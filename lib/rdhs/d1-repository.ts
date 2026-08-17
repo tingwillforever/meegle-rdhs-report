@@ -1,6 +1,6 @@
 import { getD1 } from "@/db";
 import { summarizeSnapshot } from "./aggregate.ts";
-import type { Cadence, RdhsSnapshot } from "./types.ts";
+import type { Cadence } from "./types.ts";
 import type {
   SaveSnapshotResult,
   SnapshotRepository,
@@ -249,4 +249,3 @@ export class D1SnapshotRepository implements SnapshotRepository {
       .run();
   }
 }
-

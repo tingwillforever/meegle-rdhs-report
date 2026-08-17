@@ -2,7 +2,12 @@
 set -euo pipefail
 
 site_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-python_bin="${RDHS_PYTHON_BIN:-$(command -v python3)}"
+env_file="${RDHS_SYNC_ENV:-$site_root/.env.sync}"
+if [[ ! -f "$env_file" ]]; then
+  echo "Create $env_file from .env.sync.example before installing jobs." >&2
+  exit 1
+fi
+chmod 600 "$env_file"
 launch_agents="$HOME/Library/LaunchAgents"
 mkdir -p "$launch_agents"
 
@@ -18,9 +23,8 @@ write_plist() {
 <plist version="1.0"><dict>
   <key>Label</key><string>$label</string>
   <key>ProgramArguments</key><array>
-    <string>$python_bin</string>
-    <string>$site_root/scripts/sync-rdhs-snapshot.py</string>
-    <string>--cadence</string><string>$cadence</string>
+    <string>$site_root/scripts/run-sync-job.sh</string>
+    <string>$cadence</string>
   </array>
   <key>WorkingDirectory</key><string>$site_root</string>
   <key>StartCalendarInterval</key><dict>
@@ -40,4 +44,3 @@ mkdir -p "$site_root/runtime"
 write_plist "com.rdhs.operations.weekly" "weekly" "2" ""
 write_plist "com.rdhs.operations.monthly" "monthly" "" "1"
 echo "RDHS weekly and monthly synchronization jobs installed."
-

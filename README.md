@@ -1,100 +1,54 @@
-# vinext-starter
+# RDHS 产研过程效能运营报告
 
-A clean full-stack starter running on
-[vinext](https://github.com/cloudflare/vinext), with optional Cloudflare D1 and
-Drizzle support.
+消费者 BG 的周/月 RDHS 运营工作台。站点以研发中产品主数据为底表，排除测试业务线，左关联产品维度 RDHS 数据，并将未度量/待关联产品纳入重点治理。
 
-## Prerequisites
+## 数据口径
 
-- Node.js `>=22.13.0`
+- 产品范围：状态为 `In Progress` 的产品主数据。
+- 排除范围：`测试业务线`。
+- 关联键：规范化后的 `一级业务线 + 产品`。
+- 治理分档：`<45 + 未度量/待关联`、`45~<60`、`60~<70`、`>=70`。
+- 平均 RDHS：仅统计已度量产品；覆盖率单独展示。
+- 发布保护：不完整或不一致的源数据不得替换最近有效快照。
 
-## Quick Start
+完整语义定义见 [设计说明](docs/superpowers/specs/2026-08-17-rdhs-live-operations-site-design.md)，日常操作见 [运行手册](docs/operations.md)。
+
+## 架构
+
+```text
+Meegle CLI -> run_periodic_report.py -> report_data/audit
+          -> snapshot sync -> Sites ingest API -> D1 history
+          -> React operations dashboard
+```
+
+Meegle CLI 只在本机或内网任务机运行。Sites 运行时不持有 Meegle 凭据，浏览器也不会接触快照写入密钥。
+
+## 本地开发
+
+前置版本：Node.js `>=22.13.0`、Python 3。
 
 ```bash
 npm install
 npm run dev
-npm run build
 ```
 
-This starter does not use `wrangler.jsonc`.
+本地地址为 `http://localhost:3000`。D1 尚无数据时，首页使用仓库内两份已验证月度快照并明确标记为历史快照。
 
-## Included Shape
+## 验证
 
-- edit site code under `app/`
-- `.openai/hosting.json` declares optional Sites D1 and R2 bindings
-- `vite.config.ts` simulates declared bindings for local development
-- `db/schema.ts` starts intentionally empty
-- `examples/d1/` contains an optional D1 example surface
-- `drizzle.config.ts` supports local migration generation when needed
-
-## Workspace Auth Headers
-
-Signed-in visitors receive both `oai-authenticated-user-id` and `oai-authenticated-user-email`. Private Sites require every visitor to sign in; public Sites may also have anonymous visitors, for whom neither header is present.
-
-The user ID is stable for the same user on the same Site and different across Sites. Email and name are intended for display or contact purposes.
-
-SIWC-authenticated workspace sites may also receive
-`oai-authenticated-user-full-name` when the user's SIWC profile has a non-empty
-`name` claim. The full-name value is percent-encoded UTF-8 and is accompanied by
-`oai-authenticated-user-full-name-encoding: percent-encoded-utf-8`.
-
-Treat the full name as optional and fall back to email when it is absent:
-
-```tsx
-import { headers } from "next/headers";
-
-export default async function Home() {
-  const requestHeaders = await headers();
-  const userId = requestHeaders.get("oai-authenticated-user-id");
-  const email = requestHeaders.get("oai-authenticated-user-email");
-  const encodedFullName = requestHeaders.get("oai-authenticated-user-full-name");
-  const fullName =
-    encodedFullName &&
-    requestHeaders.get("oai-authenticated-user-full-name-encoding") ===
-      "percent-encoded-utf-8"
-      ? decodeURIComponent(encodedFullName)
-      : null;
-
-  const displayName = fullName ?? email;
-  // ...
-}
+```bash
+npm test
+npm run lint
+bash -n scripts/run-sync-job.sh scripts/install-launchd.sh
 ```
 
-## Optional Dispatch-Owned ChatGPT Sign-In
+`npm test` 依次执行领域/接口/筛选单元测试、Python 同步器测试、生产构建和服务端渲染测试。
 
-Import the ready-to-use helpers from `app/chatgpt-auth.ts` when the site needs
-optional or required ChatGPT sign-in:
+## 目录
 
-- Use `getChatGPTUser()` for optional signed-in UI.
-- Use `requireChatGPTUser(returnTo)` for server-rendered pages that should send
-  anonymous visitors through Sign in with ChatGPT.
-- Use `chatGPTSignInPath(returnTo)` and `chatGPTSignOutPath(returnTo)` for
-  browser links or actions.
-- Pass a same-origin relative `returnTo` path for the destination after sign-in
-  or sign-out. The helper validates and safely encodes it.
-- Mark protected pages with `export const dynamic = "force-dynamic"` because
-  they depend on per-request identity headers.
-
-Dispatch owns `/signin-with-chatgpt`, `/signout-with-chatgpt`, `/callback`, the
-OAuth cookies, and identity header injection. Do not implement app routes for
-those reserved paths. Routes that do not import and call the helper remain
-anonymous-compatible.
-
-SIWC establishes identity only; it does not prove workspace membership. Use the
-Sites hosting platform's access policy controls for workspace-wide restrictions,
-or enforce explicit server-side membership or allowlist checks.
-
-Use SIWC for account pages, user-specific dashboards, saved records, and write
-actions tied to the current ChatGPT user. Leave public content anonymous.
-
-## Useful Commands
-
-- `npm run dev`: start local development
-- `npm run build`: verify the vinext build output
-- `npm test`: build the starter and verify its rendered loading skeleton
-- `npm run db:generate`: generate Drizzle migrations after schema changes
-
-## Learn More
-
-- [vinext Documentation](https://github.com/cloudflare/vinext)
-- [Drizzle D1 Guide](https://orm.drizzle.team/docs/get-started/d1-new)
+- `app/`：页面、交互组件和 API 路由。
+- `lib/rdhs/`：快照合同、校验、聚合、筛选和仓储。
+- `db/`、`drizzle/`：D1 模型与迁移。
+- `scripts/`：快照同步、历史导入和定时任务安装。
+- `data/`：首次部署前可用的已验证历史快照。
+- `tests/`：Node、Python 与渲染测试。
