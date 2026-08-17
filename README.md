@@ -25,7 +25,7 @@ Meegle CLI 只在本机或内网任务机运行。Sites 运行时不持有 Meegl
 
 ## 本地开发
 
-前置版本：Node.js `>=22.13.0`、Python 3。
+前置版本：Node.js `>=22.13.0`、Python `>=3.10`。
 
 ```bash
 npm install

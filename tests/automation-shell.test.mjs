@@ -9,6 +9,7 @@ test("scheduled jobs load their private sync environment before invoking Python"
   assert.match(wrapper, /\.env\.sync/);
   assert.match(wrapper, /source "\$env_file"/);
   assert.match(wrapper, /sync-rdhs-snapshot\.py/);
+  assert.match(wrapper, /version_info.*3, 10/);
   assert.match(installer, /run-sync-job\.sh/);
   assert.doesNotMatch(installer, /RDHS_INGEST_TOKEN.*<string>/);
 });

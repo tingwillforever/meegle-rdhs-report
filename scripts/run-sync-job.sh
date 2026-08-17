@@ -20,5 +20,32 @@ set +a
 : "${RDHS_SITE_URL:?RDHS_SITE_URL is required}"
 : "${RDHS_INGEST_TOKEN:?RDHS_INGEST_TOKEN is required}"
 
-python_bin="${RDHS_PYTHON_BIN:-$(command -v python3)}"
+select_python() {
+  local candidate resolved
+  if [[ -n "${RDHS_PYTHON_BIN:-}" ]]; then
+    candidate="$RDHS_PYTHON_BIN"
+    if "$candidate" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
+      printf '%s\n' "$candidate"
+      return 0
+    fi
+    echo "RDHS_PYTHON_BIN must point to Python 3.10 or newer" >&2
+    return 1
+  fi
+
+  for candidate in \
+    "$HOME/.local/bin/python3.13" \
+    "$HOME/.local/bin/python3.12" \
+    "$HOME/.local/bin/python3.11" \
+    python3; do
+    resolved="$(command -v "$candidate" 2>/dev/null || true)"
+    if [[ -n "$resolved" ]] && "$resolved" -c 'import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)'; then
+      printf '%s\n' "$resolved"
+      return 0
+    fi
+  done
+  echo "Python 3.10 or newer is required for RDHS synchronization" >&2
+  return 1
+}
+
+python_bin="$(select_python)"
 exec "$python_bin" "$site_root/scripts/sync-rdhs-snapshot.py" --cadence "$cadence"

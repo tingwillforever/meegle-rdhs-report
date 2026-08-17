@@ -3,6 +3,7 @@
 ## 1. 前置检查
 
 同步任务必须运行在能够访问内网 Meegle 私有部署的 Mac 或任务机上。
+任务包装器会自动选择 Python 3.10+；也可在 `.env.sync` 中通过 `RDHS_PYTHON_BIN` 指定解释器。
 
 ```bash
 meegle auth status
