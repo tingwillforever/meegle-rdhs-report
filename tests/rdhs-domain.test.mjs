@@ -8,9 +8,9 @@ import {
 } from "../lib/rdhs/aggregate.ts";
 import { validateSnapshot } from "../lib/rdhs/validate.ts";
 
-function product(productName, rdhs, components = {}) {
+function product(productName, rdhs, components = {}, businessLine = "业务线A") {
   return {
-    businessLine: "业务线A",
+    businessLine,
     product: productName,
     productStatus: "研发中",
     rdhs,
@@ -146,6 +146,59 @@ test("monthly trend sorts periods ascending and keeps product-level rates", () =
   assert.equal(trend[0].averageRdhs, 56);
   assert.equal(trend[0].measuredProductCount, 2);
   assert.equal(trend[0].complianceRate, 1 / 3);
+});
+
+test("monthly trend can be scoped to one business line without product drilldown series", () => {
+  const july = validateSnapshot(snapshot({
+    periodKey: "2026-07",
+    asOf: "2026-07-31",
+    products: [
+      product("A低分", 40, {}, "业务线A"),
+      product("A规范", 78, {}, "业务线A"),
+      product("B规范", 90, {}, "业务线B"),
+    ],
+    audit: {
+      rawRowCount: 3,
+      acceptedRowCount: 3,
+      zeroScoreRowCount: 0,
+      emptyDimensionRowCount: 0,
+      researchProductCount: 3,
+      measuredProductCount: 3,
+      unmeasuredProductCount: 0,
+      excludedTestBusinessLineCount: 0,
+      status: "validated",
+      warning: null,
+    },
+    businessLines: [
+      {
+        businessLine: "业务线A",
+        productTotal: 2,
+        keyGovernanceCount: 1,
+        riskImprovementCount: 0,
+        continuousOptimizationCount: 0,
+        regularTrackingCount: 1,
+        mode: "重点治理",
+        focus: "业务线A治理。",
+      },
+      {
+        businessLine: "业务线B",
+        productTotal: 1,
+        keyGovernanceCount: 0,
+        riskImprovementCount: 0,
+        continuousOptimizationCount: 0,
+        regularTrackingCount: 1,
+        mode: "常规跟踪",
+        focus: "业务线B常规跟踪。",
+      },
+    ],
+  }));
+
+  const trend = buildMonthlyTrend([july], { businessLine: "业务线A" });
+
+  assert.equal(trend[0].averageRdhs, 59);
+  assert.equal(trend[0].productTotal, 2);
+  assert.equal(trend[0].complianceRate, 0.5);
+  assert.equal(Object.hasOwn(trend[0], "productSeries"), false);
 });
 
 test("weekly snapshots are rejected by the monthly-only contract", () => {

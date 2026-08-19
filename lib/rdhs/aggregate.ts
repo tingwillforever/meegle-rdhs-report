@@ -83,13 +83,21 @@ export function summarizeSnapshot(snapshot: RdhsSnapshot): SnapshotSummary {
   };
 }
 
-export function buildMonthlyTrend(snapshots: RdhsSnapshot[]): TrendPoint[] {
+export function buildMonthlyTrend(
+  snapshots: RdhsSnapshot[],
+  options: { businessLine?: string } = {},
+): TrendPoint[] {
   return snapshots
     .filter((snapshot) => snapshot.cadence === "monthly")
     .sort((left, right) => left.periodKey.localeCompare(right.periodKey))
     .map((snapshot) => ({
       periodKey: snapshot.periodKey,
       asOf: snapshot.asOf,
-      ...summarizeSnapshot(snapshot),
+      ...summarizeSnapshot({
+        ...snapshot,
+        products: options.businessLine
+          ? snapshot.products.filter((product) => product.businessLine === options.businessLine)
+          : snapshot.products,
+      }),
     }));
 }

@@ -2,6 +2,8 @@
 
 import {
   BookOpenCheck,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Database,
   RefreshCw,
@@ -38,6 +40,7 @@ type DeltaView = {
 };
 
 const BANDS: GovernanceBand[] = ["重点治理", "风险改进", "持续优化", "常规跟踪"];
+const PRODUCT_PAGE_SIZE = 10;
 const COMPONENT_LABELS: Array<[keyof ComponentScores, string, number]> = [
   ["linkClosure", "价值链路闭环", 25],
   ["deliveryClosure", "交付闭环", 15],
@@ -108,8 +111,43 @@ function modeForSummary(summary: SnapshotSummary): GovernanceBand {
   return "常规跟踪";
 }
 
+function scopeExclusionNote(snapshot: RdhsSnapshot) {
+  const parts = [
+    snapshot.audit.excludedTestBusinessLineCount > 0
+      ? `测试业务线 ${snapshot.audit.excludedTestBusinessLineCount} 个`
+      : "",
+    snapshot.audit.excludedProductAttributeCount > 0
+      ? `交付定制 ${snapshot.audit.excludedProductAttributeCount} 个`
+      : "",
+  ].filter(Boolean);
+  return parts.length > 0 ? `已排除${parts.join("、")}` : "未排除额外主数据";
+}
+
 function productKey(product: Pick<ProductMetric, "businessLine" | "product">) {
   return `${product.businessLine}\u0000${product.product}`;
+}
+
+function paginationItems(currentPage: number, pageCount: number): Array<number | "gap"> {
+  if (pageCount <= 7) {
+    return Array.from({ length: pageCount }, (_, index) => index + 1);
+  }
+
+  const pages = new Set([1, pageCount, currentPage - 1, currentPage, currentPage + 1]);
+  const sorted = [...pages]
+    .filter((page) => page >= 1 && page <= pageCount)
+    .sort((left, right) => left - right);
+
+  const items: Array<number | "gap"> = [];
+  for (const page of sorted) {
+    const previous = items.at(-1);
+    if (typeof previous === "number" && page - previous === 2) {
+      items.push(previous + 1);
+    } else if (typeof previous === "number" && page - previous > 2) {
+      items.push("gap");
+    }
+    items.push(page);
+  }
+  return items;
 }
 
 function summaryForProducts(snapshot: RdhsSnapshot, products: ProductMetric[]) {
@@ -117,40 +155,10 @@ function summaryForProducts(snapshot: RdhsSnapshot, products: ProductMetric[]) {
 }
 
 function trendForLine(snapshots: RdhsSnapshot[], line: string): TrendPoint[] {
-  if (line === "CBG整体") return buildMonthlyTrend(snapshots);
-  return sortSnapshots(snapshots).map((snapshot) => ({
-    periodKey: snapshot.periodKey,
-    asOf: snapshot.asOf,
-    ...summaryForProducts(
-      snapshot,
-      snapshot.products.filter((product) => product.businessLine === line),
-    ),
-  }));
-}
-
-function productTrendSeries(snapshots: RdhsSnapshot[], currentSnapshot: RdhsSnapshot, line: string) {
-  if (line === "CBG整体") return [];
-  const candidates = sortProducts(
-    currentSnapshot.products.filter(
-      (product) => product.businessLine === line && product.rdhs !== null,
-    ),
-    "rdhs-asc",
-  ).slice(0, 4);
-
-  return candidates.map((candidate) => ({
-    name: candidate.product,
-    points: sortSnapshots(snapshots).map((snapshot) => {
-      const matched = snapshot.products.find(
-        (product) =>
-          product.businessLine === candidate.businessLine &&
-          product.product === candidate.product,
-      );
-      return {
-        periodKey: snapshot.periodKey,
-        value: matched?.rdhs ?? null,
-      };
-    }),
-  }));
+  return buildMonthlyTrend(
+    snapshots,
+    line === "CBG整体" ? {} : { businessLine: line },
+  );
 }
 
 function MetricCard({
@@ -291,6 +299,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
   const [query, setQuery] = useState("");
   const [unmeasuredOnly, setUnmeasuredOnly] = useState(false);
   const [selectedProductKey, setSelectedProductKey] = useState<string | null>(null);
+  const [productPage, setProductPage] = useState(1);
   const [refreshState, setRefreshState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [refreshMessage, setRefreshMessage] = useState("");
   const [runtimeDataMode, setRuntimeDataMode] = useState(dataMode);
@@ -322,8 +331,14 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
     ? filteredProducts.some((product) => productKey(product) === selectedProductKey)
     : false;
   const activeDetail = selectedProductIsVisible ? selectedProduct : null;
+  const pageCount = Math.max(1, Math.ceil(filteredProducts.length / PRODUCT_PAGE_SIZE));
+  const currentProductPage = Math.min(productPage, pageCount);
+  const pageStartIndex = (currentProductPage - 1) * PRODUCT_PAGE_SIZE;
+  const paginatedProducts = filteredProducts.slice(pageStartIndex, pageStartIndex + PRODUCT_PAGE_SIZE);
+  const visibleStart = filteredProducts.length === 0 ? 0 : pageStartIndex + 1;
+  const visibleEnd = Math.min(pageStartIndex + PRODUCT_PAGE_SIZE, filteredProducts.length);
+  const pageItems = paginationItems(currentProductPage, pageCount);
   const trendPoints = snapshot ? trendForLine(available, selectedTrendLine) : [];
-  const trendProducts = snapshot ? productTrendSeries(available, snapshot, selectedTrendLine) : [];
   const mode = summary ? modeForSummary(summary) : "重点治理";
   const isCurrentMonth = snapshot?.periodKey === monthNow;
   const dataStateText =
@@ -340,6 +355,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
     setQuery("");
     setUnmeasuredOnly(false);
     setSelectedProductKey(null);
+    setProductPage(1);
   }
 
   function changePeriod(nextPeriod: string) {
@@ -353,11 +369,17 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
     setSelectedLine(line);
     setSelectedTrendLine(line);
     setSelectedProductKey(null);
+    setProductPage(1);
     document.getElementById("product-workbench")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function clearFilters() {
     resetDrilldown();
+  }
+
+  function changeProductPage(nextPage: number) {
+    setProductPage(Math.min(Math.max(nextPage, 1), pageCount));
+    setSelectedProductKey(null);
   }
 
   async function refreshCurrentMonth() {
@@ -480,7 +502,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
             </p>
             {refreshMessage ? <span className={`refreshMessage ${refreshState}`}>{refreshMessage}</span> : null}
           </div>
-          <MetricCard label="研发中产品" value={String(summary.productTotal)} suffix=" 个" note={`已排除测试业务线 ${snapshot.audit.excludedTestBusinessLineCount} 个`} />
+          <MetricCard label="研发中产品" value={String(summary.productTotal)} suffix=" 个" note={scopeExclusionNote(snapshot)} />
           <MetricCard label="平均 RDHS" value={summary.averageRdhs?.toFixed(1) ?? "—"} suffix=" 分" note={`仅统计 ${summary.measuredProductCount} 个已度量产品`} />
           <MetricCard label="度量覆盖率" value={(summary.measurementCoverage * 100).toFixed(1)} suffix="%" note={`未度量 / 待关联 ${summary.unmeasuredProductCount} 个`} />
           <MetricCard label="产品规范率" value={(summary.complianceRate * 100).toFixed(1)} suffix="%" note={`${summary.complianceCount} 个产品符合规范`} delta={complianceDelta} />
@@ -495,11 +517,11 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
         <section className="panel trendPanel" aria-label="月度 RDHS 趋势">
           <div className="panelHead">
             <div>
-              <h2 className="panelTitle">{trendLabel} 平均 RDHS 趋势</h2>
+              <h2 className="panelTitle">{trendLabel} 平均 RDHS 与规范占比趋势</h2>
               <div className="panelSubtitle">
                 {selectedTrendLine === "CBG整体"
-                  ? "默认展示 CBG 平均 RDHS"
-                  : "业务线平均 RDHS 与产品 RDHS 趋势"}
+                  ? "默认展示 CBG 平均 RDHS 和 CBG 产品规范占比"
+                  : "仅展示业务线平均 RDHS 和业务线规范占比"}
               </div>
             </div>
             <label className="selectWrap">
@@ -513,6 +535,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                   setSelectedTrendLine(nextLine);
                   setSelectedLine(nextLine === "CBG整体" ? "全部业务线" : nextLine);
                   setSelectedProductKey(null);
+                  setProductPage(1);
                 }}
               >
                 <option value="CBG整体">CBG整体</option>
@@ -524,15 +547,16 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
           </div>
           <div className="trendBody">
             <div className="trendMeta">
-              <span>平均 RDHS 与 45 / 60 / 70 治理阈值</span>
-              <b>{snapshot.periodKey} · {trendPoints.at(-1)?.averageRdhs?.toFixed(1) ?? "—"}</b>
+              <span>平均 RDHS、规范占比与 45 / 60 / 70 治理阈值</span>
+              <b>
+                {snapshot.periodKey} · RDHS {trendPoints.at(-1)?.averageRdhs?.toFixed(1) ?? "—"} · 规范 {formatPercent(trendPoints.at(-1)?.complianceRate ?? 0)}
+              </b>
             </div>
             <TrendChart
               points={trendPoints}
-              productSeries={trendProducts}
-              ariaLabel={`${trendLabel}平均RDHS趋势`}
+              ariaLabel={`${trendLabel}平均RDHS与规范占比趋势`}
             />
-            <div className="sourceNote">平均 RDHS 仅统计已度量产品；历史月份读取月初固化快照，当月读取缓存。</div>
+            <div className="sourceNote">平均 RDHS 仅统计已度量产品；规范占比按常规跟踪产品 / 研发中产品计算；悬停趋势点查看每月指标值；历史月份读取月初固化快照，当月读取缓存。</div>
           </div>
         </section>
 
@@ -609,7 +633,9 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                   {selectedLine === "全部业务线" ? "产品列表与治理详情保持同屏核查" : "已按业务线筛选，趋势与产品列表保持一致"}
                 </div>
               </div>
-              <span className="workbenchCount">{filteredProducts.length} / {snapshot.products.length} 个产品</span>
+              <span className="workbenchCount">
+                第 {currentProductPage}/{pageCount} 页 · {filteredProducts.length} / {snapshot.products.length} 个产品
+              </span>
             </div>
             <button className="iconButton quiet" type="button" title="清除筛选" aria-label="清除筛选" onClick={clearFilters}>
               <X size={16} strokeWidth={1.8} />
@@ -625,7 +651,11 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                   <input
                     type="search"
                     value={query}
-                    onChange={(event) => setQuery(event.target.value)}
+                    onChange={(event) => {
+                      setQuery(event.target.value);
+                      setSelectedProductKey(null);
+                      setProductPage(1);
+                    }}
                     placeholder="搜索产品或业务线"
                   />
                 </label>
@@ -633,7 +663,11 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                   className="filterSelect"
                   aria-label="按治理分档筛选"
                   value={selectedBand}
-                  onChange={(event) => setSelectedBand(event.target.value as GovernanceBand | "全部分档")}
+                  onChange={(event) => {
+                    setSelectedBand(event.target.value as GovernanceBand | "全部分档");
+                    setSelectedProductKey(null);
+                    setProductPage(1);
+                  }}
                 >
                   <option value="全部分档">全部治理分档</option>
                   {BANDS.map((band) => <option key={band} value={band}>{band}</option>)}
@@ -642,14 +676,23 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                   <input
                     type="checkbox"
                     checked={unmeasuredOnly}
-                    onChange={(event) => setUnmeasuredOnly(event.target.checked)}
+                    onChange={(event) => {
+                      setUnmeasuredOnly(event.target.checked);
+                      setSelectedProductKey(null);
+                      setProductPage(1);
+                    }}
                   />
                   <span>仅未度量</span>
                 </label>
               </div>
 
+              <div className="listStatus" aria-live="polite">
+                <span>当前展示 <b className="mono">{visibleStart}-{visibleEnd}</b> / {filteredProducts.length} 个</span>
+                <span>每页 {PRODUCT_PAGE_SIZE} 个</span>
+              </div>
+
               <div className="productList">
-                {filteredProducts.map((product) => {
+                {paginatedProducts.map((product) => {
                   const key = productKey(product);
                   const isSelected = key === selectedProductKey;
                   return (
@@ -677,6 +720,49 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                 })}
                 {filteredProducts.length === 0 ? <div className="emptyList">没有匹配的产品</div> : null}
               </div>
+
+              {filteredProducts.length > PRODUCT_PAGE_SIZE ? (
+                <nav className="pagination" aria-label="产品列表分页">
+                  <button
+                    className="pageNav"
+                    type="button"
+                    title="上一页"
+                    aria-label="上一页"
+                    onClick={() => changeProductPage(currentProductPage - 1)}
+                    disabled={currentProductPage === 1}
+                  >
+                    <ChevronLeft size={15} strokeWidth={1.8} />
+                  </button>
+                  <div className="pageNumbers">
+                    {pageItems.map((item, index) => (
+                      item === "gap" ? (
+                        <span className="pageGap" key={`gap-${index}`}>...</span>
+                      ) : (
+                        <button
+                          className={`pageNumber ${item === currentProductPage ? "active" : ""}`}
+                          type="button"
+                          key={item}
+                          aria-label={`第 ${item} 页`}
+                          aria-current={item === currentProductPage ? "page" : undefined}
+                          onClick={() => changeProductPage(item)}
+                        >
+                          {item}
+                        </button>
+                      )
+                    ))}
+                  </div>
+                  <button
+                    className="pageNav"
+                    type="button"
+                    title="下一页"
+                    aria-label="下一页"
+                    onClick={() => changeProductPage(currentProductPage + 1)}
+                    disabled={currentProductPage === pageCount}
+                  >
+                    <ChevronRight size={15} strokeWidth={1.8} />
+                  </button>
+                </nav>
+              ) : null}
             </div>
 
             <aside className="detail">
@@ -709,6 +795,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
             <div><dt>研发中产品</dt><dd>{snapshot.audit.researchProductCount}</dd></div>
             <div><dt>未度量/待关联</dt><dd>{snapshot.audit.unmeasuredProductCount}</dd></div>
             <div><dt>排除测试业务线</dt><dd>{snapshot.audit.excludedTestBusinessLineCount}</dd></div>
+            <div><dt>排除交付定制</dt><dd>{snapshot.audit.excludedProductAttributeCount}</dd></div>
             <div><dt>源哈希</dt><dd title={snapshot.source.sha256}>{snapshot.source.sha256.slice(0, 10)}</dd></div>
           </dl>
         </section>

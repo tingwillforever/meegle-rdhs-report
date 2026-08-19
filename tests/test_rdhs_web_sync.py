@@ -57,6 +57,7 @@ class SnapshotSyncTests(unittest.TestCase):
             all(row["businessLine"] != "测试业务线" for row in snapshot["products"])
         )
         self.assertEqual(snapshot["audit"]["excludedTestBusinessLineCount"], 2)
+        self.assertEqual(snapshot["audit"]["excludedProductAttributeCount"], 0)
 
     def test_build_snapshot_rejects_weekly_periods(self) -> None:
         manifest = _load_json(REPORT_DIR / "audit_manifest.json")

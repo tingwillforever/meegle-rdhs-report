@@ -49,6 +49,7 @@ export type SnapshotAudit = {
   measuredProductCount: number;
   unmeasuredProductCount: number;
   excludedTestBusinessLineCount: number;
+  excludedProductAttributeCount: number;
   status: "validated";
   warning: string | null;
 };

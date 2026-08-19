@@ -141,6 +141,10 @@ function auditAt(value: unknown): SnapshotAudit {
       input.excludedTestBusinessLineCount,
       "audit.excludedTestBusinessLineCount",
     ),
+    excludedProductAttributeCount: countAt(
+      input.excludedProductAttributeCount ?? 0,
+      "audit.excludedProductAttributeCount",
+    ),
     status: "validated",
     warning:
       input.warning === null ? null : stringAt(input.warning, "audit.warning", true),

@@ -63,17 +63,27 @@ export async function POST(request: Request) {
       mode: "current-month-cache-refresh",
     }),
   });
+  const detail = await response.text();
   if (!response.ok) {
-    const detail = await response.text();
     return Response.json(
       { error: detail || "实时刷新服务触发失败" },
       { status: 502 },
     );
   }
+  let runnerPayload: { message?: unknown } = {};
+  try {
+    const parsed = JSON.parse(detail) as unknown;
+    runnerPayload = typeof parsed === "object" && parsed !== null ? parsed : {};
+  } catch {
+    // Plain-text runners are also accepted; the standard message below remains enough.
+  }
 
   return Response.json({
     status: "triggered",
-    message: "已触发当月实时刷新，完成后将覆盖当月缓存",
+    message:
+      typeof runnerPayload.message === "string"
+        ? runnerPayload.message
+        : "已触发当月实时刷新，完成后将覆盖当月缓存",
     periodKey,
   });
 }

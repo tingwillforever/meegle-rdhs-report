@@ -255,6 +255,9 @@ def build_snapshot(
             "excludedTestBusinessLineCount": int(
                 report_audit["excluded_business_line_master_total"]
             ),
+            "excludedProductAttributeCount": int(
+                report_audit.get("excluded_product_attribute_master_total", 0)
+            ),
             "status": "validated",
             "warning": None,
         },

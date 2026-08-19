@@ -5,7 +5,7 @@
 站点只呈现月报。产品视角采用固定加工链路：
 
 ```text
-研发中产品主数据 -> 排除测试业务线 -> left join RDHS Chart -> 未度量/待关联纳入重点治理 -> 产品明细 -> 业务线/CBG 汇总
+研发中产品主数据 -> 排除测试业务线和交付定制产品 -> left join RDHS Chart -> 未度量/待关联纳入重点治理 -> 产品明细 -> 业务线/CBG 汇总
 ```
 
 核心指标口径：
@@ -39,7 +39,7 @@ meegle chart get \
   --format json
 ```
 
-站点只接收经过周期报告流水线校验的月度快照。Chart 原始行数异常、有效产品覆盖异常、产品总数不一致、测试业务线混入、分档不一致等情况都会中止同步，最近有效报告保持不变。
+站点只接收经过周期报告流水线校验的月度快照。Chart 原始行数异常、有效产品覆盖异常、产品总数不一致、测试业务线或交付定制产品混入、分档不一致等情况都会中止同步，最近有效报告保持不变。
 
 ## 4. 同步环境
 
@@ -87,6 +87,16 @@ python3 scripts/sync-rdhs-snapshot.py --current-month-cache
 当月缓存模式使用 `run_periodic_report.py --mode monthly`，读取当前 Meegle Chart；月初固化历史快照仍使用默认的上一个完整月。
 
 生成的 schema-v1 快照位于 `runtime/sync-runs/site-snapshots/`。同周期同源哈希重复上传为幂等成功；修正后的不同哈希会形成新版本并成为当前版本。
+
+本地点击页面「更新数据」前，需要启动本机刷新 runner：
+
+```bash
+npm run dev
+npm run db:migrate:local
+npm run dev:refresh-runner
+```
+
+`.dev.vars` 中至少需要配置 `RDHS_INGEST_TOKEN`、`RDHS_REFRESH_WEBHOOK_URL=http://127.0.0.1:8765/rdhs/refresh` 和 `RDHS_REFRESH_WEBHOOK_TOKEN`。如本机默认 `python3` 低于 3.10，可额外配置 `RDHS_PYTHON_BIN`。站点 API 只触发 runner；真正的 Meegle CLI 查询仍在本机 runner 内执行。
 
 ## 6. 历史导入
 
