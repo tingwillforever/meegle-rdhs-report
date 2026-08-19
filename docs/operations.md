@@ -78,6 +78,14 @@ python3 scripts/sync-rdhs-snapshot.py \
   --dry-run
 ```
 
+刷新当月缓存：
+
+```bash
+python3 scripts/sync-rdhs-snapshot.py --current-month-cache
+```
+
+当月缓存模式使用 `run_periodic_report.py --mode monthly`，读取当前 Meegle Chart；月初固化历史快照仍使用默认的上一个完整月。
+
 生成的 schema-v1 快照位于 `runtime/sync-runs/site-snapshots/`。同周期同源哈希重复上传为幂等成功；修正后的不同哈希会形成新版本并成为当前版本。
 
 ## 6. 历史导入

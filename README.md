@@ -22,6 +22,7 @@ Meegle CLI -> run_periodic_report.py -> report_data/audit
 ```
 
 Meegle CLI 只在本机或内网任务机运行。Sites 运行时不持有 Meegle 凭据，浏览器也不会接触快照写入密钥。
+当月刷新由 `POST /api/report/refresh` 触发内网 runner，runner 可执行 `scripts/sync-rdhs-snapshot.py --current-month-cache` 覆盖当月缓存；历史月份由每月 1 日任务固化为快照。
 
 ## 本地开发
 

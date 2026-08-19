@@ -8,7 +8,9 @@ import tempfile
 import unittest
 from urllib.error import HTTPError
 
+import scripts.rdhs_snapshot_sync as sync_module
 from scripts.rdhs_snapshot_sync import build_snapshot
+from scripts.rdhs_snapshot_sync import generate_report
 from scripts.rdhs_snapshot_sync import upload_snapshot
 
 
@@ -109,6 +111,39 @@ class SnapshotSyncTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 0, completed.stderr)
         result = json.loads(completed.stdout)
         self.assertFalse(result["uploaded"])
+
+    def test_current_month_cache_uses_current_month_report_mode(self) -> None:
+        captured: dict[str, object] = {}
+
+        class Completed:
+            returncode = 0
+            stdout = '{"run_dir": "/tmp/current-month-run"}\n'
+            stderr = ""
+
+        def fake_run(command, **kwargs):  # noqa: ANN001, ANN003
+            captured["command"] = command
+            captured["cwd"] = kwargs["cwd"]
+            return Completed()
+
+        original = sync_module.subprocess.run
+        sync_module.subprocess.run = fake_run
+        try:
+            run_dir = generate_report(
+                "monthly",
+                Path("/tmp/rdhs-output"),
+                "2026-08-19",
+                current_month_cache=True,
+            )
+        finally:
+            sync_module.subprocess.run = original
+
+        command = captured["command"]
+        self.assertEqual(run_dir, Path("/tmp/current-month-run"))
+        self.assertIn("--mode", command)
+        self.assertIn("monthly", command)
+        self.assertNotIn("last-month", command)
+        self.assertIn("--as-of", command)
+        self.assertIn("2026-08-19", command)
 
 
 if __name__ == "__main__":

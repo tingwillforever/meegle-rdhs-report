@@ -312,19 +312,25 @@ def _load_json(path: Path) -> dict[str, object]:
     return payload
 
 
-def generate_report(cadence: str, output_root: Path, as_of: Optional[str]) -> Path:
+def generate_report(
+    cadence: str,
+    output_root: Path,
+    as_of: Optional[str],
+    *,
+    current_month_cache: bool = False,
+) -> Path:
     if cadence != "monthly":
         raise ValueError("cadence must be monthly")
-    command = [
-        sys.executable,
-        str(WORKSPACE_ROOT / "run_periodic_report.py"),
-        "last-month",
-        "--no-publish",
-        "--output-root",
-        str(output_root),
-    ]
+    command = [sys.executable, str(WORKSPACE_ROOT / "run_periodic_report.py")]
+    if current_month_cache:
+        command.extend(["--mode", "monthly"])
+    else:
+        command.append("last-month")
+    command.extend(["--no-publish", "--output-root", str(output_root)])
     if as_of:
         command.extend(["--as-of", as_of])
+    elif current_month_cache:
+        command.extend(["--as-of", date.today().isoformat()])
     environment = dict(os.environ)
     environment["PATH"] = f"{Path.home() / '.local' / 'bin'}:{environment.get('PATH', '')}"
     completed = subprocess.run(
@@ -351,6 +357,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="同步 RDHS 月度快照到运营报告站点")
     parser.add_argument("--cadence", choices=("monthly",), default="monthly")
     parser.add_argument("--as-of")
+    parser.add_argument(
+        "--current-month-cache",
+        action="store_true",
+        help="刷新当月缓存；默认用于每月 1 日固化上一个完整月快照",
+    )
     parser.add_argument("--source-dir", type=Path)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)
     parser.add_argument("--site-url", default=os.environ.get("RDHS_SITE_URL", ""))
@@ -361,7 +372,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = build_parser().parse_args(argv)
-    source_dir = args.source_dir or generate_report(args.cadence, args.output_root, args.as_of)
+    source_dir = args.source_dir or generate_report(
+        args.cadence,
+        args.output_root,
+        args.as_of,
+        current_month_cache=args.current_month_cache,
+    )
     snapshot = build_snapshot(
         _load_json(source_dir / "report_data.json"),
         _load_json(source_dir / "audit_manifest.json"),
