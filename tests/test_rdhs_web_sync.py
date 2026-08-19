@@ -14,14 +14,8 @@ from scripts.rdhs_snapshot_sync import generate_report
 from scripts.rdhs_snapshot_sync import upload_snapshot
 
 
-WORKSPACE = Path(__file__).resolve().parents[2]
-REPORT_DIR = (
-    WORKSPACE
-    / "reports"
-    / "periodic-rerun-20260817"
-    / "2026-08"
-    / "monthly-report"
-)
+SITE_ROOT = Path(__file__).resolve().parents[1]
+REPORT_DIR = SITE_ROOT / "tests" / "fixtures" / "monthly-report"
 
 
 def _load_json(path: Path) -> dict[str, object]:
@@ -40,24 +34,24 @@ class SnapshotSyncTests(unittest.TestCase):
 
         self.assertEqual(snapshot["schemaVersion"], 1)
         self.assertEqual(snapshot["periodKey"], "2026-08")
-        self.assertEqual(len(snapshot["products"]), 67)
+        self.assertEqual(len(snapshot["products"]), 61)
         self.assertEqual(
             len([row for row in snapshot["products"] if row["rdhs"] is not None]),
-            60,
+            55,
         )
         self.assertEqual(
             len([row for row in snapshot["products"] if row["rdhs"] is None]),
-            7,
+            6,
         )
         self.assertEqual(
             sum(row["productTotal"] for row in snapshot["businessLines"]),
-            67,
+            61,
         )
         self.assertTrue(
             all(row["businessLine"] != "测试业务线" for row in snapshot["products"])
         )
         self.assertEqual(snapshot["audit"]["excludedTestBusinessLineCount"], 2)
-        self.assertEqual(snapshot["audit"]["excludedProductAttributeCount"], 0)
+        self.assertEqual(snapshot["audit"]["excludedProductAttributeCount"], 9)
 
     def test_build_snapshot_extracts_product_dependency_metrics(self) -> None:
         snapshot = build_snapshot(
@@ -75,14 +69,14 @@ class SnapshotSyncTests(unittest.TestCase):
         self.assertEqual(product["subLine"], None)
         self.assertEqual(metrics["月人均需求吞吐量"]["value"], 0.0)
         self.assertEqual(metrics["月人均需求吞吐量"]["tone"], "critical")
-        self.assertAlmostEqual(metrics["需求开发周期"]["value"], 88.41)
+        self.assertAlmostEqual(metrics["需求开发周期"]["value"], 88.21)
         self.assertEqual(metrics["需求开发周期"]["tone"], "critical")
-        self.assertAlmostEqual(metrics["需求交付周期"]["value"], 90.85)
+        self.assertAlmostEqual(metrics["需求交付周期"]["value"], 91.11)
         self.assertEqual(metrics["需求交付周期"]["tone"], "critical")
-        self.assertAlmostEqual(metrics["需求发布闭环率"]["value"], 1 / 6)
+        self.assertAlmostEqual(metrics["需求发布闭环率"]["value"], 1 / 7)
         self.assertEqual(metrics["需求发布闭环率"]["unit"], "%")
         self.assertEqual(metrics["需求发布闭环率"]["tone"], "critical")
-        self.assertAlmostEqual(metrics["需求积压占比"]["value"], 0.5166)
+        self.assertAlmostEqual(metrics["需求积压占比"]["value"], 0.5082)
         self.assertEqual(metrics["需求积压占比"]["tone"], "critical")
 
     def test_build_snapshot_rejects_weekly_periods(self) -> None:
@@ -129,7 +123,7 @@ class SnapshotSyncTests(unittest.TestCase):
                     directory,
                     "--dry-run",
                 ],
-                cwd=WORKSPACE / "rdhs-web",
+                cwd=SITE_ROOT,
                 text=True,
                 capture_output=True,
                 check=False,

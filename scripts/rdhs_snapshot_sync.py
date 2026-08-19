@@ -18,7 +18,19 @@ from urllib.request import build_opener
 
 
 SITE_ROOT = Path(__file__).resolve().parents[1]
-WORKSPACE_ROOT = SITE_ROOT.parent
+
+
+def _resolve_workspace_root() -> Path:
+    configured = os.environ.get("RDHS_WORKSPACE_ROOT")
+    if configured:
+        return Path(configured).expanduser().resolve()
+    for candidate in (SITE_ROOT, SITE_ROOT.parent):
+        if (candidate / "run_periodic_report.py").exists():
+            return candidate
+    return SITE_ROOT
+
+
+WORKSPACE_ROOT = _resolve_workspace_root()
 DEFAULT_OUTPUT_ROOT = SITE_ROOT / "runtime" / "sync-runs"
 
 RDHS_FIELD = "RDHS(100')"

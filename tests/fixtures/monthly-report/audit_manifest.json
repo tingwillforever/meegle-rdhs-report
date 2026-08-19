@@ -1,0 +1,66 @@
+{
+  "mode": "monthly",
+  "as_of": "2026-08-19",
+  "baseline_source": "stored_month_start_baseline",
+  "data_validation": {
+    "current": {
+      "chart_id": "7659618575337915254",
+      "chart_name": "【本月】产研健康度得分(RDHS) By 产品",
+      "fetched_at": "2026-08-19T13:40:26+08:00",
+      "source_sha256": "1fdbb07adb70b3afef66d2e9b51f0532ad8df19263dde4c37e63bb0860d2e998",
+      "raw_row_count": 640,
+      "zero_rdhs_row_count": 574,
+      "empty_dimension_row_count": 4,
+      "accepted_row_count": 62
+    },
+    "previous": {
+      "chart_id": "7659608529799496565",
+      "chart_name": "【上月】产研健康度得分(RDHS) By 产品",
+      "fetched_at": "2026-08-19T13:33:39+08:00",
+      "source_sha256": "03bcac5f48d71d7b58e570aaf97cf155d07d14e5345378a6161b621540b7da37",
+      "raw_row_count": 558,
+      "zero_rdhs_row_count": 496,
+      "empty_dimension_row_count": 0,
+      "accepted_row_count": 62
+    }
+  },
+  "report": {
+    "current_chart_id": "7659618575337915254",
+    "previous_chart_id": "7659608529799496565",
+    "current_accepted_row_count": 62,
+    "previous_accepted_row_count": 62,
+    "selected_improvement_count": 50,
+    "selection_limit_per_business_line": null,
+    "priority_counts": {
+      "P0": 16,
+      "P1": 22,
+      "P2": 12
+    },
+    "clean_research_product_total": 61,
+    "clean_research_lt70_total": 44,
+    "measured_research_product_total": 55,
+    "unmeasured_or_pending_total": 6,
+    "chart_orphan_record_total": 0,
+    "excluded_business_lines": [
+      "测试业务线"
+    ],
+    "excluded_business_line_master_total": 2,
+    "excluded_business_line_chart_record_total": 0,
+    "excluded_product_attributes": [
+      "hmeckpgbh",
+      "交付定制"
+    ],
+    "excluded_product_attribute_master_total": 9,
+    "excluded_product_attribute_chart_record_total": 7,
+    "excluded_finished": 0,
+    "status_raw_counts": {
+      "In Progress": 61
+    },
+    "unknown_status_counts": {},
+    "full_improvement_count": 50,
+    "product_master_match_audit_path": "tests/fixtures/monthly-report/product_master_match_audit.json"
+  },
+  "publication": {
+    "published": false
+  }
+}
