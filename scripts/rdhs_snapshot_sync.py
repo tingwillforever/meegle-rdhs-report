@@ -29,6 +29,7 @@ COMPONENT_FIELDS = {
     "granularity": "颗粒度对齐度(20')",
     "quality": "质量敏锐度(20')",
 }
+SUB_LINE_FIELDS = ("二级业务线", "二级业务线名称", "业务线二级", "产品二级业务线")
 
 
 def _as_mapping(value: object, label: str) -> dict[str, object]:
@@ -47,6 +48,112 @@ def _number_or_none(value: object) -> Optional[float]:
     if value is None or str(value).strip() in {"", "—", "-"}:
         return None
     return float(value)
+
+
+def _optional_text(row: Mapping[str, object], fields: tuple[str, ...]) -> Optional[str]:
+    for field in fields:
+        value = row.get(field)
+        if value is None:
+            continue
+        text = str(value).strip()
+        if text and text not in {"—", "-"}:
+            return text
+    return None
+
+
+def _tone_by_lower_bound(value: Optional[float], critical: float, risk: float) -> str:
+    if value is None or value < critical:
+        return "critical"
+    if value < risk:
+        return "risk"
+    return "track"
+
+
+def _tone_by_upper_bound(
+    value: Optional[float],
+    *,
+    risk_above: float,
+    critical_above: Optional[float] = None,
+    neutral_when_ok: bool = False,
+) -> str:
+    if value is None:
+        return "critical"
+    if critical_above is not None and value > critical_above:
+        return "critical"
+    if value > risk_above:
+        return "risk"
+    return "neutral" if neutral_when_ok else "track"
+
+
+def _release_closure_rate(row: Mapping[str, object]) -> Optional[float]:
+    expected = _number_or_none(row.get("应发布需求数"))
+    actual = _number_or_none(row.get("有效发布需求数"))
+    if expected is None or actual is None or expected <= 0:
+        return None
+    return actual / expected
+
+
+def _dependency_metrics(row: Mapping[str, object]) -> list[dict[str, object]]:
+    demand_throughput = _number_or_none(row.get("人均需求吞吐量"))
+    defect_closure = _number_or_none(row.get("人均缺陷关闭量"))
+    delivery_cycle = _number_or_none(row.get("需求交付周期"))
+    development_cycle = _number_or_none(row.get("需求开发周期"))
+    release_closure = _release_closure_rate(row)
+    severe_defect_rate = _number_or_none(row.get("严重缺陷占比"))
+    low_level_defect_rate = _number_or_none(row.get("低级缺陷占比"))
+    backlog_rate = _number_or_none(row.get("积压需求占比"))
+
+    defect_tone = "risk" if (demand_throughput is not None and demand_throughput < 0.2 and (defect_closure or 0) > 0) else "neutral"
+    return [
+        {
+            "label": "月人均需求吞吐量",
+            "value": demand_throughput,
+            "unit": "个/人",
+            "tone": _tone_by_lower_bound(demand_throughput, 0.2, 0.5),
+        },
+        {
+            "label": "月人均缺陷关闭量",
+            "value": defect_closure,
+            "unit": "个/人",
+            "tone": defect_tone,
+        },
+        {
+            "label": "需求开发周期",
+            "value": development_cycle,
+            "unit": "天",
+            "tone": _tone_by_upper_bound(development_cycle, risk_above=30, critical_above=60),
+        },
+        {
+            "label": "需求交付周期",
+            "value": delivery_cycle,
+            "unit": "天",
+            "tone": _tone_by_upper_bound(delivery_cycle, risk_above=45, critical_above=90),
+        },
+        {
+            "label": "需求发布闭环率",
+            "value": release_closure,
+            "unit": "%",
+            "tone": _tone_by_lower_bound(release_closure, 0.6, 0.8),
+        },
+        {
+            "label": "严重缺陷占比",
+            "value": severe_defect_rate,
+            "unit": "%",
+            "tone": _tone_by_upper_bound(severe_defect_rate, risk_above=0.08, critical_above=0.15),
+        },
+        {
+            "label": "低级缺陷占比",
+            "value": low_level_defect_rate,
+            "unit": "%",
+            "tone": _tone_by_upper_bound(low_level_defect_rate, risk_above=0.10, neutral_when_ok=True),
+        },
+        {
+            "label": "需求积压占比",
+            "value": backlog_rate,
+            "unit": "%",
+            "tone": _tone_by_upper_bound(backlog_rate, risk_above=0.15, critical_above=0.30),
+        },
+    ]
 
 
 def _band_for_rdhs(rdhs: Optional[float]) -> str:
@@ -150,6 +257,7 @@ def build_snapshot(
         products.append(
             {
                 "businessLine": business_line,
+                "subLine": _optional_text(metric_row, SUB_LINE_FIELDS),
                 "product": product_name,
                 "productStatus": "研发中",
                 "rdhs": rdhs,
@@ -159,6 +267,7 @@ def build_snapshot(
                     key_name: _number_or_none(metric_row.get(source_name))
                     for key_name, source_name in COMPONENT_FIELDS.items()
                 },
+                "dependencyMetrics": _dependency_metrics(metric_row),
                 "lowestComponent": str(
                     improvement.get("最低分分项") if improvement else _lowest_component(metric_row)
                 ),
@@ -190,12 +299,14 @@ def build_snapshot(
         products.append(
             {
                 "businessLine": business_line,
+                "subLine": _optional_text(improvement, SUB_LINE_FIELDS),
                 "product": product_name,
                 "productStatus": "研发中",
                 "rdhs": None,
                 "governanceBand": "重点治理",
                 "priority": "P0",
                 "components": {key_name: None for key_name in COMPONENT_FIELDS},
+                "dependencyMetrics": [],
                 "lowestComponent": str(improvement["最低分分项"]),
                 "problem": str(improvement["主要问题"]),
                 "action": str(improvement["建议本期动作"]),

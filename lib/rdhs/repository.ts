@@ -38,6 +38,14 @@ export class MemorySnapshotRepository implements SnapshotRepository {
         existing.snapshot.source.sha256 === record.snapshot.source.sha256,
     );
     if (duplicate) {
+      for (const existing of this.records) {
+        if (existing.cadence === record.cadence && existing.periodKey === record.periodKey) {
+          existing.isCurrent = false;
+        }
+      }
+      duplicate.snapshot = record.snapshot;
+      duplicate.summary = record.summary;
+      duplicate.isCurrent = true;
       return { snapshotId: duplicate.id, version: duplicate.version, created: false };
     }
 

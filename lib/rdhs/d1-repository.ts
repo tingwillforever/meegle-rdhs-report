@@ -44,6 +44,52 @@ export class D1SnapshotRepository implements SnapshotRepository {
       .bind(record.cadence, record.periodKey, record.snapshot.source.sha256)
       .first<{ id: string; version: number }>();
     if (duplicate) {
+      const summary = record.summary;
+      await d1
+        .prepare(
+          `UPDATE rdhs_snapshots SET is_current = 0
+           WHERE cadence = ? AND period_key = ? AND is_current = 1`,
+        )
+        .bind(record.cadence, record.periodKey)
+        .run();
+      await d1
+        .prepare(
+          `UPDATE rdhs_snapshots SET
+             is_current = 1, as_of = ?, fetched_at = ?, product_total = ?,
+             measured_product_count = ?, unmeasured_product_count = ?,
+             below_70_count = ?, average_rdhs = ?, measurement_coverage = ?,
+             key_governance_count = ?, risk_improvement_count = ?,
+             continuous_optimization_count = ?, regular_tracking_count = ?,
+             link_closure_average = ?, delivery_closure_average = ?,
+             timeliness_average = ?, granularity_average = ?, quality_average = ?,
+             conclusion = ?, focus = ?, audit_json = ?, snapshot_json = ?
+           WHERE id = ?`,
+        )
+        .bind(
+          record.snapshot.asOf,
+          record.snapshot.fetchedAt,
+          summary.productTotal,
+          summary.measuredProductCount,
+          summary.unmeasuredProductCount,
+          summary.below70Count,
+          summary.averageRdhs,
+          summary.measurementCoverage,
+          summary.bandCounts.keyGovernance,
+          summary.bandCounts.riskImprovement,
+          summary.bandCounts.continuousOptimization,
+          summary.bandCounts.regularTracking,
+          summary.componentAverages.linkClosure,
+          summary.componentAverages.deliveryClosure,
+          summary.componentAverages.timeliness,
+          summary.componentAverages.granularity,
+          summary.componentAverages.quality,
+          record.snapshot.overview.conclusion,
+          record.snapshot.overview.focus,
+          JSON.stringify(record.snapshot.audit),
+          JSON.stringify(record.snapshot),
+          duplicate.id,
+        )
+        .run();
       return { snapshotId: duplicate.id, version: duplicate.version, created: false };
     }
 

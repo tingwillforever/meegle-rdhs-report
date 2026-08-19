@@ -16,14 +16,25 @@ export type ComponentScores = {
   quality: number | null;
 };
 
+export type DependencyMetricTone = "critical" | "risk" | "track" | "neutral";
+
+export type ProductDependencyMetric = {
+  label: string;
+  value: number | null;
+  unit: string;
+  tone: DependencyMetricTone;
+};
+
 export type ProductMetric = {
   businessLine: string;
+  subLine: string | null;
   product: string;
   productStatus: "研发中";
   rdhs: number | null;
   governanceBand: GovernanceBand;
   priority: Priority;
   components: ComponentScores;
+  dependencyMetrics: ProductDependencyMetric[];
   lowestComponent: string;
   problem: string;
   action: string;

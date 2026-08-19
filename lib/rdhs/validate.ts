@@ -2,8 +2,10 @@ import { governanceBandForScore } from "./aggregate.ts";
 import type {
   BusinessLineMetric,
   ComponentScores,
+  DependencyMetricTone,
   GovernanceBand,
   Priority,
+  ProductDependencyMetric,
   ProductMetric,
   RdhsSnapshot,
   SnapshotAudit,
@@ -25,6 +27,13 @@ function stringAt(value: unknown, path: string, allowEmpty = false): string {
     fail(path, "must be a non-empty string");
   }
   return value;
+}
+
+function optionalStringAt(value: unknown, path: string): string | null {
+  if (value === undefined || value === null || value === "") return null;
+  if (typeof value !== "string") fail(path, "must be a string or null");
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
 }
 
 function countAt(value: unknown, path: string): number {
@@ -67,6 +76,37 @@ function componentsAt(value: unknown, path: string): ComponentScores {
   };
 }
 
+function dependencyMetricToneAt(value: unknown, path: string): DependencyMetricTone {
+  if (!(["critical", "risk", "track", "neutral"] as unknown[]).includes(value)) {
+    fail(path, "has an unknown dependency metric tone");
+  }
+  return value as DependencyMetricTone;
+}
+
+function finiteNumberOrNullAt(value: unknown, path: string): number | null {
+  if (value === null) return null;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    fail(path, "must be null or a finite number");
+  }
+  return value;
+}
+
+function dependencyMetricAt(value: unknown, path: string): ProductDependencyMetric {
+  const input = objectAt(value, path);
+  return {
+    label: stringAt(input.label, `${path}.label`),
+    value: finiteNumberOrNullAt(input.value, `${path}.value`),
+    unit: stringAt(input.unit, `${path}.unit`, true),
+    tone: dependencyMetricToneAt(input.tone, `${path}.tone`),
+  };
+}
+
+function dependencyMetricsAt(value: unknown, path: string): ProductDependencyMetric[] {
+  if (value === undefined || value === null) return [];
+  if (!Array.isArray(value)) fail(path, "must be an array");
+  return value.map((metric, index) => dependencyMetricAt(metric, `${path}[${index}]`));
+}
+
 function productAt(value: unknown, index: number): ProductMetric {
   const path = `products[${index}]`;
   const input = objectAt(value, path);
@@ -81,12 +121,14 @@ function productAt(value: unknown, index: number): ProductMetric {
   if (input.productStatus !== "研发中") fail(`${path}.productStatus`, "must be 研发中");
   return {
     businessLine,
+    subLine: optionalStringAt(input.subLine, `${path}.subLine`),
     product: stringAt(input.product, `${path}.product`),
     productStatus: "研发中",
     rdhs,
     governanceBand,
     priority: priorityAt(input.priority, `${path}.priority`),
     components: componentsAt(input.components, `${path}.components`),
+    dependencyMetrics: dependencyMetricsAt(input.dependencyMetrics, `${path}.dependencyMetrics`),
     lowestComponent: stringAt(input.lowestComponent, `${path}.lowestComponent`),
     problem: stringAt(input.problem, `${path}.problem`),
     action: stringAt(input.action, `${path}.action`),

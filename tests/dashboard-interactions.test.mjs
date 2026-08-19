@@ -10,18 +10,21 @@ import {
 const products = [
   {
     businessLine: "开放平台业务群",
+    subLine: "星火业务线",
     product: "开放平台控制台",
     rdhs: null,
     governanceBand: "重点治理",
   },
   {
     businessLine: "AI营销业务群",
+    subLine: "营销云业务线",
     product: "营销云",
     rdhs: 52,
     governanceBand: "风险改进",
   },
   {
     businessLine: "AI营销业务群",
+    subLine: "智能投放业务线",
     product: "智能投放",
     rdhs: 72,
     governanceBand: "常规跟踪",
@@ -47,6 +50,18 @@ test("product filters compose business line, band, search, and unmeasured state"
       unmeasuredOnly: true,
     }).map((product) => product.product),
     ["开放平台控制台"],
+  );
+});
+
+test("product search includes secondary business line names", () => {
+  assert.deepEqual(
+    filterProducts(products, {
+      businessLine: "全部业务线",
+      band: "全部分档",
+      query: "智能投放业务线",
+      unmeasuredOnly: false,
+    }).map((product) => product.product),
+    ["智能投放"],
   );
 });
 

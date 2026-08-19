@@ -9,7 +9,7 @@ export type ProductFilters = {
 
 export type ProductSort = "rdhs-asc" | "rdhs-desc" | "product-asc";
 
-export function filterProducts<T extends Pick<ProductMetric, "businessLine" | "product" | "rdhs" | "governanceBand">>(
+export function filterProducts<T extends Pick<ProductMetric, "businessLine" | "product" | "rdhs" | "governanceBand"> & Partial<Pick<ProductMetric, "subLine">>>(
   products: T[],
   filters: ProductFilters,
 ): T[] {
@@ -20,7 +20,12 @@ export function filterProducts<T extends Pick<ProductMetric, "businessLine" | "p
     }
     if (filters.band !== "全部分档" && product.governanceBand !== filters.band) return false;
     if (filters.unmeasuredOnly && product.rdhs !== null) return false;
-    if (query && !`${product.product} ${product.businessLine}`.toLocaleLowerCase("zh-CN").includes(query)) {
+    const searchableText = [
+      product.product,
+      product.businessLine,
+      product.subLine ?? "",
+    ].join(" ");
+    if (query && !searchableText.toLocaleLowerCase("zh-CN").includes(query)) {
       return false;
     }
     return true;

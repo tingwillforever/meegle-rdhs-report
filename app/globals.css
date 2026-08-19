@@ -734,12 +734,85 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   border-bottom: 1px solid var(--border);
 }
 .detailSection:last-child { border-bottom: 0; }
-.detailSection h3 { margin: 0 0 9px; font-size: 12px; font-weight: 680; }
+.detailSection h3 { margin: 0 0 8px; font-size: 12px; font-weight: 680; }
 .detailSection p {
   margin: 0;
   color: var(--ink);
   font-size: 12px;
   line-height: 1.65;
+}
+.dependentMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+.dependencyFocus {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 0;
+}
+.dependencyCard {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+}
+.dependencyCard.prominent { background: var(--surface); }
+.dependencyCard dt {
+  margin: 0 0 5px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dependencyCard dd {
+  margin: 0;
+  color: var(--fg);
+  font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  font-weight: 720;
+  letter-spacing: 0;
+}
+.dependencyCard.prominent dd { font-size: 15px; }
+.dependencyCard small {
+  margin-left: 3px;
+  color: var(--muted);
+  font-family: var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+}
+.dependencyCard.critical {
+  border-color: oklch(0.542 0.171 30 / 0.22);
+  background: oklch(0.542 0.171 30 / 0.07);
+}
+.dependencyCard.risk {
+  border-color: oklch(0.66 0.139 72 / 0.24);
+  background: oklch(0.66 0.139 72 / 0.08);
+}
+.dependencyCard.track {
+  border-color: oklch(0.52 0.09 150 / 0.22);
+  background: oklch(0.52 0.09 150 / 0.07);
+}
+.dependencyCard.critical dd { color: oklch(0.45 0.145 30); }
+.dependencyCard.risk dd { color: oklch(0.47 0.115 72); }
+.dependencyCard.track dd { color: oklch(0.38 0.075 150); }
+.detailSection .dependencyRule {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.45;
+}
+.detailSection .dependencyRule b { color: var(--ink); font-weight: 650; }
+.detailSection .dependencyEmpty {
+  color: var(--muted) !important;
+  font-size: 11px !important;
 }
 .componentList { display: grid; gap: 8px; }
 .componentRow {

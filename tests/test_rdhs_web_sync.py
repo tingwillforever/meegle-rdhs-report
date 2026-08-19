@@ -59,6 +59,32 @@ class SnapshotSyncTests(unittest.TestCase):
         self.assertEqual(snapshot["audit"]["excludedTestBusinessLineCount"], 2)
         self.assertEqual(snapshot["audit"]["excludedProductAttributeCount"], 0)
 
+    def test_build_snapshot_extracts_product_dependency_metrics(self) -> None:
+        snapshot = build_snapshot(
+            _load_json(REPORT_DIR / "report_data.json"),
+            _load_json(REPORT_DIR / "audit_manifest.json"),
+            cadence="monthly",
+        )
+
+        product = next(
+            row for row in snapshot["products"]
+            if row["businessLine"] == "AI文娱业务群" and row["product"] == "讯飞输入法"
+        )
+        metrics = {row["label"]: row for row in product["dependencyMetrics"]}
+
+        self.assertEqual(product["subLine"], None)
+        self.assertEqual(metrics["月人均需求吞吐量"]["value"], 0.0)
+        self.assertEqual(metrics["月人均需求吞吐量"]["tone"], "critical")
+        self.assertAlmostEqual(metrics["需求开发周期"]["value"], 88.41)
+        self.assertEqual(metrics["需求开发周期"]["tone"], "critical")
+        self.assertAlmostEqual(metrics["需求交付周期"]["value"], 90.85)
+        self.assertEqual(metrics["需求交付周期"]["tone"], "critical")
+        self.assertAlmostEqual(metrics["需求发布闭环率"]["value"], 1 / 6)
+        self.assertEqual(metrics["需求发布闭环率"]["unit"], "%")
+        self.assertEqual(metrics["需求发布闭环率"]["tone"], "critical")
+        self.assertAlmostEqual(metrics["需求积压占比"]["value"], 0.5166)
+        self.assertEqual(metrics["需求积压占比"]["tone"], "critical")
+
     def test_build_snapshot_rejects_weekly_periods(self) -> None:
         manifest = _load_json(REPORT_DIR / "audit_manifest.json")
         manifest["as_of"] = "2026-08-16"

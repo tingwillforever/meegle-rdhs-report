@@ -111,6 +111,32 @@ test("unmeasured products stay in key governance without lowering average RDHS",
   assert.equal(summary.componentAverages.linkClosure, 13);
 });
 
+test("snapshot validation preserves secondary line and dependency metrics for product detail", () => {
+  const valid = validateSnapshot(snapshot({
+    products: [
+      {
+        ...product("产品A", 40),
+        subLine: "输入法业务线",
+        dependencyMetrics: [
+          { label: "月人均需求吞吐量", value: 0.1, unit: "个/人", tone: "critical" },
+          { label: "需求发布闭环率", value: 0.42, unit: "%", tone: "critical" },
+        ],
+      },
+      product("产品B", 72),
+      product("产品C", null),
+    ],
+  }));
+
+  assert.equal(valid.products[0].subLine, "输入法业务线");
+  assert.deepEqual(
+    valid.products[0].dependencyMetrics.map((metric) => [metric.label, metric.value, metric.unit, metric.tone]),
+    [
+      ["月人均需求吞吐量", 0.1, "个/人", "critical"],
+      ["需求发布闭环率", 0.42, "%", "critical"],
+    ],
+  );
+});
+
 test("snapshot validation rejects overview counts that do not reconcile", () => {
   const invalid = snapshot({
     businessLines: [

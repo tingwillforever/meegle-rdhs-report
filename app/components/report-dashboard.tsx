@@ -21,6 +21,7 @@ import {
 import type {
   ComponentScores,
   GovernanceBand,
+  ProductDependencyMetric,
   ProductMetric,
   RdhsSnapshot,
   SnapshotSummary,
@@ -41,6 +42,7 @@ type DeltaView = {
 
 const BANDS: GovernanceBand[] = ["重点治理", "风险改进", "持续优化", "常规跟踪"];
 const PRODUCT_PAGE_SIZE = 10;
+const FEATURED_DEPENDENCY_METRICS = new Set(["需求发布闭环率", "需求积压占比"]);
 const COMPONENT_LABELS: Array<[keyof ComponentScores, string, number]> = [
   ["linkClosure", "价值链路闭环", 25],
   ["deliveryClosure", "交付闭环", 15],
@@ -127,6 +129,16 @@ function productKey(product: Pick<ProductMetric, "businessLine" | "product">) {
   return `${product.businessLine}\u0000${product.product}`;
 }
 
+function linePath(product: Pick<ProductMetric, "businessLine"> & Partial<Pick<ProductMetric, "subLine">>) {
+  return product.subLine ? `${product.businessLine} / ${product.subLine}` : product.businessLine;
+}
+
+function formatDependencyValue(metric: ProductDependencyMetric) {
+  if (metric.value === null) return "—";
+  if (metric.unit === "%") return (metric.value * 100).toFixed(1);
+  return metric.value.toFixed(1);
+}
+
 function paginationItems(currentPage: number, pageCount: number): Array<number | "gap"> {
   if (pageCount <= 7) {
     return Array.from({ length: pageCount }, (_, index) => index + 1);
@@ -158,6 +170,45 @@ function trendForLine(snapshots: RdhsSnapshot[], line: string): TrendPoint[] {
   return buildMonthlyTrend(
     snapshots,
     line === "CBG整体" ? {} : { businessLine: line },
+  );
+}
+
+function DependencyCard({
+  metric,
+  prominent = false,
+}: {
+  metric: ProductDependencyMetric;
+  prominent?: boolean;
+}) {
+  return (
+    <div className={`dependencyCard ${prominent ? "prominent" : ""} ${metric.tone}`}>
+      <dt>{metric.label}</dt>
+      <dd>
+        {formatDependencyValue(metric)}
+        {metric.value !== null && metric.unit ? <small>{metric.unit}</small> : null}
+      </dd>
+    </div>
+  );
+}
+
+function DependencyMetrics({ metrics }: { metrics: ProductDependencyMetric[] }) {
+  if (metrics.length === 0) {
+    return <p className="dependencyEmpty">暂无可展示的过程依赖指标，待下次快照补齐。</p>;
+  }
+  const regularMetrics = metrics.filter((metric) => !FEATURED_DEPENDENCY_METRICS.has(metric.label));
+  const featuredMetrics = metrics.filter((metric) => FEATURED_DEPENDENCY_METRICS.has(metric.label));
+  return (
+    <>
+      <dl className="dependentMetrics">
+        {regularMetrics.map((metric) => <DependencyCard metric={metric} key={metric.label} />)}
+      </dl>
+      {featuredMetrics.length > 0 ? (
+        <dl className="dependencyFocus">
+          {featuredMetrics.map((metric) => <DependencyCard metric={metric} prominent key={metric.label} />)}
+        </dl>
+      ) : null}
+      <p className="dependencyRule"><b>判色规则</b> 红色=重点治理阈值或无有效数据；黄色=风险观察；绿色=常规跟踪达标；灰色=中性参考。</p>
+    </>
   );
 }
 
@@ -236,7 +287,7 @@ function ProductDetail({
     <div className={mobile ? "detailContent mobile" : "detailContent"}>
       <div className="detailTop">
         <div>
-          <div className="detailKicker">{product.businessLine}</div>
+          <div className="detailKicker">{linePath(product)}</div>
           <h3 className="detailTitle">{product.product}</h3>
           <div className="detailMeta">{periodKey} 月报 · {product.rdhs === null ? "等待数据关联" : "已完成度量"}</div>
         </div>
@@ -253,6 +304,10 @@ function ProductDetail({
         </div>
         <span className={`badge ${bandClass(product.governanceBand)}`}>{product.governanceBand}</span>
         {product.priority ? <span className="priority">{product.priority}</span> : null}
+      </div>
+      <div className="detailSection">
+        <h3>过程依赖指标</h3>
+        <DependencyMetrics metrics={product.dependencyMetrics} />
       </div>
       <div className="detailSection">
         <h3>最低过程项</h3>
@@ -647,7 +702,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
               <div className="filters">
                 <label className="search">
                   <Search size={16} strokeWidth={1.8} aria-hidden="true" />
-                  <span className="srOnly">搜索产品或业务线</span>
+                  <span className="srOnly">搜索产品、一级业务线或二级业务线</span>
                   <input
                     type="search"
                     value={query}
@@ -656,7 +711,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                       setSelectedProductKey(null);
                       setProductPage(1);
                     }}
-                    placeholder="搜索产品或业务线"
+                    placeholder="搜索产品 / 一级 / 二级业务线"
                   />
                 </label>
                 <select
@@ -704,7 +759,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                       >
                         <span>
                           <span className="productName">{product.product}</span>
-                          <span className="productLine">{product.businessLine}</span>
+                          <span className="productLine">{linePath(product)}</span>
                         </span>
                         <span className={`score ${product.rdhs === null ? "unmeasured" : bandClass(product.governanceBand)}`}>
                           {formatScore(product.rdhs)}
