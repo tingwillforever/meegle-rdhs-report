@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** 交付一个由 Meegle CLI 同步、Sites+D1 托管、支持周/月历史查询与月度趋势的 RDHS 运营工作台。
+**Goal:** 交付一个由 Meegle CLI 同步、Sites+D1 托管、支持月度历史查询、当月缓存刷新与月度趋势的 RDHS 运营工作台。
 
 **Architecture:** 本机/内网 Python 同步器复用现有周期报告流水线并上传稳定快照合同；Vinext 服务端校验后写入 D1，React 页面读取当前和历史快照。写入采用不可变版本和当前指针，失败数据不会覆盖有效报告。
 
@@ -72,7 +72,7 @@
 
 **Interfaces:**
 - Consumes: 现有 `run_periodic_report.py` 的 `report_data.json`、`audit_manifest.json`、站点 URL 和写入令牌。
-- Produces: schema v1 快照、HTTPS 上传、周/月运行命令和已有报告批量导入。
+- Produces: schema v1 快照、HTTPS 上传、月度运行命令和已有报告批量导入。
 
 - [ ] **Step 1: Write the failing test**：断言正确转换 67 个研发中产品、排除测试业务线、未度量 RDHS 为 `None`、周期键正确，以及远端拒绝时退出非零。
 - [ ] **Step 2: Run test to verify it fails**：运行 `pytest -q tests/test_rdhs_web_sync.py`，预期因同步模块不存在失败。
@@ -94,9 +94,9 @@
 
 **Interfaces:**
 - Consumes: 报告和趋势接口；无 D1 数据时使用明确标注的内置演示快照。
-- Produces: 可识别的 RDHS 工作台第一屏、周/月与周期选择、核心指标和趋势。
+- Produces: 可识别的 RDHS 工作台第一屏、月份选择、核心指标和趋势。
 
-- [ ] **Step 1: Write the failing test**：扩展渲染测试，断言页面包含周期切换、四个核心指标、70 分基线和数据状态。
+- [ ] **Step 1: Write the failing test**：扩展渲染测试，断言页面包含月份选择、产品规范率、待治理占比、RDHS 阈值标尺和数据状态。
 - [ ] **Step 2: Run test to verify it fails**：运行 `npm test`，预期 starter 页面不满足断言。
 - [ ] **Step 3: Write minimal implementation**：完成第一屏与设计令牌，移除 starter skeleton 和 `react-loading-skeleton`。
 - [ ] **Step 4: Run test to verify it passes**：启动开发服务，检查目标路由返回成功并打开首次有效预览。
@@ -153,4 +153,3 @@
 - [ ] **Step 3: Save version**：推送精确提交，打包 `dist` 和迁移并保存版本。
 - [ ] **Step 4: Deploy privately**：部署私有版本并轮询至成功。
 - [ ] **Step 5: Verify production**：打开部署 URL，检查首页、周期接口和当前报告；确认站点默认不公开。
-

@@ -98,6 +98,10 @@ test("unmeasured products stay in key governance without lowering average RDHS",
   assert.equal(governanceBandForScore(null), "重点治理");
   assert.equal(summary.averageRdhs, 56);
   assert.equal(summary.measurementCoverage, 2 / 3);
+  assert.equal(summary.complianceCount, 1);
+  assert.equal(summary.pendingGovernanceCount, 2);
+  assert.equal(summary.complianceRate, 1 / 3);
+  assert.equal(summary.pendingGovernanceRate, 2 / 3);
   assert.deepEqual(summary.bandCounts, {
     keyGovernance: 2,
     riskImprovement: 0,
@@ -129,14 +133,11 @@ test("snapshot validation rejects overview counts that do not reconcile", () => 
   );
 });
 
-test("monthly trend excludes weekly snapshots and sorts periods ascending", () => {
+test("monthly trend sorts periods ascending and keeps product-level rates", () => {
   const july = validateSnapshot(snapshot({ periodKey: "2026-07", asOf: "2026-07-31" }));
   const august = validateSnapshot(snapshot());
-  const weekly = validateSnapshot(
-    snapshot({ cadence: "weekly", periodKey: "2026-08-30", asOf: "2026-08-30" }),
-  );
 
-  const trend = buildMonthlyTrend([august, weekly, july]);
+  const trend = buildMonthlyTrend([august, july]);
 
   assert.deepEqual(
     trend.map((point) => point.periodKey),
@@ -144,5 +145,12 @@ test("monthly trend excludes weekly snapshots and sorts periods ascending", () =
   );
   assert.equal(trend[0].averageRdhs, 56);
   assert.equal(trend[0].measuredProductCount, 2);
+  assert.equal(trend[0].complianceRate, 1 / 3);
 });
 
+test("weekly snapshots are rejected by the monthly-only contract", () => {
+  assert.throws(
+    () => validateSnapshot(snapshot({ cadence: "weekly", periodKey: "2026-08-30", asOf: "2026-08-30" })),
+    /cadence: must be monthly/,
+  );
+});

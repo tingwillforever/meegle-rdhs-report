@@ -40,7 +40,7 @@ def main() -> int:
                 continue
             manifest = load_json(manifest_path)
             mode = str(manifest.get("mode") or "")
-            if mode not in {"weekly", "monthly"}:
+            if mode != "monthly":
                 continue
             snapshot = build_snapshot(load_json(report_path), manifest, cadence=mode)
             source_hash = str(snapshot["source"]["sha256"])

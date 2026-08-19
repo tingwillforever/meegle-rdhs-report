@@ -1,12 +1,9 @@
 "use client";
 
 import {
-  Activity,
+  BookOpenCheck,
   CheckCircle2,
-  CircleAlert,
   Database,
-  Gauge,
-  PackageCheck,
   RefreshCw,
   Search,
   X,
@@ -18,13 +15,14 @@ import {
   filterProducts,
   sortBusinessLines,
   sortProducts,
-  type ProductSort,
 } from "@/lib/rdhs/filter";
 import type {
-  Cadence,
   ComponentScores,
   GovernanceBand,
+  ProductMetric,
   RdhsSnapshot,
+  SnapshotSummary,
+  TrendPoint,
 } from "@/lib/rdhs/types";
 import { ScoreRail } from "./score-rail";
 import { TrendChart } from "./trend-chart";
@@ -32,6 +30,11 @@ import { TrendChart } from "./trend-chart";
 type ReportDashboardProps = {
   initialSnapshots: RdhsSnapshot[];
   dataMode: "live" | "preview";
+};
+
+type DeltaView = {
+  text: string;
+  tone: "good" | "bad" | "neutral";
 };
 
 const BANDS: GovernanceBand[] = ["重点治理", "风险改进", "持续优化", "常规跟踪"];
@@ -43,10 +46,26 @@ const COMPONENT_LABELS: Array<[keyof ComponentScores, string, number]> = [
   ["quality", "质量表现", 20],
 ];
 
+function currentMonthKey() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Shanghai",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  return `${year}-${month}`;
+}
+
+function sortSnapshots(snapshots: RdhsSnapshot[]) {
+  return snapshots
+    .filter((snapshot) => snapshot.cadence === "monthly")
+    .sort((left, right) => left.periodKey.localeCompare(right.periodKey));
+}
+
 function formatFetchedAt(value: string) {
   return new Intl.DateTimeFormat("zh-CN", {
     timeZone: "Asia/Shanghai",
-    year: "numeric",
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
@@ -59,77 +78,231 @@ function formatScore(value: number | null) {
   return value === null ? "未度量" : value.toFixed(1);
 }
 
-function bandClass(band: GovernanceBand) {
-  if (band === "重点治理") return "key";
-  if (band === "风险改进") return "risk";
-  if (band === "持续优化") return "optimize";
-  return "regular";
+function formatPercent(value: number) {
+  return `${(value * 100).toFixed(1)}%`;
 }
 
-function MetricItem({
-  icon,
+function formatDelta(label: string, current: number, previous: number | null, favorableDirection: "up" | "down"): DeltaView {
+  if (previous === null) return { text: `${label}暂无上月对比`, tone: "neutral" };
+  const delta = (current - previous) * 100;
+  if (Math.abs(delta) < 0.05) return { text: `${label}环比持平`, tone: "neutral" };
+  const isGood = favorableDirection === "up" ? delta > 0 : delta < 0;
+  const sign = delta > 0 ? "+" : "-";
+  return {
+    text: `${label}环比 ${sign}${Math.abs(delta).toFixed(1)}pp`,
+    tone: isGood ? "good" : "bad",
+  };
+}
+
+function bandClass(band: GovernanceBand) {
+  if (band === "重点治理") return "critical";
+  if (band === "风险改进") return "risk";
+  if (band === "持续优化") return "optimize";
+  return "track";
+}
+
+function modeForSummary(summary: SnapshotSummary): GovernanceBand {
+  if (summary.bandCounts.keyGovernance > 0) return "重点治理";
+  if (summary.bandCounts.riskImprovement > 0) return "风险改进";
+  if (summary.bandCounts.continuousOptimization > 0) return "持续优化";
+  return "常规跟踪";
+}
+
+function productKey(product: Pick<ProductMetric, "businessLine" | "product">) {
+  return `${product.businessLine}\u0000${product.product}`;
+}
+
+function summaryForProducts(snapshot: RdhsSnapshot, products: ProductMetric[]) {
+  return summarizeSnapshot({ ...snapshot, products });
+}
+
+function trendForLine(snapshots: RdhsSnapshot[], line: string): TrendPoint[] {
+  if (line === "CBG整体") return buildMonthlyTrend(snapshots);
+  return sortSnapshots(snapshots).map((snapshot) => ({
+    periodKey: snapshot.periodKey,
+    asOf: snapshot.asOf,
+    ...summaryForProducts(
+      snapshot,
+      snapshot.products.filter((product) => product.businessLine === line),
+    ),
+  }));
+}
+
+function productTrendSeries(snapshots: RdhsSnapshot[], currentSnapshot: RdhsSnapshot, line: string) {
+  if (line === "CBG整体") return [];
+  const candidates = sortProducts(
+    currentSnapshot.products.filter(
+      (product) => product.businessLine === line && product.rdhs !== null,
+    ),
+    "rdhs-asc",
+  ).slice(0, 4);
+
+  return candidates.map((candidate) => ({
+    name: candidate.product,
+    points: sortSnapshots(snapshots).map((snapshot) => {
+      const matched = snapshot.products.find(
+        (product) =>
+          product.businessLine === candidate.businessLine &&
+          product.product === candidate.product,
+      );
+      return {
+        periodKey: snapshot.periodKey,
+        value: matched?.rdhs ?? null,
+      };
+    }),
+  }));
+}
+
+function MetricCard({
   label,
   value,
   suffix,
-  meta,
+  note,
+  delta,
 }: {
-  icon: React.ReactNode;
   label: string;
   value: string;
   suffix?: string;
-  meta: string;
+  note: string;
+  delta?: DeltaView;
 }) {
   return (
-    <div className="metricItem">
-      <div className="metricLabel">{icon}<span>{label}</span></div>
-      <div className="metricValue">
-        {value}{suffix ? <span className="metricSuffix">{suffix}</span> : null}
-      </div>
-      <div className="metricMeta">{meta}</div>
+    <div className="metric">
+      <span className="metricLabel">{label}</span>
+      <strong className="metricValue">
+        {value}
+        {suffix ? <small>{suffix}</small> : null}
+      </strong>
+      <span className="metricNote">{note}</span>
+      {delta ? <span className={`metricDelta ${delta.tone}`}>{delta.text}</span> : null}
     </div>
   );
 }
 
-function BandStack({ counts, total, label }: {
-  counts: [number, number, number, number];
-  total: number;
-  label: string;
+function Distribution({ summary }: { summary: SnapshotSummary }) {
+  const rows: Array<[GovernanceBand, string, number]> = [
+    ["重点治理", "<45 / 未度量", summary.bandCounts.keyGovernance],
+    ["风险改进", "45-<60", summary.bandCounts.riskImprovement],
+    ["持续优化", "60-<70", summary.bandCounts.continuousOptimization],
+    ["常规跟踪", ">=70", summary.bandCounts.regularTracking],
+  ];
+  return (
+    <section className="panel distributionPanel" aria-label="治理分档分布">
+      <div className="panelHead">
+        <div>
+          <h2 className="panelTitle">治理分档分布</h2>
+          <div className="panelSubtitle">未度量 / 待关联产品纳入重点治理</div>
+        </div>
+        <span className="mono panelMeta">{summary.productTotal} 个产品</span>
+      </div>
+      <div className="distributionBody">
+        {rows.map(([band, range, count]) => (
+          <div className="distributionRow" key={band}>
+            <span>{band} <small>{range}</small></span>
+            <div className="bar" aria-hidden="true">
+              <i
+                className={bandClass(band)}
+                style={{ width: `${summary.productTotal === 0 ? 0 : (count / summary.productTotal) * 100}%` }}
+              />
+            </div>
+            <b>{count}</b>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ProductDetail({
+  product,
+  periodKey,
+  onClose,
+  mobile = false,
+}: {
+  product: ProductMetric;
+  periodKey: string;
+  onClose?: () => void;
+  mobile?: boolean;
 }) {
   return (
-    <span className="bandStack" aria-label={`${label}：重点治理 ${counts[0]}，风险改进 ${counts[1]}，持续优化 ${counts[2]}，常规跟踪 ${counts[3]}`}>
-      {counts.map((count, index) => (
-        <span
-          className={`bandStackItem ${["key", "risk", "optimize", "regular"][index]}`}
-          key={index}
-          style={{ width: `${total === 0 ? 0 : (count / total) * 100}%` }}
-        />
-      ))}
-    </span>
+    <div className={mobile ? "detailContent mobile" : "detailContent"}>
+      <div className="detailTop">
+        <div>
+          <div className="detailKicker">{product.businessLine}</div>
+          <h3 className="detailTitle">{product.product}</h3>
+          <div className="detailMeta">{periodKey} 月报 · {product.rdhs === null ? "等待数据关联" : "已完成度量"}</div>
+        </div>
+        {onClose ? (
+          <button className="iconButton quiet" type="button" title="关闭产品详情" aria-label="关闭产品详情" onClick={onClose}>
+            <X size={15} strokeWidth={1.8} />
+          </button>
+        ) : null}
+      </div>
+      <div className="detailScore">
+        <div>
+          <div className="detailScoreNum">{product.rdhs === null ? "—" : product.rdhs.toFixed(1)}</div>
+          <div className="detailScoreLabel">{product.rdhs === null ? "RDHS 未度量" : "RDHS 分数"}</div>
+        </div>
+        <span className={`badge ${bandClass(product.governanceBand)}`}>{product.governanceBand}</span>
+        {product.priority ? <span className="priority">{product.priority}</span> : null}
+      </div>
+      <div className="detailSection">
+        <h3>最低过程项</h3>
+        <p>{product.lowestComponent}</p>
+      </div>
+      <div className="detailSection">
+        <h3>分项得分</h3>
+        <div className="componentList">
+          {COMPONENT_LABELS.map(([key, label, maximum]) => {
+            const value = product.components[key];
+            return (
+              <div className="componentRow" key={key}>
+                <span>{label}</span>
+                <span className="componentTrack"><i style={{ width: `${value === null ? 0 : Math.min(100, (value / maximum) * 100)}%` }} /></span>
+                <strong>{value === null ? "—" : value.toFixed(1)}</strong>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div className="detailSection">
+        <h3>主要问题</h3>
+        <p>{product.problem}</p>
+      </div>
+      <div className="detailSection">
+        <h3>建议治理动作</h3>
+        <div className="actionBox"><p>{product.action}</p></div>
+      </div>
+    </div>
   );
 }
 
 export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardProps) {
-  const [snapshots, setSnapshots] = useState(initialSnapshots);
-  const monthlySnapshots = snapshots.filter((snapshot) => snapshot.cadence === "monthly");
-  const [cadence, setCadence] = useState<Cadence>("monthly");
-  const [periodKey, setPeriodKey] = useState(
-    monthlySnapshots.at(-1)?.periodKey ?? snapshots.at(-1)?.periodKey ?? "",
-  );
+  const [snapshots, setSnapshots] = useState(sortSnapshots(initialSnapshots));
+  const monthNow = currentMonthKey();
+  const initialPeriod =
+    snapshots.find((snapshot) => snapshot.periodKey === monthNow)?.periodKey ??
+    snapshots.at(-1)?.periodKey ??
+    "";
+  const [periodKey, setPeriodKey] = useState(initialPeriod);
   const [selectedLine, setSelectedLine] = useState("全部业务线");
+  const [selectedTrendLine, setSelectedTrendLine] = useState("CBG整体");
   const [selectedBand, setSelectedBand] = useState<GovernanceBand | "全部分档">("全部分档");
   const [query, setQuery] = useState("");
   const [unmeasuredOnly, setUnmeasuredOnly] = useState(false);
-  const [productSort, setProductSort] = useState<ProductSort>("rdhs-asc");
-  const [selectedProductName, setSelectedProductName] = useState<string | null>(null);
+  const [selectedProductKey, setSelectedProductKey] = useState<string | null>(null);
   const [refreshState, setRefreshState] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [refreshMessage, setRefreshMessage] = useState("");
-  const [currentDataMode, setCurrentDataMode] = useState(dataMode);
+  const [runtimeDataMode, setRuntimeDataMode] = useState(dataMode);
 
-  const available = snapshots.filter((snapshot) => snapshot.cadence === cadence);
+  const available = sortSnapshots(snapshots);
   const snapshot =
     available.find((candidate) => candidate.periodKey === periodKey) ?? available.at(-1) ?? null;
   const summary = snapshot ? summarizeSnapshot(snapshot) : null;
-  const trend = buildMonthlyTrend(snapshots);
+  const previousSnapshot = snapshot
+    ? [...available].reverse().find((candidate) => candidate.periodKey < snapshot.periodKey) ?? null
+    : null;
+  const previousSummary = previousSnapshot ? summarizeSnapshot(previousSnapshot) : null;
   const businessLines = snapshot ? sortBusinessLines(snapshot.businessLines) : [];
   const filteredProducts = snapshot
     ? sortProducts(
@@ -139,242 +312,406 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
         query,
         unmeasuredOnly,
       }),
-      productSort,
+      "rdhs-asc",
     )
     : [];
   const selectedProduct = snapshot?.products.find(
-    (product) => product.product === selectedProductName,
+    (product) => productKey(product) === selectedProductKey,
   ) ?? null;
+  const selectedProductIsVisible = selectedProduct
+    ? filteredProducts.some((product) => productKey(product) === selectedProductKey)
+    : false;
+  const activeDetail = selectedProductIsVisible ? selectedProduct : null;
+  const trendPoints = snapshot ? trendForLine(available, selectedTrendLine) : [];
+  const trendProducts = snapshot ? productTrendSeries(available, snapshot, selectedTrendLine) : [];
+  const mode = summary ? modeForSummary(summary) : "重点治理";
+  const isCurrentMonth = snapshot?.periodKey === monthNow;
+  const dataStateText =
+    runtimeDataMode === "preview"
+      ? "内置预览快照"
+      : isCurrentMonth
+        ? "当月缓存"
+        : "历史快照";
 
   function resetDrilldown() {
     setSelectedLine("全部业务线");
+    setSelectedTrendLine("CBG整体");
     setSelectedBand("全部分档");
     setQuery("");
     setUnmeasuredOnly(false);
-    setProductSort("rdhs-asc");
-    setSelectedProductName(null);
-  }
-
-  function changeCadence(nextCadence: Cadence) {
-    setCadence(nextCadence);
-    const candidates = snapshots.filter((item) => item.cadence === nextCadence);
-    setPeriodKey(candidates.at(-1)?.periodKey ?? "");
-    resetDrilldown();
+    setSelectedProductKey(null);
   }
 
   function changePeriod(nextPeriod: string) {
     setPeriodKey(nextPeriod);
+    setRefreshState("idle");
+    setRefreshMessage("");
     resetDrilldown();
   }
 
   function chooseBusinessLine(line: string) {
     setSelectedLine(line);
-    setSelectedProductName(null);
-    document.getElementById("product-drilldown")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  async function refreshReports() {
-    setRefreshState("loading");
-    setRefreshMessage("");
-    try {
-      const periodsResponse = await fetch(`/api/periods?cadence=${cadence}`, { cache: "no-store" });
-      if (!periodsResponse.ok) throw new Error("实时数据暂不可用");
-      const periodsPayload = await periodsResponse.json() as { periods: Array<{ periodKey: string }> };
-      if (periodsPayload.periods.length === 0) {
-        setRefreshState("success");
-        setRefreshMessage("当前无新增有效快照");
-        return;
-      }
-      const records = await Promise.all(periodsPayload.periods.map(async ({ periodKey: nextPeriod }) => {
-        const response = await fetch(`/api/report?cadence=${cadence}&period=${nextPeriod}`, { cache: "no-store" });
-        if (!response.ok) throw new Error("实时报告读取失败");
-        return response.json() as Promise<{ record: { snapshot: RdhsSnapshot } }>;
-      }));
-      const otherCadence = snapshots.filter((item) => item.cadence !== cadence);
-      const refreshed = records.map((record) => record.record.snapshot);
-      setSnapshots([...otherCadence, ...refreshed]);
-      changePeriod(refreshed.at(-1)?.periodKey ?? periodKey);
-      setCurrentDataMode("live");
-      setRefreshState("success");
-      setRefreshMessage("已更新至最新有效快照");
-    } catch (error) {
-      setRefreshState("error");
-      setRefreshMessage(error instanceof Error ? error.message : "实时数据暂不可用");
-    }
+    setSelectedTrendLine(line);
+    setSelectedProductKey(null);
+    document.getElementById("product-workbench")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function clearFilters() {
     resetDrilldown();
   }
 
+  async function refreshCurrentMonth() {
+    if (!snapshot) return;
+    if (!isCurrentMonth) {
+      setRefreshState("error");
+      setRefreshMessage("历史月份使用快照，不支持实时刷新");
+      return;
+    }
+
+    setRefreshState("loading");
+    setRefreshMessage("");
+    try {
+      const response = await fetch("/api/report/refresh", {
+        method: "POST",
+        headers: { "Content-Type": "application/json; charset=utf-8" },
+        body: JSON.stringify({ periodKey: snapshot.periodKey }),
+      });
+      const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
+      if (!response.ok) throw new Error(payload.error ?? "当月数据刷新失败");
+
+      const reportResponse = await fetch(`/api/report?period=${snapshot.periodKey}`, { cache: "no-store" });
+      if (reportResponse.ok) {
+        const report = await reportResponse.json() as { record: { snapshot: RdhsSnapshot } };
+        setSnapshots((current) => sortSnapshots([
+          ...current.filter((item) => item.periodKey !== report.record.snapshot.periodKey),
+          report.record.snapshot,
+        ]));
+      }
+      setRuntimeDataMode("live");
+      setRefreshState("success");
+      setRefreshMessage(payload.message ?? "已更新当月缓存");
+    } catch (error) {
+      setRefreshState("error");
+      setRefreshMessage(error instanceof Error ? error.message : "当月数据刷新失败");
+    }
+  }
+
+  if (!snapshot || !summary) {
+    return (
+      <div className="dashboardShell">
+        <main className="pageInner">
+          <section className="panel emptyState">该月份暂无有效报告</section>
+        </main>
+      </div>
+    );
+  }
+
+  const complianceDelta = formatDelta(
+    "规范",
+    summary.complianceRate,
+    previousSummary?.complianceRate ?? null,
+    "up",
+  );
+  const pendingDelta = formatDelta(
+    "待治理",
+    summary.pendingGovernanceRate,
+    previousSummary?.pendingGovernanceRate ?? null,
+    "down",
+  );
+  const trendLabel = selectedTrendLine === "CBG整体" ? "CBG" : selectedTrendLine;
+
   return (
     <div className="dashboardShell">
       <header className="topbar">
-        <div className="topbarInner">
-          <div className="brandLockup">
-            <div className="brandMark" aria-hidden="true">RDHS</div>
-            <div>
-              <h1 className="brandTitle">产研过程效能运营报告</h1>
-              <p className="brandSubtitle">消费者BG · 产品视角</p>
-            </div>
-          </div>
-          <div className="topbarActions">
-            <div className="segmented" aria-label="报告周期">
-              <button className="segment" type="button" aria-pressed={cadence === "weekly"} onClick={() => changeCadence("weekly")}>周报</button>
-              <button className="segment" type="button" aria-pressed={cadence === "monthly"} onClick={() => changeCadence("monthly")}>月报</button>
-            </div>
-            <select className="periodSelect" aria-label="选择报告周期" value={periodKey} onChange={(event) => changePeriod(event.target.value)} disabled={available.length === 0}>
+        <div className="brand">
+          <span className="brandSymbol" aria-hidden="true"><i /><i /><i /><i /></span>
+          <span>CBG RDHS运营报告</span>
+        </div>
+        <span className="contextLabel">研发过程效能 · 月报工作台</span>
+        <div className="barControls">
+          <label className="selectWrap">
+            <span className="srOnly">选择月报月份</span>
+            <select
+              aria-label="选择月报月份"
+              value={snapshot.periodKey}
+              onChange={(event) => changePeriod(event.target.value)}
+              disabled={available.length === 0}
+            >
               {available.length === 0 ? <option value="">暂无数据</option> : null}
-              {[...available].reverse().map((item) => <option key={item.periodKey} value={item.periodKey}>{item.periodKey}</option>)}
+              {[...available].reverse().map((item) => (
+                <option key={item.periodKey} value={item.periodKey}>{item.periodKey}</option>
+              ))}
             </select>
-            <button className="iconButton" type="button" title="检查最新数据" aria-label="检查最新数据" onClick={refreshReports} disabled={refreshState === "loading"}>
-              <RefreshCw className={refreshState === "loading" ? "spin" : ""} size={16} strokeWidth={1.8} />
-            </button>
-          </div>
+          </label>
+          <button
+            className="iconButton"
+            type="button"
+            title="更新数据"
+            aria-label="更新数据"
+            onClick={refreshCurrentMonth}
+            disabled={refreshState === "loading"}
+          >
+            <RefreshCw className={refreshState === "loading" ? "spin" : ""} size={17} strokeWidth={1.8} />
+          </button>
         </div>
       </header>
 
       <main className="pageInner">
-        {snapshot && summary ? (
-          <>
-            <section className="reportIntro">
+        <section className="reportHead">
+          <div>
+            <div className="eyebrow">{snapshot.periodKey} / CBG</div>
+            <h1>CBG RDHS运营报告</h1>
+          </div>
+          <div className="status">
+            <b aria-hidden="true" />
+            数据校验通过 · <span className="mono">{formatFetchedAt(snapshot.fetchedAt)}</span> 同步 · {dataStateText}
+          </div>
+        </section>
+
+        <section className="panel summary" aria-label="本月总体判断和核心指标">
+          <div className="judgement">
+            <div className="judgementTop">
+              <span className="label">总体判断</span>
+              <span className={`badge ${bandClass(mode)}`}>{mode}阶段</span>
+            </div>
+            <p>
+              本期 CBG 共覆盖 <b className="mono">{summary.productTotal}</b> 个研发中产品，整体仍处于{mode}阶段。
+              {snapshot.overview.focus}
+            </p>
+            {refreshMessage ? <span className={`refreshMessage ${refreshState}`}>{refreshMessage}</span> : null}
+          </div>
+          <MetricCard label="研发中产品" value={String(summary.productTotal)} suffix=" 个" note={`已排除测试业务线 ${snapshot.audit.excludedTestBusinessLineCount} 个`} />
+          <MetricCard label="平均 RDHS" value={summary.averageRdhs?.toFixed(1) ?? "—"} suffix=" 分" note={`仅统计 ${summary.measuredProductCount} 个已度量产品`} />
+          <MetricCard label="度量覆盖率" value={(summary.measurementCoverage * 100).toFixed(1)} suffix="%" note={`未度量 / 待关联 ${summary.unmeasuredProductCount} 个`} />
+          <MetricCard label="产品规范率" value={(summary.complianceRate * 100).toFixed(1)} suffix="%" note={`${summary.complianceCount} 个产品符合规范`} delta={complianceDelta} />
+          <MetricCard label="待治理占比" value={(summary.pendingGovernanceRate * 100).toFixed(1)} suffix="%" note={`${summary.pendingGovernanceCount} 个产品需治理`} delta={pendingDelta} />
+        </section>
+
+        <div className="insights">
+          <ScoreRail value={summary.averageRdhs} />
+          <Distribution summary={summary} />
+        </div>
+
+        <section className="panel trendPanel" aria-label="月度 RDHS 趋势">
+          <div className="panelHead">
+            <div>
+              <h2 className="panelTitle">{trendLabel} 平均 RDHS 趋势</h2>
+              <div className="panelSubtitle">
+                {selectedTrendLine === "CBG整体"
+                  ? "默认展示 CBG 平均 RDHS"
+                  : "业务线平均 RDHS 与产品 RDHS 趋势"}
+              </div>
+            </div>
+            <label className="selectWrap">
+              <span className="srOnly">选择趋势业务线</span>
+              <select
+                className="trendSelect"
+                aria-label="选择趋势业务线"
+                value={selectedTrendLine}
+                onChange={(event) => {
+                  const nextLine = event.target.value;
+                  setSelectedTrendLine(nextLine);
+                  setSelectedLine(nextLine === "CBG整体" ? "全部业务线" : nextLine);
+                  setSelectedProductKey(null);
+                }}
+              >
+                <option value="CBG整体">CBG整体</option>
+                {businessLines.map((line) => (
+                  <option key={line.businessLine} value={line.businessLine}>{line.businessLine}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="trendBody">
+            <div className="trendMeta">
+              <span>平均 RDHS 与 45 / 60 / 70 治理阈值</span>
+              <b>{snapshot.periodKey} · {trendPoints.at(-1)?.averageRdhs?.toFixed(1) ?? "—"}</b>
+            </div>
+            <TrendChart
+              points={trendPoints}
+              productSeries={trendProducts}
+              ariaLabel={`${trendLabel}平均RDHS趋势`}
+            />
+            <div className="sourceNote">平均 RDHS 仅统计已度量产品；历史月份读取月初固化快照，当月读取缓存。</div>
+          </div>
+        </section>
+
+        <section className="panel overview" aria-label="业务线总览">
+          <div className="panelHead">
+            <div>
+              <h2 className="panelTitle">业务线总览</h2>
+              <div className="panelSubtitle">按一级业务线汇总 · 点击行联动趋势与产品治理工作区</div>
+            </div>
+            <span className="mono panelMeta">{businessLines.length} 条业务线</span>
+          </div>
+          <div className="tableWrap">
+            <table className="overviewTable">
+              <thead>
+                <tr>
+                  <th>一级业务线</th>
+                  <th>产品</th>
+                  <th>重点治理</th>
+                  <th>风险改进</th>
+                  <th>持续优化</th>
+                  <th>常规跟踪</th>
+                  <th>未度量 / 待关联</th>
+                  <th>规范占比</th>
+                </tr>
+              </thead>
+              <tbody>
+                {businessLines.map((line) => {
+                  const lineProducts = snapshot.products.filter((product) => product.businessLine === line.businessLine);
+                  const lineSummary = summaryForProducts(snapshot, lineProducts);
+                  return (
+                    <tr
+                      className={selectedLine === line.businessLine ? "selected" : ""}
+                      key={line.businessLine}
+                      tabIndex={0}
+                      onClick={() => chooseBusinessLine(line.businessLine)}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") chooseBusinessLine(line.businessLine);
+                      }}
+                    >
+                      <td>{line.businessLine}</td>
+                      <td className="nMuted">{line.productTotal}</td>
+                      <td className="nCritical">{line.keyGovernanceCount}</td>
+                      <td className="nRisk">{line.riskImprovementCount}</td>
+                      <td className="nOptimize">{line.continuousOptimizationCount}</td>
+                      <td className="nTrack">{line.regularTrackingCount}</td>
+                      <td className={lineSummary.unmeasuredProductCount > 0 ? "nCritical" : "nMuted"}>{lineSummary.unmeasuredProductCount || "—"}</td>
+                      <td className="normRate">{formatPercent(lineSummary.complianceRate)}</td>
+                    </tr>
+                  );
+                })}
+                <tr className="totalRow">
+                  <td>CBG（合计）</td>
+                  <td>{summary.productTotal}</td>
+                  <td>{summary.bandCounts.keyGovernance}</td>
+                  <td>{summary.bandCounts.riskImprovement}</td>
+                  <td>{summary.bandCounts.continuousOptimization}</td>
+                  <td>{summary.bandCounts.regularTracking}</td>
+                  <td>{summary.unmeasuredProductCount || "—"}</td>
+                  <td>{formatPercent(summary.complianceRate)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="panel workbench" id="product-workbench" aria-label="产品治理工作区">
+          <div className="panelHead workbenchHead">
+            <div className="workbenchCopy">
               <div>
-                <p className="eyebrow">{snapshot.periodKey} · {cadence === "monthly" ? "月度" : "周度"}判断</p>
-                <h2>{snapshot.overview.conclusion}</h2>
-                <p className="focusText">{snapshot.overview.focus}</p>
-              </div>
-              <div className="dataStamp">
-                <span className="stampLabel">数据更新时间</span>
-                <span className="stampValue">{formatFetchedAt(snapshot.fetchedAt)}</span>
-                <span className={`dataState ${currentDataMode === "live" ? "live" : "preview"}`}>
-                  {currentDataMode === "live" ? "实时数据已校验" : "已验证历史快照"}
-                </span>
-                {refreshMessage ? <span className={`refreshMessage ${refreshState}`}>{refreshMessage}</span> : null}
-              </div>
-            </section>
-
-            <section className="metricStrip" aria-label="消费者BG核心指标">
-              <MetricItem icon={<PackageCheck size={15} />} label="研发中产品" value={String(summary.productTotal)} suffix="个" meta={`${snapshot.businessLines.length} 条业务线`} />
-              <MetricItem icon={<Gauge size={15} />} label="平均 RDHS" value={summary.averageRdhs?.toFixed(1) ?? "—"} suffix="分" meta={`${summary.measuredProductCount} 个已度量产品`} />
-              <MetricItem icon={<Activity size={15} />} label="度量覆盖率" value={(summary.measurementCoverage * 100).toFixed(1)} suffix="%" meta={`${summary.unmeasuredProductCount} 个未度量/待关联`} />
-              <MetricItem icon={<CircleAlert size={15} />} label="低于70分" value={String(summary.below70Count)} suffix="个" meta="包含未度量/待关联" />
-            </section>
-
-            <ScoreRail value={summary.averageRdhs} />
-
-            <section className="contentGrid">
-              <div className="panel">
-                <div className="panelHeader">
-                  <div><h3 className="panelTitle">月度 RDHS 趋势</h3><p className="panelSubtitle">已度量产品均值 · 覆盖率独立核验</p></div>
-                  <div className="chartLegend" aria-hidden="true">
-                    <span className="legendItem"><span className="legendSwatch" />平均 RDHS</span>
-                    <span className="legendItem"><span className="legendSwatch baseline" />70分基线</span>
-                  </div>
+                <h2 className="panelTitle">
+                  {selectedLine === "全部业务线" ? "产品治理工作区" : `${selectedLine} · 产品治理工作区`}
+                </h2>
+                <div className="panelSubtitle">
+                  {selectedLine === "全部业务线" ? "产品列表与治理详情保持同屏核查" : "已按业务线筛选，趋势与产品列表保持一致"}
                 </div>
-                <TrendChart points={trend} />
+              </div>
+              <span className="workbenchCount">{filteredProducts.length} / {snapshot.products.length} 个产品</span>
+            </div>
+            <button className="iconButton quiet" type="button" title="清除筛选" aria-label="清除筛选" onClick={clearFilters}>
+              <X size={16} strokeWidth={1.8} />
+            </button>
+          </div>
+
+          <div className="workspace">
+            <div className="productBrowser">
+              <div className="filters">
+                <label className="search">
+                  <Search size={16} strokeWidth={1.8} aria-hidden="true" />
+                  <span className="srOnly">搜索产品或业务线</span>
+                  <input
+                    type="search"
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="搜索产品或业务线"
+                  />
+                </label>
+                <select
+                  className="filterSelect"
+                  aria-label="按治理分档筛选"
+                  value={selectedBand}
+                  onChange={(event) => setSelectedBand(event.target.value as GovernanceBand | "全部分档")}
+                >
+                  <option value="全部分档">全部治理分档</option>
+                  {BANDS.map((band) => <option key={band} value={band}>{band}</option>)}
+                </select>
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={unmeasuredOnly}
+                    onChange={(event) => setUnmeasuredOnly(event.target.checked)}
+                  />
+                  <span>仅未度量</span>
+                </label>
               </div>
 
-              <div className="panel">
-                <div className="panelHeader"><div><h3 className="panelTitle">业务线分布</h3><p className="panelSubtitle">产品数与四档治理结构</p></div></div>
-                <ul className="lineList">
-                  {businessLines.map((line) => (
-                    <li className="lineListItem" key={line.businessLine}>
-                      <button className="lineSelect" type="button" onClick={() => chooseBusinessLine(line.businessLine)} aria-label={`筛选 ${line.businessLine}`}>
-                        <span className="lineName">{line.businessLine}</span>
-                        <span className="lineCount">{line.productTotal}</span>
-                        <BandStack
-                          counts={[line.keyGovernanceCount, line.riskImprovementCount, line.continuousOptimizationCount, line.regularTrackingCount]}
-                          total={line.productTotal}
-                          label={line.businessLine}
-                        />
+              <div className="productList">
+                {filteredProducts.map((product) => {
+                  const key = productKey(product);
+                  const isSelected = key === selectedProductKey;
+                  return (
+                    <div key={key}>
+                      <button
+                        type="button"
+                        className={`productRow ${isSelected ? "selected" : ""}`}
+                        onClick={() => setSelectedProductKey(key)}
+                      >
+                        <span>
+                          <span className="productName">{product.product}</span>
+                          <span className="productLine">{product.businessLine}</span>
+                        </span>
+                        <span className={`score ${product.rdhs === null ? "unmeasured" : bandClass(product.governanceBand)}`}>
+                          {formatScore(product.rdhs)}
+                        </span>
+                        <span className="productBottom">
+                          <span className="process">{product.lowestComponent}</span>
+                          <span className={`badge ${bandClass(product.governanceBand)}`}>{product.governanceBand}</span>
+                        </span>
                       </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </section>
-
-            <section className="panel operationPanel" aria-labelledby="business-table-title">
-              <div className="panelHeader tablePanelHeader">
-                <div><h3 className="panelTitle" id="business-table-title">RDHS 总览</h3><p className="panelSubtitle">未度量/待关联纳入重点治理</p></div>
-                <div className="bandLegend">
-                  {BANDS.map((band) => <span className="legendItem" key={band}><span className={`legendDot ${bandClass(band)}`} />{band}</span>)}
-                </div>
-              </div>
-              <div className="tableScroll">
-                <table className="dataTable lineTable">
-                  <thead><tr><th>业务线</th><th>产品总数</th><th>重点治理</th><th>风险改进</th><th>持续优化</th><th>常规跟踪</th><th>度量覆盖率</th><th>平均 RDHS</th><th>本期关注重点</th></tr></thead>
-                  <tbody>
-                    {businessLines.map((line) => {
-                      const lineProducts = snapshot.products.filter((product) => product.businessLine === line.businessLine);
-                      const lineSummary = summarizeSnapshot({ ...snapshot, products: lineProducts });
-                      return (
-                        <tr key={line.businessLine}>
-                          <th scope="row"><button className="tableLink" type="button" onClick={() => chooseBusinessLine(line.businessLine)}>{line.businessLine}</button></th>
-                          <td>{line.productTotal}</td><td className="bandNumber key">{line.keyGovernanceCount}</td><td className="bandNumber risk">{line.riskImprovementCount}</td><td className="bandNumber optimize">{line.continuousOptimizationCount}</td><td className="bandNumber regular">{line.regularTrackingCount}</td>
-                          <td>{(lineSummary.measurementCoverage * 100).toFixed(1)}%</td><td>{formatScore(lineSummary.averageRdhs)}</td><td className="focusCell">{line.focus}</td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="totalRow"><th scope="row">消费者BG（合计）</th><td>{summary.productTotal}</td><td>{summary.bandCounts.keyGovernance}</td><td>{summary.bandCounts.riskImprovement}</td><td>{summary.bandCounts.continuousOptimization}</td><td>{summary.bandCounts.regularTracking}</td><td>{(summary.measurementCoverage * 100).toFixed(1)}%</td><td>{formatScore(summary.averageRdhs)}</td><td className="focusCell">{snapshot.overview.focus}</td></tr>
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section className="drilldownSection" id="product-drilldown" aria-labelledby="product-table-title">
-              <div className="sectionHeading">
-                <div><h3 id="product-table-title">产品治理明细</h3><p>{filteredProducts.length} / {snapshot.products.length} 个研发中产品</p></div>
-                {(selectedLine !== "全部业务线" || selectedBand !== "全部分档" || query || unmeasuredOnly) ? <button className="clearButton" type="button" onClick={clearFilters}><X size={14} />清除筛选</button> : null}
-              </div>
-              <div className="filterBar">
-                <label className="searchField"><Search size={15} aria-hidden="true" /><span className="srOnly">搜索产品或业务线</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索产品或业务线" /></label>
-                <select aria-label="筛选业务线" value={selectedLine} onChange={(event) => { setSelectedLine(event.target.value); setSelectedProductName(null); }}><option>全部业务线</option>{businessLines.map((line) => <option key={line.businessLine}>{line.businessLine}</option>)}</select>
-                <select aria-label="筛选治理分档" value={selectedBand} onChange={(event) => setSelectedBand(event.target.value as GovernanceBand | "全部分档")}><option>全部分档</option>{BANDS.map((band) => <option key={band}>{band}</option>)}</select>
-                <select aria-label="产品排序" value={productSort} onChange={(event) => setProductSort(event.target.value as ProductSort)}><option value="rdhs-asc">RDHS 从低到高</option><option value="rdhs-desc">RDHS 从高到低</option><option value="product-asc">产品名称</option></select>
-                <label className="checkControl"><input type="checkbox" checked={unmeasuredOnly} onChange={(event) => setUnmeasuredOnly(event.target.checked)} /><span>仅未度量/待关联</span></label>
-              </div>
-
-              <div className={`productWorkspace ${selectedProduct ? "hasDetail" : ""}`}>
-                <div className="panel productTablePanel">
-                  <div className="tableScroll">
-                    <table className="dataTable productTable">
-                      <thead><tr><th>产品</th><th>业务线</th><th>RDHS</th><th>治理分档</th><th>优先级</th><th>最低过程项</th></tr></thead>
-                      <tbody>
-                        {filteredProducts.map((product) => (
-                          <tr className={selectedProductName === product.product ? "selectedRow" : ""} key={`${product.businessLine}-${product.product}`}>
-                            <th scope="row"><button className="tableLink productLink" type="button" onClick={() => setSelectedProductName(product.product)}>{product.product}</button><span className="productLineMobile">{product.businessLine}</span></th>
-                            <td>{product.businessLine}</td><td className="scoreCell">{formatScore(product.rdhs)}</td><td><span className={`bandBadge ${bandClass(product.governanceBand)}`}>{product.governanceBand}</span></td><td>{product.priority ?? "—"}</td><td>{product.lowestComponent}</td>
-                          </tr>
-                        ))}
-                        {filteredProducts.length === 0 ? <tr><td className="tableEmpty" colSpan={6}>无匹配产品</td></tr> : null}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {selectedProduct ? (
-                  <aside className="panel productDetail" aria-label={`${selectedProduct.product}治理详情`}>
-                    <div className="detailHeader"><div><span className="detailLine">{selectedProduct.businessLine}</span><h4>{selectedProduct.product}</h4></div><button className="iconButton quiet" type="button" aria-label="关闭产品详情" title="关闭产品详情" onClick={() => setSelectedProductName(null)}><X size={15} /></button></div>
-                    <div className="detailScoreRow"><span className={`scorePlate ${selectedProduct.rdhs === null ? "unmeasured" : bandClass(selectedProduct.governanceBand)}`}>{formatScore(selectedProduct.rdhs)}</span><span className={`bandBadge ${bandClass(selectedProduct.governanceBand)}`}>{selectedProduct.governanceBand}</span>{selectedProduct.priority ? <span className="priorityTag">{selectedProduct.priority}</span> : null}</div>
-                    <div className="componentList">
-                      {COMPONENT_LABELS.map(([key, label, maximum]) => {
-                        const value = selectedProduct.components[key];
-                        return <div className="componentRow" key={key}><span>{label}</span><span className="componentTrack"><span style={{ width: `${value === null ? 0 : Math.min(100, (value / maximum) * 100)}%` }} /></span><strong>{value === null ? "—" : value.toFixed(1)}</strong></div>;
-                      })}
+                      {isSelected ? <ProductDetail product={product} periodKey={snapshot.periodKey} mobile /> : null}
                     </div>
-                    <dl className="detailNotes"><div><dt>主要问题</dt><dd>{selectedProduct.problem}</dd></div><div><dt>治理动作</dt><dd>{selectedProduct.action}</dd></div></dl>
-                  </aside>
-                ) : null}
+                  );
+                })}
+                {filteredProducts.length === 0 ? <div className="emptyList">没有匹配的产品</div> : null}
               </div>
-            </section>
+            </div>
 
-            <section className="auditBand" aria-label="数据质量审计">
-              <div className="auditTitle"><Database size={16} /><span>数据质量审计</span><strong><CheckCircle2 size={14} />已通过发布校验</strong></div>
-              <dl className="auditMetrics"><div><dt>原始行</dt><dd>{snapshot.audit.rawRowCount}</dd></div><div><dt>有效度量</dt><dd>{snapshot.audit.acceptedRowCount}</dd></div><div><dt>研发中产品</dt><dd>{snapshot.audit.researchProductCount}</dd></div><div><dt>未度量/待关联</dt><dd>{snapshot.audit.unmeasuredProductCount}</dd></div><div><dt>排除测试业务线</dt><dd>{snapshot.audit.excludedTestBusinessLineCount}</dd></div><div><dt>数据哈希</dt><dd title={snapshot.source.sha256}>{snapshot.source.sha256.slice(0, 10)}</dd></div></dl>
-            </section>
-          </>
-        ) : <section className="panel emptyState">该周期暂无有效报告</section>}
+            <aside className="detail">
+              {activeDetail ? (
+                <ProductDetail
+                  product={activeDetail}
+                  periodKey={snapshot.periodKey}
+                  onClose={() => setSelectedProductKey(null)}
+                />
+              ) : (
+                <div className="detailEmpty">
+                  <BookOpenCheck size={30} strokeWidth={1.6} />
+                  <strong>选择产品，查看治理动作</strong>
+                  <span>最低过程项、主要问题和建议动作会在这里展开。</span>
+                </div>
+              )}
+            </aside>
+          </div>
+        </section>
+
+        <section className="auditBand" aria-label="数据质量审计">
+          <div className="auditTitle">
+            <Database size={16} strokeWidth={1.8} />
+            <span>数据质量审计</span>
+            <strong><CheckCircle2 size={14} strokeWidth={1.8} />已通过发布校验</strong>
+          </div>
+          <dl className="auditMetrics">
+            <div><dt>原始行</dt><dd>{snapshot.audit.rawRowCount}</dd></div>
+            <div><dt>有效度量</dt><dd>{snapshot.audit.acceptedRowCount}</dd></div>
+            <div><dt>研发中产品</dt><dd>{snapshot.audit.researchProductCount}</dd></div>
+            <div><dt>未度量/待关联</dt><dd>{snapshot.audit.unmeasuredProductCount}</dd></div>
+            <div><dt>排除测试业务线</dt><dd>{snapshot.audit.excludedTestBusinessLineCount}</dd></div>
+            <div><dt>源哈希</dt><dd title={snapshot.source.sha256}>{snapshot.source.sha256.slice(0, 10)}</dd></div>
+          </dl>
+        </section>
       </main>
     </div>
   );

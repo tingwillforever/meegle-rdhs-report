@@ -101,8 +101,8 @@ def build_snapshot(
     cadence: str,
 ) -> dict[str, object]:
     """Convert a verified periodic report into the Site's schema-v1 contract."""
-    if cadence not in {"weekly", "monthly"}:
-        raise ValueError("cadence must be weekly or monthly")
+    if cadence != "monthly":
+        raise ValueError("cadence must be monthly")
     as_of = str(audit_manifest.get("as_of") or "")
     if len(as_of) != 10:
         raise ValueError("audit manifest is missing a valid as_of date")
@@ -228,22 +228,15 @@ def build_snapshot(
     if sum(row["productTotal"] for row in business_lines) != product_total:
         raise ValueError("business line product totals do not reconcile with product master")
 
-    governed_total = (
-        int(total_row["key_governance_count"])
-        + int(total_row["risk_improvement_count"])
-        + int(total_row["continuous_optimization_count"])
-    )
-    governed_rate = governed_total / product_total if product_total else 0
     conclusion = (
-        f"本期消费者BG共覆盖{product_total}个研发中产品，其中{governed_total}个产品"
-        f"RDHS低于70分或未度量，占比约{governed_rate:.0%}，整体仍处于"
+        f"本期 CBG 共覆盖{product_total}个研发中产品，整体仍处于"
         f"{total_row['mode']}阶段。"
     )
 
     return {
         "schemaVersion": 1,
         "cadence": cadence,
-        "periodKey": as_of[:7] if cadence == "monthly" else as_of,
+        "periodKey": as_of[:7],
         "asOf": as_of,
         "fetchedAt": str(current_validation["fetched_at"]),
         "source": {
@@ -320,11 +313,12 @@ def _load_json(path: Path) -> dict[str, object]:
 
 
 def generate_report(cadence: str, output_root: Path, as_of: Optional[str]) -> Path:
-    period_command = "last-week" if cadence == "weekly" else "last-month"
+    if cadence != "monthly":
+        raise ValueError("cadence must be monthly")
     command = [
         sys.executable,
         str(WORKSPACE_ROOT / "run_periodic_report.py"),
-        period_command,
+        "last-month",
         "--no-publish",
         "--output-root",
         str(output_root),
@@ -354,8 +348,8 @@ def generate_report(cadence: str, output_root: Path, as_of: Optional[str]) -> Pa
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="同步 RDHS 周/月快照到运营报告站点")
-    parser.add_argument("--cadence", choices=("weekly", "monthly"), required=True)
+    parser = argparse.ArgumentParser(description="同步 RDHS 月度快照到运营报告站点")
+    parser.add_argument("--cadence", choices=("monthly",), default="monthly")
     parser.add_argument("--as-of")
     parser.add_argument("--source-dir", type=Path)
     parser.add_argument("--output-root", type=Path, default=DEFAULT_OUTPUT_ROOT)

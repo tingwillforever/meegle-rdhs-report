@@ -13,11 +13,8 @@ export default async function Home() {
   try {
     const { D1SnapshotRepository } = await import("@/lib/rdhs/d1-repository");
     const repository = new D1SnapshotRepository();
-    const [monthly, weekly] = await Promise.all([
-      repository.listCurrent("monthly"),
-      repository.listCurrent("weekly"),
-    ]);
-    snapshots = [...monthly, ...weekly].map((record) => record.snapshot);
+    const monthly = await repository.listCurrent("monthly");
+    snapshots = monthly.map((record) => record.snapshot);
     dataMode = snapshots.length > 0 ? "live" : "preview";
   } catch {
     // Local preview and first deployment remain useful before D1 receives its first snapshot.

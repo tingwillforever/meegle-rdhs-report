@@ -35,6 +35,7 @@ export function summarizeSnapshot(snapshot: RdhsSnapshot): SnapshotSummary {
   const measuredScores = snapshot.products.flatMap((product) =>
     product.rdhs === null ? [] : [product.rdhs],
   );
+  const productTotal = snapshot.products.length;
   const bandCounts: BandCounts = {
     keyGovernance: 0,
     riskImprovement: 0,
@@ -62,15 +63,21 @@ export function summarizeSnapshot(snapshot: RdhsSnapshot): SnapshotSummary {
   ) as ComponentScores;
 
   return {
-    productTotal: snapshot.products.length,
+    productTotal,
     measuredProductCount: measuredScores.length,
-    unmeasuredProductCount: snapshot.products.length - measuredScores.length,
+    unmeasuredProductCount: productTotal - measuredScores.length,
     below70Count: snapshot.products.filter(
       (product) => product.rdhs === null || product.rdhs < 70,
     ).length,
+    complianceCount: bandCounts.regularTracking,
+    pendingGovernanceCount: productTotal - bandCounts.regularTracking,
     averageRdhs: average(measuredScores),
     measurementCoverage:
-      snapshot.products.length === 0 ? 0 : measuredScores.length / snapshot.products.length,
+      productTotal === 0 ? 0 : measuredScores.length / productTotal,
+    complianceRate:
+      productTotal === 0 ? 0 : bandCounts.regularTracking / productTotal,
+    pendingGovernanceRate:
+      productTotal === 0 ? 0 : (productTotal - bandCounts.regularTracking) / productTotal,
     bandCounts,
     componentAverages,
   };
@@ -86,4 +93,3 @@ export function buildMonthlyTrend(snapshots: RdhsSnapshot[]): TrendPoint[] {
       ...summarizeSnapshot(snapshot),
     }));
 }
-

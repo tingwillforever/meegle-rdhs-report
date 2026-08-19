@@ -29,19 +29,23 @@ test("server-renders the RDHS operations overview", async () => {
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
 
   const html = await response.text();
-  assert.match(html, /<title>RDHS 产研过程效能运营报告<\/title>/i);
-  assert.match(html, /消费者BG/);
-  assert.match(html, /周报/);
+  assert.match(html, /<title>CBG RDHS运营报告<\/title>/i);
+  assert.match(html, /CBG RDHS运营报告/);
+  assert.match(html, /月报工作台/);
+  assert.doesNotMatch(html, /周报/);
   assert.match(html, /月报/);
   assert.match(html, /研发中产品/);
   assert.match(html, /平均 RDHS/);
   assert.match(html, /度量覆盖率/);
-  assert.match(html, /低于70分/);
-  assert.match(html, /70分基线/);
-  assert.match(html, /数据更新时间/);
-  assert.match(html, /RDHS 总览/);
+  assert.match(html, /产品规范率/);
+  assert.match(html, /待治理占比/);
+  assert.match(html, /更新数据/);
+  assert.match(html, /RDHS 阈值标尺/);
+  assert.match(html, /业务线总览/);
+  assert.match(html, /规范占比/);
   assert.match(html, /常规跟踪/);
-  assert.match(html, /产品治理明细/);
+  assert.match(html, /产品治理工作区/);
+  assert.match(html, /数据质量审计/);
   assert.match(html, /og\.png/);
 });
 

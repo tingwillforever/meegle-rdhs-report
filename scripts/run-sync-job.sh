@@ -2,9 +2,9 @@
 set -euo pipefail
 
 site_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cadence="${1:-}"
-if [[ "$cadence" != "weekly" && "$cadence" != "monthly" ]]; then
-  echo "cadence must be weekly or monthly" >&2
+cadence="${1:-monthly}"
+if [[ "$cadence" != "monthly" ]]; then
+  echo "cadence must be monthly" >&2
   exit 2
 fi
 

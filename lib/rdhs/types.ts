@@ -1,4 +1,4 @@
-export type Cadence = "weekly" | "monthly";
+export type Cadence = "monthly";
 
 export type GovernanceBand =
   | "重点治理"
@@ -85,8 +85,12 @@ export type SnapshotSummary = {
   measuredProductCount: number;
   unmeasuredProductCount: number;
   below70Count: number;
+  complianceCount: number;
+  pendingGovernanceCount: number;
   averageRdhs: number | null;
   measurementCoverage: number;
+  complianceRate: number;
+  pendingGovernanceRate: number;
   bandCounts: BandCounts;
   componentAverages: ComponentScores;
 };
@@ -95,4 +99,3 @@ export type TrendPoint = SnapshotSummary & {
   periodKey: string;
   asOf: string;
 };
-

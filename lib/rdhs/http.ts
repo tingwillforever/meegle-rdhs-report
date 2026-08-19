@@ -19,8 +19,8 @@ export function authorizeBearer(header: string | null, expectedToken: string): b
 
 export function cadenceFromUrl(url: URL): Cadence {
   const cadence = url.searchParams.get("cadence") ?? "monthly";
-  if (cadence !== "weekly" && cadence !== "monthly") {
-    throw new Error("cadence must be weekly or monthly");
+  if (cadence !== "monthly") {
+    throw new Error("cadence must be monthly");
   }
   return cadence;
 }
@@ -28,10 +28,8 @@ export function cadenceFromUrl(url: URL): Cadence {
 export function periodFromUrl(url: URL, cadence: Cadence): string | undefined {
   const period = url.searchParams.get("period") ?? undefined;
   if (period === undefined) return undefined;
-  const pattern = cadence === "monthly" ? /^\d{4}-\d{2}$/ : /^\d{4}-\d{2}-\d{2}$/;
-  if (!pattern.test(period)) {
-    throw new Error(`period must use ${cadence === "monthly" ? "YYYY-MM" : "YYYY-MM-DD"}`);
+  if (cadence !== "monthly" || !/^\d{4}-\d{2}$/.test(period)) {
+    throw new Error("period must use YYYY-MM");
   }
   return period;
 }
-

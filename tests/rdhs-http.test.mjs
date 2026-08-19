@@ -15,15 +15,15 @@ test("ingest authorization accepts only the exact bearer token", () => {
   assert.equal(authorizeBearer("Bearer sync-secret", ""), false);
 });
 
-test("cadence query defaults to monthly and rejects unknown values", () => {
+test("cadence query defaults to monthly and rejects non-monthly values", () => {
   assert.equal(cadenceFromUrl(new URL("https://example.com/api/report")), "monthly");
-  assert.equal(
-    cadenceFromUrl(new URL("https://example.com/api/report?cadence=weekly")),
-    "weekly",
+  assert.throws(
+    () => cadenceFromUrl(new URL("https://example.com/api/report?cadence=weekly")),
+    /cadence must be monthly/,
   );
   assert.throws(
     () => cadenceFromUrl(new URL("https://example.com/api/report?cadence=daily")),
-    /cadence must be weekly or monthly/,
+    /cadence must be monthly/,
   );
 });
 
@@ -34,8 +34,7 @@ test("period query validates against the selected cadence", () => {
   );
   assert.equal(periodFromUrl(new URL("https://example.com/api/report"), "monthly"), undefined);
   assert.throws(
-    () => periodFromUrl(new URL("https://example.com/api/report?period=2026-08"), "weekly"),
-    /period must use YYYY-MM-DD/,
+    () => periodFromUrl(new URL("https://example.com/api/report?period=2026-08-30"), "monthly"),
+    /period must use YYYY-MM/,
   );
 });
-

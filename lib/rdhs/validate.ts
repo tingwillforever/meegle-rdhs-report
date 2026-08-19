@@ -150,13 +150,12 @@ function auditAt(value: unknown): SnapshotAudit {
 export function validateSnapshot(value: unknown): RdhsSnapshot {
   const input = objectAt(value, "snapshot");
   if (input.schemaVersion !== 1) fail("schemaVersion", "must equal 1");
-  if (input.cadence !== "weekly" && input.cadence !== "monthly") {
-    fail("cadence", "must be weekly or monthly");
+  if (input.cadence !== "monthly") {
+    fail("cadence", "must be monthly");
   }
   const cadence = input.cadence;
   const periodKey = stringAt(input.periodKey, "periodKey");
-  const periodPattern = cadence === "monthly" ? /^\d{4}-\d{2}$/ : /^\d{4}-\d{2}-\d{2}$/;
-  if (!periodPattern.test(periodKey)) fail("periodKey", `invalid ${cadence} period`);
+  if (!/^\d{4}-\d{2}$/.test(periodKey)) fail("periodKey", "invalid monthly period");
 
   const sourceInput = objectAt(input.source, "source");
   const sha256 = stringAt(sourceInput.sha256, "source.sha256");
@@ -217,4 +216,3 @@ export function validateSnapshot(value: unknown): RdhsSnapshot {
     products,
   };
 }
-

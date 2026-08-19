@@ -116,12 +116,11 @@ test("an invalid replacement cannot change the current snapshot", async () => {
 
 test("period queries return current snapshots in reverse chronological order", async () => {
   const repository = new MemorySnapshotRepository();
-  const ids = ["july", "august", "week"];
+  const ids = ["july", "august"];
   const service = new SnapshotService(repository, () => ids.shift());
 
   await service.ingest(snapshot({ periodKey: "2026-07", sha: "b" }));
   await service.ingest(snapshot());
-  await service.ingest(snapshot({ cadence: "weekly", periodKey: "2026-08-30", sha: "c" }));
 
   assert.deepEqual(
     (await repository.listPeriods("monthly")).map((record) => record.periodKey),
@@ -129,4 +128,3 @@ test("period queries return current snapshots in reverse chronological order", a
   );
   assert.equal((await repository.listCurrent("monthly")).length, 2);
 });
-

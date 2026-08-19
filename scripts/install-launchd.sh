@@ -13,9 +13,7 @@ mkdir -p "$launch_agents"
 
 write_plist() {
   local label="$1"
-  local cadence="$2"
-  local weekday="$3"
-  local day="$4"
+  local day="$2"
   local target="$launch_agents/$label.plist"
   cat >"$target" <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
@@ -24,11 +22,10 @@ write_plist() {
   <key>Label</key><string>$label</string>
   <key>ProgramArguments</key><array>
     <string>$site_root/scripts/run-sync-job.sh</string>
-    <string>$cadence</string>
+    <string>monthly</string>
   </array>
   <key>WorkingDirectory</key><string>$site_root</string>
   <key>StartCalendarInterval</key><dict>
-    ${weekday:+<key>Weekday</key><integer>$weekday</integer>}
     ${day:+<key>Day</key><integer>$day</integer>}
     <key>Hour</key><integer>9</integer><key>Minute</key><integer>0</integer>
   </dict>
@@ -41,6 +38,5 @@ EOF
 }
 
 mkdir -p "$site_root/runtime"
-write_plist "com.rdhs.operations.weekly" "weekly" "2" ""
-write_plist "com.rdhs.operations.monthly" "monthly" "" "1"
-echo "RDHS weekly and monthly synchronization jobs installed."
+write_plist "com.rdhs.operations.monthly" "1"
+echo "RDHS monthly synchronization job installed."

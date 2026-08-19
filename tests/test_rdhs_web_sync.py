@@ -56,18 +56,16 @@ class SnapshotSyncTests(unittest.TestCase):
         )
         self.assertEqual(snapshot["audit"]["excludedTestBusinessLineCount"], 2)
 
-    def test_build_snapshot_uses_as_of_date_for_weekly_period(self) -> None:
+    def test_build_snapshot_rejects_weekly_periods(self) -> None:
         manifest = _load_json(REPORT_DIR / "audit_manifest.json")
         manifest["as_of"] = "2026-08-16"
 
-        snapshot = build_snapshot(
-            _load_json(REPORT_DIR / "report_data.json"),
-            manifest,
-            cadence="weekly",
-        )
-
-        self.assertEqual(snapshot["periodKey"], "2026-08-16")
-        self.assertEqual(snapshot["cadence"], "weekly")
+        with self.assertRaisesRegex(ValueError, "cadence must be monthly"):
+            build_snapshot(
+                _load_json(REPORT_DIR / "report_data.json"),
+                manifest,
+                cadence="weekly",
+            )
 
     def test_upload_snapshot_reports_remote_validation_failure(self) -> None:
         class RejectingOpener:
