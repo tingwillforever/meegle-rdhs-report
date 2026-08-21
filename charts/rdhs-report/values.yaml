@@ -90,9 +90,6 @@ ingress:
   pathPrefix: /meegle-rdhs-report
   annotations: {}
   tls: []
-  refresh:
-    enabled: false
-    annotations: {}
 
 pdb:
   enabled: false

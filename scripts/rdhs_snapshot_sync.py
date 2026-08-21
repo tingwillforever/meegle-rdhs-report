@@ -22,6 +22,7 @@ from typing import Optional
 from urllib.error import HTTPError
 from urllib.request import Request
 from urllib.request import build_opener
+from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 
@@ -413,8 +414,19 @@ def upload_snapshot(
     *,
     opener: object = None,
 ) -> dict[str, object]:
-    if not site_url.startswith("https://") and not site_url.startswith("http://localhost"):
-        raise ValueError("site URL must use HTTPS or localhost")
+    parsed_url = urlparse(site_url)
+    is_local_http = parsed_url.scheme == "http" and parsed_url.hostname in {
+        "localhost",
+        "127.0.0.1",
+        "::1",
+    }
+    allow_internal_http = os.environ.get("RDHS_ALLOW_INSECURE_SITE_URL", "").lower() == "true"
+    if parsed_url.scheme == "https":
+        pass
+    elif is_local_http or (parsed_url.scheme == "http" and allow_internal_http):
+        pass
+    else:
+        raise ValueError("site URL must use HTTPS, localhost, or explicit internal HTTP opt-in")
     if not token:
         raise ValueError("RDHS ingest token is required")
     payload = json.dumps(snapshot, ensure_ascii=False).encode("utf-8")

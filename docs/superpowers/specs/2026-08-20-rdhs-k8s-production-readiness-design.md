@@ -19,7 +19,7 @@
 ## 架构
 
 ```text
-业务用户 -> Ingress + 企业 SSO -> rdhs-report-web Service -> Web Pod -> SQLite PVC
+业务用户 -> 现有内网网关 -> rdhs-report-web Service -> Web Pod -> SQLite PVC
                                         |
                                         | POST /api/report/refresh
                                         v
@@ -67,7 +67,7 @@ CronJob 不通过 Runner HTTP 触发，而是直接执行 `scripts/run-sync-job.
 
 ### 网络与身份
 
-一般读请求通过主 Ingress 经企业 SSO 访问。刷新接口由独立的 Ingress 规则暴露，必须配置企业 SSO 的运营人员组校验 annotation，Chart 在缺少该 annotation 时拒绝渲染。Runner 无 Ingress。可选 NetworkPolicy 允许：Ingress -> Web、Web -> Runner、Runner/CronJob -> Web、Runner/CronJob -> Meegle 内网与 DNS。
+一般读请求和刷新接口均通过主 Ingress 转发，由现有内网网关负责访问控制；Chart 不创建独立的 refresh Ingress，也不配置网关认证 annotation。Runner 无 Ingress。可选 NetworkPolicy 允许：Ingress -> Web、Web -> Runner、Runner/CronJob -> Web、Runner/CronJob -> Meegle 内网与 DNS。
 
 ## Helm 接口
 
@@ -77,7 +77,7 @@ Chart 路径为 `charts/rdhs-report`，包含 Web Deployment、Runner Deployment
 
 - `secrets.web.name`：含 `RDHS_INGEST_TOKEN`、`RDHS_REFRESH_WEBHOOK_TOKEN`。
 - `secrets.meegle.name`：含 `MEEGLE_USER_ACCESS_TOKEN`。
-- `persistence.storageClass`、Ingress 域名和企业 SSO annotations。
+- `persistence.storageClass` 和 Ingress 域名；访问控制由现有内网网关提供。
 - `syncStorage.nfs.server`、`syncStorage.nfs.path`，且 NFS 导出目录以 UID/GID 1000 可读写并支持文件锁。
 - 恢复专用 values 必须能设置 `sync.cron.suspend: true`，令 CronJob 暂停状态跨 Helm 升级保留。
 - `sync.reportCommandTimeoutSeconds`、`sync.cron.activeDeadlineSeconds`、`sync.outputRetentionMonths`；Cron deadline 必须容纳两条报告命令与退出余量。

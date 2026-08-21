@@ -1,0 +1,43 @@
+# Production overlay. Cluster-owned storage values must match the namespace
+# before Helm install; no Secret is rendered by this file.
+image:
+  repository: artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report
+  tag: "4.0.4"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: hub4iflytek
+
+# Runner and CronJob share this directory for report runs and month-start
+# baselines. Replace these two values with the provisioned production export.
+syncStorage:
+  nfs:
+    server: nfs.company.internal
+    path: /exports/rdhs-report
+
+persistence:
+  # Empty means use the cluster default StorageClass. It must support RWO.
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+
+secrets:
+  web:
+    name: rdhs-report-web-secrets
+  meegle:
+    name: rdhs-report-meegle-secrets
+
+ingress:
+  className: nginx
+  host: ossptest.voicecloud.cn
+  pathPrefix: /meegle-rdhs-report
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+  # Access control is provided by the existing internal gateway.
+
+# Keep NetworkPolicy disabled until the cluster and Meegle egress selectors
+# are supplied and validated by the network team.
+networkPolicy:
+  enabled: false

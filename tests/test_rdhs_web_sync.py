@@ -114,6 +114,33 @@ class SnapshotSyncTests(unittest.TestCase):
                 opener=RejectingOpener(),
             )
 
+    def test_upload_snapshot_allows_explicit_internal_http_site_url(self) -> None:
+        class RejectingOpener:
+            def open(self, request, timeout):  # noqa: ANN001
+                raise HTTPError(
+                    request.full_url,
+                    422,
+                    "Unprocessable Entity",
+                    {},
+                    None,
+                )
+
+        previous = os.environ.get("RDHS_ALLOW_INSECURE_SITE_URL")
+        os.environ["RDHS_ALLOW_INSECURE_SITE_URL"] = "true"
+        try:
+            with self.assertRaisesRegex(RuntimeError, "422"):
+                upload_snapshot(
+                    "http://rdhs-report-web:3000/meegle-rdhs-report",
+                    "secret-token",
+                    {"schemaVersion": 1},
+                    opener=RejectingOpener(),
+                )
+        finally:
+            if previous is None:
+                os.environ.pop("RDHS_ALLOW_INSECURE_SITE_URL", None)
+            else:
+                os.environ["RDHS_ALLOW_INSECURE_SITE_URL"] = previous
+
     def test_cli_wrapper_runs_from_the_site_root(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             completed = subprocess.run(

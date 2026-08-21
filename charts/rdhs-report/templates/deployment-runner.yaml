@@ -50,7 +50,9 @@ spec:
               protocol: TCP
           env:
             - name: RDHS_SITE_URL
-              value: {{ printf "http://%s:3000" (include "rdhs-report.webName" .) | quote }}
+              value: {{ include "rdhs-report.siteUrl" . | quote }}
+            - name: RDHS_ALLOW_INSECURE_SITE_URL
+              value: "true"
             - name: RDHS_WORKSPACE_ROOT
               value: {{ .Values.report.workspaceRoot | quote }}
             - name: RDHS_OUTPUT_ROOT

@@ -47,6 +47,10 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
+{{- define "rdhs-report.siteUrl" -}}
+{{- printf "http://%s:3000%s" (include "rdhs-report.webName" .) .Values.ingress.pathPrefix -}}
+{{- end }}
+
 {{- define "rdhs-report.image" -}}
 {{- $image := . -}}
 {{- $repository := required "image.repository is required" $image.repository -}}
@@ -95,12 +99,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $_ := required "syncStorage.nfs.path is required for the shared Runner/CronJob output" .Values.syncStorage.nfs.path }}
 {{- $_ := required "secrets.web.name is required; the chart never creates secrets" .Values.secrets.web.name -}}
 {{- $_ := required "secrets.meegle.name is required; the chart never creates secrets" .Values.secrets.meegle.name -}}
-{{- if and .Values.ingress.refresh.enabled (not .Values.ingress.enabled) }}
-{{- fail "ingress.enabled must be true when the refresh Ingress is enabled" }}
-{{- end }}
-{{- if and .Values.ingress.refresh.enabled (not .Values.ingress.refresh.annotations) }}
-{{- fail "refresh Ingress requires enterprise SSO annotations" }}
-{{- end }}
 {{- $pathPrefix := required "ingress.pathPrefix is required" .Values.ingress.pathPrefix }}
 {{- if not (hasPrefix "/" $pathPrefix) }}
 {{- fail "ingress.pathPrefix must start with /" }}

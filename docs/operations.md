@@ -198,7 +198,7 @@ Chart 默认每条报告命令超时 540 秒，CronJob 的 `activeDeadlineSecond
 
 集群/构建环境必须在发布前提供：
 
-- Kubernetes 1.27+、Helm、NGINX Ingress 与企业 SSO；刷新路径 `/api/report/refresh` 必须使用仅允许运营人员组的 SSO annotation。
+- Kubernetes 1.27+、Helm 与 NGINX Ingress；访问控制由现有内网网关负责，Chart 不配置或创建网关认证。
 - 支持 `ReadWriteOnce` 的 StorageClass，以及已启用的 CSI VolumeSnapshot CRD 和每日快照策略（保留 180 天）。
 - 一个供 Runner 与 CronJob 共同读写的 NFS 导出目录（参考 meegle-mcp Chart 的 NFS 挂载模式）。它必须支持
   NFS 文件锁，且以容器 UID/GID `1000` 可读写；NFS server/path 分别填入 `syncStorage.nfs.server` 和
@@ -236,7 +236,8 @@ meegle-mcp 的内网仓库前缀，使用不可变的受保护发布 tag（或�
 不可覆盖），不要使用 `latest`。Web 镜像默认以 `RDHS_BASE_PATH=/meegle-rdhs-report` 构建，若调整
 Ingress path 后缀，必须同时传入相同的 `--build-arg RDHS_BASE_PATH=/your-prefix` 并修改 values：
 
-Dockerfile 不声明远端 Dockerfile frontend，也不使用 named context，避免 Jenkins 在内网构建时访问 Docker Hub。
+Dockerfile 不声明远端 Dockerfile frontend，也不使用 named context，避免 Jenkins 在内网构建时访问 Docker Hub。Ingress 只转发
+`/meegle-rdhs-report` 前缀，不做 rewrite；应用镜像、Web 探针和 Runner/CronJob 内部站点 URL 使用同一个前缀。
 
 ```bash
 BASE_IMAGE=artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report-base:node22-python3-meegle-cli-1.1.5
@@ -259,14 +260,15 @@ PROJECT_VERSION=1.0 BUILD_ID=42 SERVICE_NAME=meegle-rdhs-report ENV=prod \
 
 ### 10.4 配置与发布
 
-以 `charts/rdhs-report/values-prod.example.yaml` 复制一份受版本控制但不含机密的环境 values，至少替换：
+使用仓库内的 `charts/rdhs-report/values-prod.yaml`，并在发布前确认集群实际的 NFS 导出和默认 RWO StorageClass；该文件不含机密。
+至少确认：
 
 - 统一 `image.repository`、不可变 `tag`、Ingress 域名、RWO `storageClass`，以及
   `syncStorage.nfs.server` / `syncStorage.nfs.path`。
 - 如有容量或时长要求，调整 `sync.outputRetentionMonths`、`sync.reportCommandTimeoutSeconds` 与
   `sync.cron.activeDeadlineSeconds`；Chart 要求 Cron deadline 能容纳两次报告命令和 60 秒退出余量。
 - `secrets.web.name` 与 `secrets.meegle.name`；如需镜像凭据，配置 `imagePullSecrets` 的现有 Secret 名称。
-- `ingress.refresh.annotations` 为企业 SSO 的运营人员组校验。未配置时 Helm 会拒绝渲染刷新 Ingress。
+- Chart 不渲染独立 refresh Ingress；刷新 API 随主 Ingress 转发，由现有内网网关负责访问控制。
 - 仅在填入 ingress controller selector 与 Meegle CIDR 后设置 `networkPolicy.enabled: true`。
 
 发布前先渲染检查，再执行升级：
@@ -298,7 +300,8 @@ https://ossptest.voicecloud.cn/meegle-rdhs-report/api/health
 
 ### 10.5 首次历史导入和月度验收
 
-在受控运维环境中，把 `RDHS_SITE_URL` 指向由 `kubectl port-forward` 暴露的 Web Service 或内网域名，
+在受控运维环境中，把 `RDHS_SITE_URL` 指向由 `kubectl port-forward` 暴露的 Web Service 或内网域名（生产 Chart 已自动设置为
+`http://<web-service>:3000/meegle-rdhs-report`，并显式开启集群内 HTTP），
 以已获授权的 `RDHS_INGEST_TOKEN` 执行一次导入；令牌不可写入 shell 历史或脚本：
 
 ```bash

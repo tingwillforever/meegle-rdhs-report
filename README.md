@@ -26,7 +26,7 @@ Cloudflare/Sites 模式使用 D1；Kubernetes 模式使用 Node/Vinext + SQLite�
 只在同步工作负载中注入，浏览器和 Web 工作负载均不会接触 Meegle 凭据。
 
 ```text
-业务用户 -> SSO Ingress -> Web（单副本 Vinext + SQLite/RWO PVC）
+业务用户 -> 现有内网网关 -> Web（单副本 Vinext + SQLite/RWO PVC）
                               |                    ^
                               v                    |
                       内网 Refresh Runner ----- 快照写入 API
@@ -60,7 +60,7 @@ npm run dev
 
 生产交付在 [charts/rdhs-report](charts/rdhs-report) 中，包含 Web、内网 Runner、月度 CronJob、
 Ingress、PVC 与可选 NetworkPolicy。必须由集群预先提供：RWO StorageClass、CSI
-VolumeSnapshot 能力、可被 Runner/CronJob 同时读写且支持文件锁的 NFS 目录、企业 SSO 注解、两个业务
+VolumeSnapshot 能力、可被 Runner/CronJob 同时读写且支持文件锁的 NFS 目录、两个业务
 Secret，以及可拉取内部镜像的凭据（如需要）。
 
 现网入口沿用 meegle-mcp 的域名和镜像仓库约定：
@@ -91,7 +91,7 @@ npm test
 npm run lint
 npx tsc --noEmit
 npm run build:k8s
-helm lint charts/rdhs-report -f charts/rdhs-report/values-prod.example.yaml
+helm lint charts/rdhs-report -f charts/rdhs-report/values-prod.yaml
 bash -n charts/build-chart.sh scripts/run-sync-job.sh scripts/install-launchd.sh
 bash -c 'PROJECT_VERSION=1.0 BUILD_ID=0 charts/build-chart.sh'
 ```

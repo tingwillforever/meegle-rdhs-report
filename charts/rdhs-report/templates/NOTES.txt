@@ -10,4 +10,4 @@ RDHS 已渲染为单副本 SQLite 部署：{{ include "rdhs-report.webName" . }}
 3. PVC {{ include "rdhs-report.fullname" . }} 的 StorageClass 支持 ReadWriteOnce，并已配置每日 CSI VolumeSnapshot。
 4. NFS {{ .Values.syncStorage.nfs.server }}:{{ .Values.syncStorage.nfs.path }} 支持文件锁，且容器 UID/GID 1000 可读写；它仅供 Runner 与 CronJob 共享报告输出。
 5. NFS 已配置容量配额和告警；同步器默认只保留最近 {{ .Values.sync.outputRetentionMonths }} 个自然月的运行产物。
-6. 刷新 Ingress 的企业 SSO annotation 已限制为运营人员组，且 {{ required "secrets.web.name is required" .Values.secrets.web.name }} 中的 RDHS_REFRESH_WEBHOOK_TOKEN 非空。
+6. 生产 values 不渲染独立 refresh Ingress；确认现有内网网关已提供访问控制，且 {{ required "secrets.web.name is required" .Values.secrets.web.name }} 中的 RDHS_REFRESH_WEBHOOK_TOKEN 非空。

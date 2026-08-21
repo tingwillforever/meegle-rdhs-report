@@ -1,7 +1,7 @@
 {{- include "rdhs-report.validate" . }}
 {{- if .Values.ingress.enabled }}
 {{- $pathPrefix := required "ingress.pathPrefix is required" .Values.ingress.pathPrefix }}
-{{- $baseIngressAnnotations := dict "nginx.ingress.kubernetes.io/use-regex" "true" "nginx.ingress.kubernetes.io/rewrite-target" "/$2" }}
+{{- $baseIngressAnnotations := dict "nginx.ingress.kubernetes.io/use-regex" "true" }}
 {{- $ingressAnnotations := merge $baseIngressAnnotations (.Values.ingress.annotations | default dict) }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -33,36 +33,4 @@ spec:
                 name: {{ include "rdhs-report.webName" . }}
                 port:
                   name: http
-{{- if .Values.ingress.refresh.enabled }}
-{{- $refreshAnnotations := merge (dict "nginx.ingress.kubernetes.io/use-regex" "true" "nginx.ingress.kubernetes.io/rewrite-target" "/$2") (.Values.ingress.refresh.annotations | default dict) }}
----
-apiVersion: networking.k8s.io/v1
-kind: Ingress
-metadata:
-  name: {{ include "rdhs-report.webName" . }}-refresh
-  labels:
-    {{- include "rdhs-report.labels" . | nindent 4 }}
-    app.kubernetes.io/component: web
-  annotations:
-    {{- toYaml $refreshAnnotations | nindent 4 }}
-spec:
-  {{- with .Values.ingress.className }}
-  ingressClassName: {{ . }}
-  {{- end }}
-  {{- with .Values.ingress.tls }}
-  tls:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
-  rules:
-    - host: {{ required "ingress.host is required" .Values.ingress.host | quote }}
-      http:
-        paths:
-          - path: {{ printf "%s(/|$)(api/report/refresh)" $pathPrefix }}
-            pathType: ImplementationSpecific
-            backend:
-              service:
-                name: {{ include "rdhs-report.webName" . }}
-                port:
-                  name: http
-{{- end }}
 {{- end }}
