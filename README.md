@@ -60,8 +60,7 @@ npm run dev
 
 生产交付在 [charts/rdhs-report](charts/rdhs-report) 中，包含 Web、内网 Runner、月度 CronJob、
 Ingress、PVC 与可选 NetworkPolicy。必须由集群预先提供：RWO StorageClass、CSI
-VolumeSnapshot 能力、可被 Runner/CronJob 同时读写且支持文件锁的 NFS 目录、两个业务
-Secret，以及可拉取内部镜像的凭据（如需要）。
+VolumeSnapshot 能力、可被 Runner/CronJob 同时读写且支持文件锁的 NFS 目录、应用 Secret，以及可拉取内部镜像的凭据（如需要）。
 
 现网入口沿用 meegle-mcp 的域名和镜像仓库约定：
 `https://ossptest.voicecloud.cn/meegle-rdhs-report/`。生产 values 已将统一镜像指向

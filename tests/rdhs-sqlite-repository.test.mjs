@@ -85,8 +85,8 @@ test("SQLite repository persists snapshots and keeps the latest version current"
     );
 
     const database = new DatabaseSync(databasePath);
-    assert.equal(database.prepare("SELECT COUNT(*) AS count FROM rdhs_business_line_metrics").get().count, 2);
-    assert.equal(database.prepare("SELECT COUNT(*) AS count FROM rdhs_product_metrics").get().count, 2);
+    assert.equal(database.prepare("SELECT COUNT(*) AS count FROM rdhs_business_line_metrics").get().count, 0);
+    assert.equal(database.prepare("SELECT COUNT(*) AS count FROM rdhs_product_metrics").get().count, 0);
     database.close();
 
     const secondRepository = new SQLiteSnapshotRepository(databasePath);
@@ -116,7 +116,7 @@ test("SQLite repository updates an idempotent source without creating a version"
   assert.deepEqual(duplicate, { snapshotId: "snapshot-1", version: 1, created: false });
 });
 
-test("SQLite repository refreshes normalized child metrics for an idempotent source", async () => {
+test("SQLite repository refreshes the snapshot JSON for an idempotent source", async () => {
   const root = await mkdtemp(join(tmpdir(), "rdhs-sqlite-refresh-"));
   const databasePath = join(root, "rdhs.sqlite");
   try {
@@ -129,16 +129,9 @@ test("SQLite repository refreshes normalized child metrics for an idempotent sou
     enriched.products[0].action = "新的产品动作";
     await service.ingest(enriched);
 
-    const database = new DatabaseSync(databasePath);
-    assert.equal(
-      database.prepare("SELECT focus FROM rdhs_business_line_metrics").get().focus,
-      "新的业务线关注点",
-    );
-    assert.equal(
-      database.prepare("SELECT action FROM rdhs_product_metrics").get().action,
-      "新的产品动作",
-    );
-    database.close();
+    const current = await repository.getCurrent("monthly", "2026-08");
+    assert.equal(current?.snapshot.businessLines[0].focus, "新的业务线关注点");
+    assert.equal(current?.snapshot.products[0].action, "新的产品动作");
   } finally {
     await rm(root, { recursive: true, force: true });
   }

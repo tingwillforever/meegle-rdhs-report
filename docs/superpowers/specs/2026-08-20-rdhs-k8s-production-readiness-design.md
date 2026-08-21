@@ -11,9 +11,9 @@
 - SQLite 工作负载始终只有一个 Web Pod：`replicaCount: 1`、禁用 HPA、Deployment 使用 `Recreate`。
 - Runner 与 CronJob 必须使用同一可读写、支持文件锁的 NFS 导出目录 `/var/lib/rdhs-sync`；它保存月初比较基线和报告运行产物，与 SQLite RWO PVC 隔离。
 - Runner 必须以非空 `RDHS_REFRESH_WEBHOOK_TOKEN` 启动；每条报告命令和 CronJob 都有可配置的超时上限，NFS 运行产物默认保留最近 6 个自然月并受配额/告警监控。
-- Node、Python、Meegle CLI 预先打入基础镜像，报告代码由应用镜像复制；Web 容器不注入 Meegle Secret，
+- Node、Python、Meegle CLI 预先打入基础镜像，报告代码由应用镜像复制；Web 容器不注入 Meegle CLI 运行态，
   因此不会实际访问 Meegle。集群节点上安装的 CLI 不作为生产依赖。
-- Meegle 访问令牌、站点写入令牌、刷新令牌均由预先创建的 Kubernetes Secret 提供，Chart 不创建或保存明文机密。
+- 站点写入令牌和刷新令牌由预先创建的 Kubernetes Secret 提供，Chart 不创建或保存明文机密；Meegle 访问由容器内 `meegle` CLI 的 profile/auth 运行态负责。
 - 外部 RDHS 报告工作区通过 Docker BuildKit named context 提供；其路径、报告生成命令和 Meegle CLI 包名均为部署参数，不在站点源码中写死。
 
 ## 架构
@@ -46,7 +46,7 @@ SQLite 仓储负责快照主表、业务线明细、产品明细及失败记录�
 
 `Dockerfile` 直接依赖包含 Node 22、Python 和指定版本 `@tingwillforever/meegle-cli` 的基础镜像，并从 BuildKit context `rdhs-workspace` 复制外部报告工作区到 `/opt/rdhs-workspace`。镜像包含本仓库 `scripts/`，Runner 使用 `scripts/local-refresh-runner.py --host 0.0.0.0 --env-file /etc/rdhs/runtime.env` 启动。
 
-`rdhs-refresh-runner` 是一个单副本、仅 ClusterIP 暴露的 Deployment。它挂载 Meegle 机器账号令牌，且仅接收来自 Web Pod 的 `RDHS_REFRESH_WEBHOOK_TOKEN` 认证请求；缺少或为空时进程拒绝启动。Web 写入令牌仅由 Runner 和 CronJob 使用。Runner 与 CronJob 共同挂载 `syncStorage.nfs` 到 `/var/lib/rdhs-sync`；同步器使用该目录的 advisory file lock 串行化两类工作负载，避免在写入/读取基线时并发。
+`rdhs-refresh-runner` 是一个单副本、仅 ClusterIP 暴露的 Deployment。它使用基础镜像或运行时提供的 Meegle CLI profile/auth，且仅接收来自 Web Pod 的 `RDHS_REFRESH_WEBHOOK_TOKEN` 认证请求；缺少或为空时进程拒绝启动。Web 写入令牌仅由 Runner 和 CronJob 使用。Runner 与 CronJob 共同挂载 `syncStorage.nfs` 到 `/var/lib/rdhs-sync`；同步器使用该目录的 advisory file lock 串行化两类工作负载，避免在写入/读取基线时并发。
 
 ### 周期同步
 
@@ -76,7 +76,7 @@ Chart 路径为 `charts/rdhs-report`，包含 Web Deployment、Runner Deployment
 必须由部署环境提供：
 
 - `secrets.web.name`：含 `RDHS_INGEST_TOKEN`、`RDHS_REFRESH_WEBHOOK_TOKEN`。
-- `secrets.meegle.name`：含 `MEEGLE_USER_ACCESS_TOKEN`。
+- 基础镜像或运行时必须提供可用的 Meegle CLI profile/auth，容器内 `meegle auth status` 应返回 active。
 - `persistence.storageClass` 和 Ingress 域名；访问控制由现有内网网关提供。
 - `syncStorage.nfs.server`、`syncStorage.nfs.path`，且 NFS 导出目录以 UID/GID 1000 可读写并支持文件锁。
 - 恢复专用 values 必须能设置 `sync.cron.suspend: true`，令 CronJob 暂停状态跨 Helm 升级保留。

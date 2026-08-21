@@ -6,7 +6,7 @@ RDHS 已渲染为单副本 SQLite 部署：{{ include "rdhs-report.webName" . }}
 
 上线前确认：
 1. {{ required "secrets.web.name is required" .Values.secrets.web.name }} 含 RDHS_INGEST_TOKEN 与 RDHS_REFRESH_WEBHOOK_TOKEN。
-2. {{ required "secrets.meegle.name is required" .Values.secrets.meegle.name }} 含 MEEGLE_HOST 与 MEEGLE_USER_ACCESS_TOKEN，仅同步工作负载挂载。
+2. Meegle CLI 的 profile/auth 运行态已随基础镜像或运行时配置提供，且容器内 `meegle auth status` 正常。
 3. PVC {{ include "rdhs-report.fullname" . }} 的 StorageClass 支持 ReadWriteOnce，并已配置每日 CSI VolumeSnapshot。
 4. NFS {{ .Values.syncStorage.nfs.server }}:{{ .Values.syncStorage.nfs.path }} 支持文件锁，且容器 UID/GID 1000 可读写；它仅供 Runner 与 CronJob 共享报告输出。
 5. NFS 已配置容量配额和告警；同步器默认只保留最近 {{ .Values.sync.outputRetentionMonths }} 个自然月的运行产物。

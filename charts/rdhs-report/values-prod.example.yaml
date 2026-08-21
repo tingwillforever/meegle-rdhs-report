@@ -27,8 +27,6 @@ persistence:
 secrets:
   web:
     name: rdhs-report-web-secrets
-  meegle:
-    name: rdhs-report-meegle-secrets
 
 ingress:
   className: nginx

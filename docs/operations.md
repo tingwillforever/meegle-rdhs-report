@@ -207,11 +207,11 @@ Chart 默认每条报告命令超时 540 秒，CronJob 的 `activeDeadlineSecond
 - 可拉取统一生产镜像的内部镜像仓库；若仓库受保护，提供现有 `kubernetes.io/dockerconfigjson` Secret。
 - 基础镜像已包含 Node `>=22.13`、Python `>=3.10`、`bash`、PyYAML、Meegle CLI `@tingwillforever/meegle-cli@1.1.5`，以及完整的 Meegle CLI Skill（`SKILL.md` 和 `references/`）；应用镜像构建不再访问 apt、PyPI 或全局 npm。
 - 本仓库 `vendor/rdhs-workspace` 中已审核、固定版本的 RDHS 报告运行源码。更新该快照时，只能同步报告实际所需文件，不能带入 `.env`、临时输出或未审核工作目录。
-- Meegle 私有部署的地址和机器账号令牌；NetworkPolicy 启用前还需由网络团队提供 Meegle 出口 CIDR。
+- 基础镜像或运行时提供可用的 Meegle CLI profile/auth；NetworkPolicy 启用前还需由网络团队提供 Meegle 出口 CIDR。
 
 ### 10.2 预创建 Secret
 
-生产默认不渲染 Secret，也不会把令牌写入仓库或镜像。通过现有 ExternalSecret/KMS 流程创建以下两项
+生产默认不渲染 Secret，也不会把令牌写入仓库或镜像。通过现有 ExternalSecret/KMS 流程创建以下应用
 Secret；下列命令仅说明 Key，执行时从受控终端提供真实值。为快速验证，也可以使用未提交的本地 values
 覆盖 `secrets.create=true` 让 Chart 临时生成 Secret，但不要把该覆盖文件提交或用于正式生产。`RDHS_REFRESH_WEBHOOK_TOKEN`
 必须是非空高熵随机值；Runner 会在该 Key 缺失或为空时拒绝启动：
@@ -221,9 +221,6 @@ kubectl -n <namespace> create secret generic rdhs-report-web-secrets \
   --from-literal=RDHS_INGEST_TOKEN='<write-token>' \
   --from-literal=RDHS_REFRESH_WEBHOOK_TOKEN='<runner-token>'
 
-kubectl -n <namespace> create secret generic rdhs-report-meegle-secrets \
-  --from-literal=MEEGLE_HOST='https://<meegle-internal-host>' \
-  --from-literal=MEEGLE_USER_ACCESS_TOKEN='<machine-account-token>'
 ```
 
 快速验证时可使用未提交的 `charts/rdhs-report/values-prod.local.yaml` 覆盖文件：
@@ -236,19 +233,14 @@ secrets:
     data:
       RDHS_INGEST_TOKEN: "<write-token>"
       RDHS_REFRESH_WEBHOOK_TOKEN: "<runner-token>"
-  meegle:
-    name: rdhs-report-meegle-secrets
-    data:
-      MEEGLE_HOST: "https://<meegle-internal-host>"
-      MEEGLE_USER_ACCESS_TOKEN: "<machine-account-token>"
 ```
 
 使用时追加 `-f charts/rdhs-report/values-prod.local.yaml`；验证完成后删除该文件，并将
 `secrets.create` 恢复为 `false`。Helm 会把这类覆盖值保存到 Release Secret，因此不要将其用于正式生产。
 
-Web 使用第一项 Secret；Runner 使用两个写入 Key 与两个 Meegle Key；CronJob 仅使用
-`RDHS_INGEST_TOKEN` 与两个 Meegle Key。为私有仓库创建的 pull Secret 通过
-`imagePullSecrets` 引用，不放在应用 Secret 中。
+Web 使用该 Secret；Runner 使用两个 RDHS Key；CronJob 使用 `RDHS_INGEST_TOKEN`。
+Meegle 数据访问由容器内 `meegle` CLI 的 profile/auth 运行态负责，不再通过 `MEEGLE_*` 环境变量注入。
+为私有仓库创建的 pull Secret 通过 `imagePullSecrets` 引用，不放在应用 Secret 中。
 
 ### 10.3 构建并推送镜像
 
@@ -288,7 +280,7 @@ PROJECT_VERSION=1.0 BUILD_ID=42 SERVICE_NAME=meegle-rdhs-report ENV=prod \
   `syncStorage.nfs.server` / `syncStorage.nfs.path`。
 - 如有容量或时长要求，调整 `sync.outputRetentionMonths`、`sync.reportCommandTimeoutSeconds` 与
   `sync.cron.activeDeadlineSeconds`；Chart 要求 Cron deadline 能容纳两次报告命令和 60 秒退出余量。
-- `secrets.web.name` 与 `secrets.meegle.name`；如需镜像凭据，配置 `imagePullSecrets` 的现有 Secret 名称。
+- `secrets.web.name`；确认基础镜像或运行时提供 Meegle CLI profile/auth；如需镜像凭据，配置 `imagePullSecrets` 的现有 Secret 名称。
 - Chart 不渲染独立 refresh Ingress；刷新 API 随主 Ingress 转发，由现有内网网关负责访问控制。
 - 仅在填入 ingress controller selector 与 Meegle CIDR 后设置 `networkPolicy.enabled: true`。
 

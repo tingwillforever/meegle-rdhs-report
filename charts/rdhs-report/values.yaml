@@ -69,11 +69,6 @@ secrets:
     data:
       RDHS_INGEST_TOKEN: ""
       RDHS_REFRESH_WEBHOOK_TOKEN: ""
-  meegle:
-    name: ""
-    data:
-      MEEGLE_HOST: ""
-      MEEGLE_USER_ACCESS_TOKEN: ""
 
 report:
   workspaceRoot: /opt/rdhs-workspace

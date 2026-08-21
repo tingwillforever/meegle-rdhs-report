@@ -162,7 +162,6 @@ export class SQLiteSnapshotRepository implements SnapshotRepository {
 
       if (duplicate) {
         this.updateSnapshot(duplicate.id, record);
-        this.replaceChildMetrics(duplicate.id, record.snapshot);
         this.database.exec("COMMIT");
         return { snapshotId: duplicate.id, version: duplicate.version, created: false };
       }
@@ -296,84 +295,6 @@ export class SQLiteSnapshotRepository implements SnapshotRepository {
         JSON.stringify(snapshot),
       );
 
-    this.insertChildMetrics(record.id, snapshot);
-  }
-
-  private insertChildMetrics(snapshotId: string, snapshot: StoredSnapshot["snapshot"]): void {
-    for (const line of snapshot.businessLines) {
-      const lineProducts = snapshot.products.filter(
-        (product) => product.businessLine === line.businessLine,
-      );
-      const lineSummary = summarizeSnapshot({ ...snapshot, products: lineProducts });
-      this.database
-        .prepare(
-          `INSERT INTO rdhs_business_line_metrics (
-             snapshot_id, business_line, product_total, measured_product_count,
-             average_rdhs, measurement_coverage, key_governance_count,
-             risk_improvement_count, continuous_optimization_count,
-             regular_tracking_count, link_closure_average,
-             delivery_closure_average, timeliness_average, granularity_average,
-             quality_average, mode, focus
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(
-          snapshotId,
-          line.businessLine,
-          line.productTotal,
-          lineSummary.measuredProductCount,
-          valueOrNull(lineSummary.averageRdhs),
-          lineSummary.measurementCoverage,
-          line.keyGovernanceCount,
-          line.riskImprovementCount,
-          line.continuousOptimizationCount,
-          line.regularTrackingCount,
-          valueOrNull(lineSummary.componentAverages.linkClosure),
-          valueOrNull(lineSummary.componentAverages.deliveryClosure),
-          valueOrNull(lineSummary.componentAverages.timeliness),
-          valueOrNull(lineSummary.componentAverages.granularity),
-          valueOrNull(lineSummary.componentAverages.quality),
-          line.mode,
-          line.focus,
-        );
-    }
-
-    for (const product of snapshot.products) {
-      this.database
-        .prepare(
-          `INSERT INTO rdhs_product_metrics (
-             snapshot_id, business_line, product, product_status, rdhs,
-             governance_band, priority, link_closure, delivery_closure,
-             timeliness, granularity, quality, lowest_component, problem, action
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        )
-        .run(
-          snapshotId,
-          product.businessLine,
-          product.product,
-          product.productStatus,
-          product.rdhs,
-          product.governanceBand,
-          product.priority,
-          product.components.linkClosure,
-          product.components.deliveryClosure,
-          product.components.timeliness,
-          product.components.granularity,
-          product.components.quality,
-          product.lowestComponent,
-          product.problem,
-          product.action,
-        );
-    }
-  }
-
-  private replaceChildMetrics(snapshotId: string, snapshot: StoredSnapshot["snapshot"]): void {
-    this.database
-      .prepare("DELETE FROM rdhs_business_line_metrics WHERE snapshot_id = ?")
-      .run(snapshotId);
-    this.database
-      .prepare("DELETE FROM rdhs_product_metrics WHERE snapshot_id = ?")
-      .run(snapshotId);
-    this.insertChildMetrics(snapshotId, snapshot);
   }
 
   private updateSnapshot(

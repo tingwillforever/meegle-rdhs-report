@@ -98,12 +98,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $_ := required "syncStorage.nfs.server is required for the shared Runner/CronJob output" .Values.syncStorage.nfs.server }}
 {{- $_ := required "syncStorage.nfs.path is required for the shared Runner/CronJob output" .Values.syncStorage.nfs.path }}
 {{- $_ := required "secrets.web.name is required" .Values.secrets.web.name -}}
-{{- $_ := required "secrets.meegle.name is required" .Values.secrets.meegle.name -}}
 {{- if .Values.secrets.create }}
 {{- $_ := required "secrets.web.data.RDHS_INGEST_TOKEN is required when secrets.create=true" .Values.secrets.web.data.RDHS_INGEST_TOKEN -}}
 {{- $_ := required "secrets.web.data.RDHS_REFRESH_WEBHOOK_TOKEN is required when secrets.create=true" .Values.secrets.web.data.RDHS_REFRESH_WEBHOOK_TOKEN -}}
-{{- $_ := required "secrets.meegle.data.MEEGLE_HOST is required when secrets.create=true" .Values.secrets.meegle.data.MEEGLE_HOST -}}
-{{- $_ := required "secrets.meegle.data.MEEGLE_USER_ACCESS_TOKEN is required when secrets.create=true" .Values.secrets.meegle.data.MEEGLE_USER_ACCESS_TOKEN -}}
 {{- end }}
 {{- $pathPrefix := required "ingress.pathPrefix is required" .Values.ingress.pathPrefix }}
 {{- if not (hasPrefix "/" $pathPrefix) }}

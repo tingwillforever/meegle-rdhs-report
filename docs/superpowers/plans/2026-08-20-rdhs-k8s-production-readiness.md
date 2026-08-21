@@ -166,7 +166,7 @@ git commit -m "build: add production RDHS images"
 
 **Interfaces:**
 - `secrets.web.name` supplies `RDHS_INGEST_TOKEN` and `RDHS_REFRESH_WEBHOOK_TOKEN`.
-- `secrets.meegle.name` supplies `MEEGLE_USER_ACCESS_TOKEN` to sync workloads only.
+- The sync workloads use the Meegle CLI profile/auth runtime supplied by the image or deployment environment; no `MEEGLE_*` environment Secret is injected.
 - The chart has one primary Ingress; the refresh API is routed through it and access control remains owned by the existing internal gateway.
 
 - [ ] **Step 1: Write the failing test**
@@ -188,7 +188,7 @@ Expected: FAIL because the chart does not exist.
 
 - [ ] **Step 3: Write minimal implementation**
 
-Create the chart described in the spec. Enforce a one-replica Web Deployment and `Recreate`, mount the RWO PVC only into Web, mount a shared NFS report-output directory into Runner/CronJob, expose Runner by ClusterIP only, fail closed without its webhook token, mount Meegle Secret only into runner/CronJob, and give CronJob `Forbid` concurrency, bounded command/deadline values and Asia/Shanghai time zone. Fail Helm rendering if mutable image tags or missing NFS storage are present. Keep NetworkPolicy opt-in but provide safe named-pod selector rules and DNS egress.
+Create the chart described in the spec. Enforce a one-replica Web Deployment and `Recreate`, mount the RWO PVC only into Web, mount a shared NFS report-output directory into Runner/CronJob, expose Runner by ClusterIP only, fail closed without its webhook token, use the Meegle CLI profile/auth runtime supplied by the image or deployment environment, and give CronJob `Forbid` concurrency, bounded command/deadline values and Asia/Shanghai time zone. Fail Helm rendering if mutable image tags or missing NFS storage are present. Keep NetworkPolicy opt-in but provide safe named-pod selector rules and DNS egress.
 
 - [ ] **Step 4: Run test to verify it passes**
 

@@ -77,16 +77,6 @@ spec:
                 secretKeyRef:
                   name: {{ required "secrets.web.name is required" .Values.secrets.web.name }}
                   key: RDHS_REFRESH_WEBHOOK_TOKEN
-            - name: MEEGLE_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: {{ required "secrets.meegle.name is required" .Values.secrets.meegle.name }}
-                  key: MEEGLE_HOST
-            - name: MEEGLE_USER_ACCESS_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: {{ required "secrets.meegle.name is required" .Values.secrets.meegle.name }}
-                  key: MEEGLE_USER_ACCESS_TOKEN
           livenessProbe:
             httpGet:
               path: /health

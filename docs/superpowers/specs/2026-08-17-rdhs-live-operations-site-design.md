@@ -40,13 +40,12 @@
 
 ## 存储
 
-D1 使用三张主表：
+D1 和 SQLite 以 `rdhs_snapshots.snapshot_json` 保存完整、经过校验的快照；读取时由领域层重新计算汇总，避免维护第二份派生事实。
 
-- `snapshots`：周期、版本、状态、汇总指标、源哈希、抓取时间和诊断信息。
-- `business_line_metrics`：每个快照的业务线产品数、四档数量、平均 RDHS、覆盖率和五项均值。
-- `product_metrics`：每个快照的产品状态、RDHS、治理分档、优先级、五项分数、问题和行动。
+- `rdhs_snapshots`：周期、版本、当前指针、源哈希和完整快照 JSON。
+- `rdhs_ingest_failures`：失败写入的诊断信息。
 
-常用查询按 `(cadence, period_key, is_current)`、`snapshot_id + business_line` 和 `snapshot_id + governance_band` 建索引。已有 `report_data.json` 可通过同一合同导入，作为趋势起点。
+`(cadence, period_key, is_current)` 和 `(cadence, period_key, source_sha256)` 仍用于当前版本与幂等查找。历史迁移中保留的 `business_line_metrics`、`product_metrics` 表和主表派生列不再由应用写入；如未来确有分析查询需求，应以明确的查询消费者为前提单独设计迁移。已有 `report_data.json` 可通过同一合同导入，作为趋势起点。
 
 ## 页面
 

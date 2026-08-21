@@ -32,6 +32,26 @@ test("the application image consumes the prebuilt RDHS dependency image", async 
   assert.match(dockerfile, /COPY --from=builder \/app\/dist \.\/dist/);
 });
 
+test("the sync image copies only the periodic report import closure", async () => {
+  const dockerfile = await readFile(new URL("../Dockerfile", import.meta.url), "utf8");
+  const modules = [
+    "periodic_report_analysis.py",
+    "periodic_report_data.py",
+    "periodic_report_models.py",
+    "periodic_report_renderer.py",
+    "periodic_report_runtime.py",
+    "product_improvement_enrichment.py",
+  ];
+
+  assert.doesNotMatch(dockerfile, /COPY vendor\/rdhs-workspace\/topics\/rdhs-operations\/impl \/opt/);
+  for (const fileName of modules) {
+    assert.match(
+      dockerfile,
+      new RegExp(`COPY vendor/rdhs-workspace/topics/rdhs-operations/impl/${fileName} /opt/rdhs-workspace/topics/rdhs-operations/impl/${fileName}`),
+    );
+  }
+});
+
 test("the Web production dependency set provides the Vinext server command", async () => {
   const packageManifest = JSON.parse(
     await readFile(new URL("../package.json", import.meta.url), "utf8"),

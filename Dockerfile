@@ -35,7 +35,12 @@ COPY --from=builder /app/dist ./dist
 COPY scripts ./scripts
 
 COPY vendor/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py /opt/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py
-COPY vendor/rdhs-workspace/topics/rdhs-operations/impl /opt/rdhs-workspace/topics/rdhs-operations/impl
+COPY vendor/rdhs-workspace/topics/rdhs-operations/impl/periodic_report_analysis.py /opt/rdhs-workspace/topics/rdhs-operations/impl/periodic_report_analysis.py
+COPY vendor/rdhs-workspace/topics/rdhs-operations/impl/periodic_report_data.py /opt/rdhs-workspace/topics/rdhs-operations/impl/periodic_report_data.py
+COPY vendor/rdhs-workspace/topics/rdhs-operations/impl/periodic_report_models.py /opt/rdhs-workspace/topics/rdhs-operations/impl/periodic_report_models.py
+COPY vendor/rdhs-workspace/topics/rdhs-operations/impl/periodic_report_renderer.py /opt/rdhs-workspace/topics/rdhs-operations/impl/periodic_report_renderer.py
+COPY vendor/rdhs-workspace/topics/rdhs-operations/impl/periodic_report_runtime.py /opt/rdhs-workspace/topics/rdhs-operations/impl/periodic_report_runtime.py
+COPY vendor/rdhs-workspace/topics/rdhs-operations/impl/product_improvement_enrichment.py /opt/rdhs-workspace/topics/rdhs-operations/impl/product_improvement_enrichment.py
 COPY vendor/rdhs-workspace/topics/rdhs-operations/config/periodic_report.yaml /opt/rdhs-workspace/topics/rdhs-operations/config/periodic_report.yaml
 COPY vendor/rdhs-workspace/topics/rdhs-operations/config/initial_super_team_mappings.csv /opt/rdhs-workspace/topics/rdhs-operations/config/initial_super_team_mappings.csv
 

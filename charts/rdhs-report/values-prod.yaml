@@ -1,6 +1,6 @@
 # Production overlay. Cluster-owned storage values must match the namespace
 # before Helm install. Production should keep secrets.create=false and provide
-# the two named Secrets through ExternalSecret/KMS or a controlled kubectl flow.
+# the named Secret through ExternalSecret/KMS or a controlled kubectl flow.
 image:
   repository: artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report
   tag: "4.0.4"
@@ -27,8 +27,6 @@ secrets:
   create: false
   web:
     name: rdhs-report-web-secrets
-  meegle:
-    name: rdhs-report-meegle-secrets
 
 ingress:
   className: nginx

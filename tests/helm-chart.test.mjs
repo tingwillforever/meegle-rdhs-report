@@ -34,19 +34,16 @@ test("production render creates one Web replica with RWO storage and a monthly s
   assert.doesNotMatch(result.stdout, /^kind: Secret$/m);
 });
 
-test("quick validation can render the two application Secrets from a local override", () => {
+test("quick validation can render the application Secret from a local override", () => {
   const result = renderHelm([
     "--set", "secrets.create=true",
     "--set-string", "secrets.web.data.RDHS_INGEST_TOKEN=ingest-test-token",
     "--set-string", "secrets.web.data.RDHS_REFRESH_WEBHOOK_TOKEN=refresh-test-token",
-    "--set-string", "secrets.meegle.data.MEEGLE_HOST=https://meegle.example.internal",
-    "--set-string", "secrets.meegle.data.MEEGLE_USER_ACCESS_TOKEN=meegle-test-token",
   ]);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /kind: Secret\nmetadata:\n {2}name: rdhs-report-web-secrets/);
-  assert.match(result.stdout, /kind: Secret\nmetadata:\n {2}name: rdhs-report-meegle-secrets/);
   assert.match(result.stdout, /RDHS_INGEST_TOKEN: "ingest-test-token"/);
-  assert.match(result.stdout, /MEEGLE_HOST: "https:\/\/meegle\.example\.internal"/);
+  assert.doesNotMatch(result.stdout, /MEEGLE_HOST|MEEGLE_USER_ACCESS_TOKEN|rdhs-report-meegle-secrets/);
 });
 
 test("inline Secret mode fails closed when a credential is missing", () => {
