@@ -34,10 +34,10 @@ RUN npm ci --omit=dev --ignore-scripts
 COPY --from=builder /app/dist ./dist
 COPY scripts ./scripts
 
-COPY --from=rdhs-workspace topics/rdhs-operations/run_periodic_report.py /opt/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py
-COPY --from=rdhs-workspace topics/rdhs-operations/impl /opt/rdhs-workspace/topics/rdhs-operations/impl
-COPY --from=rdhs-workspace topics/rdhs-operations/config/periodic_report.yaml /opt/rdhs-workspace/topics/rdhs-operations/config/periodic_report.yaml
-COPY --from=rdhs-workspace topics/rdhs-operations/config/initial_super_team_mappings.csv /opt/rdhs-workspace/topics/rdhs-operations/config/initial_super_team_mappings.csv
+COPY vendor/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py /opt/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py
+COPY vendor/rdhs-workspace/topics/rdhs-operations/impl /opt/rdhs-workspace/topics/rdhs-operations/impl
+COPY vendor/rdhs-workspace/topics/rdhs-operations/config/periodic_report.yaml /opt/rdhs-workspace/topics/rdhs-operations/config/periodic_report.yaml
+COPY vendor/rdhs-workspace/topics/rdhs-operations/config/initial_super_team_mappings.csv /opt/rdhs-workspace/topics/rdhs-operations/config/initial_super_team_mappings.csv
 
 RUN mkdir -p /home/node /var/lib/rdhs /var/lib/rdhs-sync \
   && chown -R node:node /app /home/node /var/lib/rdhs /var/lib/rdhs-sync /opt/rdhs-workspace

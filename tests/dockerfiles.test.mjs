@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("the application image consumes the prebuilt RDHS dependency image", async () => {
@@ -15,9 +15,15 @@ test("the application image consumes the prebuilt RDHS dependency image", async 
   assert.doesNotMatch(dockerfile, /NODE_BASE_IMAGE|RUNTIME_BASE_IMAGE/);
   assert.match(
     dockerfile,
-    /COPY --from=rdhs-workspace topics\/rdhs-operations\/run_periodic_report\.py \/opt\/rdhs-workspace\/topics\/rdhs-operations\/run_periodic_report\.py/,
+    /COPY vendor\/rdhs-workspace\/topics\/rdhs-operations\/run_periodic_report\.py \/opt\/rdhs-workspace\/topics\/rdhs-operations\/run_periodic_report\.py/,
   );
-  assert.doesNotMatch(dockerfile, /COPY --from=rdhs-workspace\s+\/\s+\/opt\/rdhs-workspace/);
+  assert.doesNotMatch(dockerfile, /--from=rdhs-workspace/);
+  await access(
+    new URL(
+      "../vendor/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py",
+      import.meta.url,
+    ),
+  );
   assert.match(dockerfile, /RDHS_WORKSPACE_ROOT=\/opt\/rdhs-workspace/);
   assert.doesNotMatch(dockerfile, /apt-get install/);
   assert.doesNotMatch(dockerfile, /npm install --global/);

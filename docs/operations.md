@@ -206,7 +206,7 @@ Chart 默认每条报告命令超时 540 秒，CronJob 的 `activeDeadlineSecond
   原始 Chart 数据及备份窗口设置容量配额和用量告警。
 - 可拉取统一生产镜像的内部镜像仓库；若仓库受保护，提供现有 `kubernetes.io/dockerconfigjson` Secret。
 - 基础镜像已包含 Node `>=22.13`、Python `>=3.10`、`bash`、PyYAML、Meegle CLI `@tingwillforever/meegle-cli@1.1.5`，以及完整的 Meegle CLI Skill（`SKILL.md` 和 `references/`）；应用镜像构建不再访问 apt、PyPI 或全局 npm。
-- 已审核、固定版本的 `daily-data-ops` 源码目录。BuildKit 只复制其中运行报告必需的文件，仍不可把 `.env`、临时输出或未审核工作目录作为构建上下文。
+- 本仓库 `vendor/rdhs-workspace` 中已审核、固定版本的 RDHS 报告运行源码。更新该快照时，只能同步报告实际所需文件，不能带入 `.env`、临时输出或未审核工作目录。
 - Meegle 私有部署的地址和机器账号令牌；NetworkPolicy 启用前还需由网络团队提供 Meegle 出口 CIDR。
 
 ### 10.2 预创建 Secret
@@ -231,21 +231,19 @@ Web 使用第一项 Secret；Runner 使用两个写入 Key 与两个 Meegle Key�
 
 ### 10.3 构建并推送镜像
 
-`Dockerfile` 使用预构建基础镜像构建应用镜像，并通过 BuildKit named context 读取外部报告源码。现网镜像沿用
+`Dockerfile` 使用预构建基础镜像构建应用镜像，并直接复制本仓库已固定的报告源码快照。现网镜像沿用
 meegle-mcp 的内网仓库前缀，使用不可变的受保护发布 tag（或在镜像仓库策略中强制 tag
 不可覆盖），不要使用 `latest`。Web 镜像默认以 `RDHS_BASE_PATH=/meegle-rdhs-report` 构建，若调整
 Ingress path 后缀，必须同时传入相同的 `--build-arg RDHS_BASE_PATH=/your-prefix` 并修改 values：
 
-Dockerfile 不声明远端 Dockerfile frontend，避免 Jenkins 在内网构建时访问 Docker Hub。构建命令必须显式传入
-`rdhs-workspace` named context；不能替换为不带该参数的普通 `docker build`，否则报告代码无法复制进镜像。
+Dockerfile 不声明远端 Dockerfile frontend，也不使用 named context，避免 Jenkins 在内网构建时访问 Docker Hub。
 
 ```bash
 BASE_IMAGE=artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report-base:node22-python3-meegle-cli-1.1.5
 
-docker buildx build --load \
+docker build --platform linux/amd64 \
   --build-arg RDHS_BASE_IMAGE="$BASE_IMAGE" \
   --build-arg RDHS_BASE_PATH=/meegle-rdhs-report \
-  --build-context rdhs-workspace=/absolute/path/to/reviewed/daily-data-ops \
   -t artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report:v1.0.0 .
 
 docker push artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report:v1.0.0
