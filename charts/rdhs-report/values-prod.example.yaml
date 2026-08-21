@@ -5,24 +5,20 @@ image:
 imagePullSecrets:
   - name: hub4iflytek
 
-# Shared report-workspace output. This is intentionally separate from the
-# SQLite RWO PVC and is mounted only by Runner and CronJob.
-syncStorage:
-  nfs:
-    server: nfs.company.internal
-    path: /exports/rdhs-report
+database:
+  driver: mysql
+  mysql:
+    host: 172.31.114.194
+    port: 4302
+    database: rdhs_report
+    secretName: rdhs-report-db-secrets
+    connectionLimit: 10
+    tls: false
+    tlsRejectUnauthorized: true
 
 # Reference an existing image-pull Secret when the internal registry requires it.
 # imagePullSecrets:
 #   - name: rdhs-registry-credentials
-
-persistence:
-  storageClass: fast-rwo
-  accessModes:
-    - ReadWriteOnce
-  size: 20Gi
-# Recovery only: set existingClaim to a PVC restored from a VolumeSnapshot.
-# existingClaim: rdhs-report-restored
 
 secrets:
   web:
@@ -49,3 +45,6 @@ networkPolicy:
   meegleEgress:
     - ipBlock:
         cidr: 10.0.0.0/8
+  mysqlEgress:
+    - ipBlock:
+        cidr: 172.31.114.194/32

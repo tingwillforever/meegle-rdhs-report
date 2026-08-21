@@ -27,7 +27,8 @@
 
 历史快照由每月 1 日任务生成上一个完整月，并写入站点。任务先以**当月 1 日**运行
 `monthly-baseline`，将上月比较基线固化到当月目录；再以**上月末**运行 `weekly`，生成上一完整月
-的可上传报告。该基线被当月的刷新复用，故 Runner 和 CronJob 必须共享持久化输出目录。快照必须包含当时的产品主数据、业务线归属、RDHS 度量结果和未度量/待关联产品。
+的可上传报告。该基线被当月刷新复用，生产环境通过 Web 内部 API 按月份保存到 MySQL；
+Runner/CronJob 的本地报告目录可以是一次性的 `emptyDir`。快照必须包含当时的产品主数据、业务线归属、RDHS 度量结果和未度量/待关联产品。
 
 ## 3. 前置检查
 
@@ -60,9 +61,10 @@ RDHS_INGEST_TOKEN=<sites-secret-token>
 RDHS_MONTHLY_BASELINE_COMMAND=python3 /absolute/path/to/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py --mode monthly-baseline
 RDHS_MONTHLY_REPORT_COMMAND=python3 /absolute/path/to/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py --mode weekly
 RDHS_CURRENT_REPORT_COMMAND=python3 /absolute/path/to/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py --mode weekly
-# 当本机同时运行 Cron 和 refresh runner 时应使用同一持久化目录
+# 本机可以使用同一目录；K8s 中每个 Pod 使用自己的 emptyDir
 RDHS_OUTPUT_ROOT=/absolute/path/to/persistent/rdhs-sync
 RDHS_REPORT_COMMAND_TIMEOUT_SECONDS=540
+RDHS_SYNC_LEASE_TTL_SECONDS=1800
 RDHS_OUTPUT_RETENTION_MONTHS=6
 ```
 
@@ -96,12 +98,12 @@ python3 scripts/sync-rdhs-snapshot.py --current-month-cache
 
 月度任务先以当月 1 日运行 `monthly-baseline` 固化比较基线，再以上月末运行 `weekly` 生成包含
 `report_data.json` 的可上传报告；`monthly-baseline` 自身不会生成可上传快照。当前月缓存使用
-`weekly` 模式读取当前 Meegle Chart，并复用同一输出目录中的月初基线。同步器会对输出目录加文件锁，
-避免 CronJob 与刷新任务同时改写基线。
+`weekly` 模式读取当前 Meegle Chart。生产同步器先从 Web 下载所需月份的基线到本地目录，运行后再上传
+新生成或回补的基线；MySQL 租约用于避免 CronJob 与刷新任务并发执行，本地文件锁只保护单个 Pod 内部写入。
 
 成功写入站点后，同步器只清理按 `YYYY-MM` 命名且超过 `RDHS_OUTPUT_RETENTION_MONTHS`（默认 6 个自然月）的
-报告运行目录及 `site-snapshots/monthly-YYYY-MM.json`；不会删除其他路径。NFS 应设置与该窗口匹配的容量配额、
-用量告警和 180 天备份保留。单条报告命令最多运行 `RDHS_REPORT_COMMAND_TIMEOUT_SECONDS`（默认 540）秒，
+报告运行目录及 `site-snapshots/monthly-YYYY-MM.json`；不会删除其他路径。K8s 中这些文件位于 `emptyDir`，
+Pod 退出时自动删除，真正需要备份的是 MySQL。单条报告命令最多运行 `RDHS_REPORT_COMMAND_TIMEOUT_SECONDS`（默认 540）秒，
 超时会明确失败，不能无限占用同步任务。
 
 生成的 schema-v1 快照位于 `runtime/sync-runs/site-snapshots/`。同周期同源哈希重复上传为幂等成功；修正后的不同哈希会形成新版本并成为当前版本。
@@ -164,9 +166,11 @@ launchctl print gui/$(id -u)/com.rdhs.operations.monthly
 - `GET /api/trends`：月度趋势。
 - `POST /api/report/refresh`：触发当月缓存刷新。
 - `POST /api/snapshots`：Bearer 保护的快照写入。
+- `GET/PUT /api/internal/sync/baseline`：Runner/CronJob 读写按月基线。
+- `POST /api/internal/sync/lock/acquire|release`：Runner/CronJob 管理 MySQL 租约。
 
-D1 模式和 SQLite 模式均保存不可变版本、业务线汇总、产品明细和失败诊断。只有完整批量
-写入成功后，新版本才可见；SQLite 写入使用单一 Web 副本和 RWO PVC。
+D1、SQLite（本地兼容）和 MySQL 模式均保存不可变快照版本。K8s 生产只使用 MySQL；快照切换在事务中完成，
+只有完整写入成功后新版本才可见。内部同步接口与快照写入共用 `RDHS_INGEST_TOKEN`，且只由集群内工作负载调用。
 
 ## 9. 发布检查
 
@@ -175,6 +179,8 @@ D1 模式和 SQLite 模式均保存不可变版本、业务线汇总、产品明
 ```bash
 npm test
 npm run lint
+mysql --host=<mysql-host> --port=<mysql-port> --user=<migration-user> -p <rdhs_report> \
+  < database/mysql/001_initial.sql
 sqlite3 /tmp/rdhs-migration-check.db < drizzle/0000_normal_zemo.sql
 ```
 
@@ -184,26 +190,23 @@ sqlite3 /tmp/rdhs-migration-check.db < drizzle/0000_normal_zemo.sql
 
 ### 10.1 架构与前置依赖
 
-第一阶段不引入独立数据库服务。Web Pod 使用 Node 22 的 SQLite，数据库文件位于
-`/var/lib/rdhs/rdhs.sqlite`，由一个 `ReadWriteOnce` PVC 持久化。因此 Chart 固定 Web 为一个
-副本、固定 `Recreate` 更新策略且不提供 HPA；不能把 Web 扩为多副本。
+生产环境使用 MySQL 作为唯一持久化数据库，迁移脚本为 `database/mysql/001_initial.sql`。
+Web 是 MySQL 的唯一客户端；Runner/CronJob 通过 Web 内部 API 管理基线与租约，不直接连接数据库。
+报告运行目录位于 Pod 自己的 `emptyDir`，Pod 重建后丢弃，不承担持久化职责。
 
 同步能力不在 Kubernetes 节点安装：Node、Python、指定版本 Meegle CLI 预先打入基础镜像，
 `Dockerfile` 直接依赖该基础镜像并复制经过审查的报告代码。Web、Runner 和 CronJob 复用一个应用镜像，只通过 Kubernetes command
 区分启动角色。Runner 仅通过 ClusterIP 接收 Web 的刷新请求；CronJob 在
 `Asia/Shanghai` 时区每月 1 日 09:00 运行：先以当月 1 日固化上月基线，再以上月末生成并上传月度快照。
-两者都挂载到 `/var/lib/rdhs-sync` 的 NFS 目录；该目录保存基线和运行产物，绝不存放 SQLite 数据库。
+两者都使用 `/var/lib/rdhs-sync` 的 `emptyDir` 保存临时基线副本和运行产物；基线写回 Web 后进入 MySQL。
 Chart 默认每条报告命令超时 540 秒，CronJob 的 `activeDeadlineSeconds` 为 1,500 秒，防止卡住的任务因
 `concurrencyPolicy: Forbid` 长期阻塞下个月执行。
 
 集群/构建环境必须在发布前提供：
 
 - Kubernetes 1.27+、Helm 与 NGINX Ingress；访问控制由现有内网网关负责，Chart 不配置或创建网关认证。
-- 支持 `ReadWriteOnce` 的 StorageClass，以及已启用的 CSI VolumeSnapshot CRD 和每日快照策略（保留 180 天）。
-- 一个供 Runner 与 CronJob 共同读写的 NFS 导出目录（参考 meegle-mcp Chart 的 NFS 挂载模式）。它必须支持
-  NFS 文件锁，且以容器 UID/GID `1000` 可读写；NFS server/path 分别填入 `syncStorage.nfs.server` 和
-  `syncStorage.nfs.path`。这不是数据库服务，也不能用 SQLite 的 RWO PVC 替代。按默认 6 个月运行产物、
-  原始 Chart 数据及备份窗口设置容量配额和用量告警。
+- 已创建 `rdhs_report` 数据库、生产账号和最小权限；Web Pod 可访问 `172.31.114.194:4302`。
+- 已执行 `database/mysql/001_initial.sql`，并为 MySQL 备份和恢复设置策略（建议至少保留 180 天）。
 - 可拉取统一生产镜像的内部镜像仓库；若仓库受保护，提供现有 `kubernetes.io/dockerconfigjson` Secret。
 - 基础镜像已包含 Node `>=22.13`、Python `>=3.10`、`bash`、PyYAML、Meegle CLI `@tingwillforever/meegle-cli@1.1.5`，以及完整的 Meegle CLI Skill（`SKILL.md` 和 `references/`）；应用镜像构建不再访问 apt、PyPI 或全局 npm。
 - 本仓库 `vendor/rdhs-workspace` 中已审核、固定版本的 RDHS 报告运行源码。更新该快照时，只能同步报告实际所需文件，不能带入 `.env`、临时输出或未审核工作目录。
@@ -211,15 +214,20 @@ Chart 默认每条报告命令超时 540 秒，CronJob 的 `activeDeadlineSecond
 
 ### 10.2 预创建 Secret
 
-生产默认不渲染 Secret，也不会把令牌写入仓库或镜像。通过现有 ExternalSecret/KMS 流程创建以下应用
-Secret；下列命令仅说明 Key，执行时从受控终端提供真实值。为快速验证，也可以使用未提交的本地 values
-覆盖 `secrets.create=true` 让 Chart 临时生成 Secret，但不要把该覆盖文件提交或用于正式生产。`RDHS_REFRESH_WEBHOOK_TOKEN`
+应用令牌不写入仓库或镜像，生产通过现有 ExternalSecret/KMS 流程创建
+`rdhs-report-web-secrets`；下列命令仅说明 Key，执行时从受控终端提供真实值。当前上线前验证的
+`values-prod.yaml` 临时以内联方式生成 `rdhs-report-db-secrets`，验证完成后必须改回托管 Secret 并轮换密码。
+`RDHS_REFRESH_WEBHOOK_TOKEN`
 必须是非空高熵随机值；Runner 会在该 Key 缺失或为空时拒绝启动：
 
 ```bash
 kubectl -n <namespace> create secret generic rdhs-report-web-secrets \
   --from-literal=RDHS_INGEST_TOKEN='<write-token>' \
   --from-literal=RDHS_REFRESH_WEBHOOK_TOKEN='<runner-token>'
+
+kubectl -n <namespace> create secret generic rdhs-report-db-secrets \
+  --from-literal=MYSQL_USER='<rdhs-db-user>' \
+  --from-literal=MYSQL_PASSWORD='<rdhs-db-password>'
 
 ```
 
@@ -238,7 +246,7 @@ secrets:
 使用时追加 `-f charts/rdhs-report/values-prod.local.yaml`；验证完成后删除该文件，并将
 `secrets.create` 恢复为 `false`。Helm 会把这类覆盖值保存到 Release Secret，因此不要将其用于正式生产。
 
-Web 使用该 Secret；Runner 使用两个 RDHS Key；CronJob 使用 `RDHS_INGEST_TOKEN`。
+Web 使用 Web Secret 和数据库 Secret；Runner 使用两个 RDHS Key；CronJob 使用 `RDHS_INGEST_TOKEN`。
 Meegle 数据访问由容器内 `meegle` CLI 的 profile/auth 运行态负责，不再通过 `MEEGLE_*` 环境变量注入。
 为私有仓库创建的 pull Secret 通过 `imagePullSecrets` 引用，不放在应用 Secret 中。
 
@@ -273,15 +281,16 @@ PROJECT_VERSION=1.0 BUILD_ID=42 SERVICE_NAME=meegle-rdhs-report ENV=prod \
 
 ### 10.4 配置与发布
 
-使用仓库内的 `charts/rdhs-report/values-prod.yaml`，并在发布前确认集群实际的 NFS 导出和默认 RWO StorageClass；该文件不含机密。
+使用仓库内的 `charts/rdhs-report/values-prod.yaml`。当前文件仅为上线前验证临时包含数据库明文凭据，
+不得作为长期生产配置；验证完成后改回外部 `rdhs-report-db-secrets` 并轮换密码。
 至少确认：
 
-- 统一 `image.repository`、不可变 `tag`、Ingress 域名、RWO `storageClass`，以及
-  `syncStorage.nfs.server` / `syncStorage.nfs.path`。
+- 统一 `image.repository`、不可变 `tag`、Ingress 域名，以及 `database.mysql.host/port/database`。
 - 如有容量或时长要求，调整 `sync.outputRetentionMonths`、`sync.reportCommandTimeoutSeconds` 与
   `sync.cron.activeDeadlineSeconds`；Chart 要求 Cron deadline 能容纳两次报告命令和 60 秒退出余量。
 - `secrets.web.name`；确认基础镜像或运行时提供 Meegle CLI profile/auth；如需镜像凭据，配置 `imagePullSecrets` 的现有 Secret 名称。
 - Chart 不渲染独立 refresh Ingress；刷新 API 随主 Ingress 转发，由现有内网网关负责访问控制。
+- 启用 NetworkPolicy 时，同时允许 Web 到 `172.31.114.194:4302` 的 egress。
 - 仅在填入 ingress controller selector 与 Meegle CIDR 后设置 `networkPolicy.enabled: true`。
 
 发布前先渲染检查，再执行升级：
@@ -308,8 +317,9 @@ https://ossptest.voicecloud.cn/meegle-rdhs-report/api/health/live
 https://ossptest.voicecloud.cn/meegle-rdhs-report/api/health
 ```
 
-正式生产渲染结果不得出现 `kind: Secret` 或任意明文令牌；快速验证模式会按本地覆盖生成两个 Secret。`/api/health/live` 用于 liveness，`/api/health`
-会读取 SQLite，作为 readiness；首次部署在导入快照前返回就绪但页面会明确显示“数据暂不可用”，不会展示演示数据。
+正式生产加固后渲染结果不得出现数据库明文或由 Chart 管理的 Secret；本轮快速验证会生成数据库 Secret，
+应用令牌 Secret 仍由外部流程提供。`/api/health/live` 用于 liveness，`/api/health`
+会读取 MySQL，作为 readiness；首次部署在导入快照前返回就绪但页面会明确显示“数据暂不可用”，不会展示演示数据。
 
 ### 10.5 首次历史导入和月度验收
 
@@ -331,16 +341,15 @@ kubectl -n <namespace> logs -f job/meegle-rdhs-report-sync-smoke
 
 ### 10.6 备份、恢复与回滚
 
-存储团队必须为 RDHS SQLite PVC **及** `syncStorage.nfs.path` 的 NFS 导出目录设置同一恢复点的每日快照、
-保留 180 天，并定期演练恢复。SQLite 保存站点历史版本；NFS 保存当月刷新复用的月初基线。两者恢复点不一致时，
-后续刷新可能把恢复后的站点与未来基线混用。恢复时禁止让两个 Pod 同时挂载或写入同一 SQLite 卷：
+生产持久化数据全部位于 MySQL：快照版本、失败诊断、按月基线和同步租约都由
+`database/mysql/001_initial.sql` 创建的表保存。运维只需为 `rdhs_report` 数据库配置备份、
+恢复演练和权限审计；`emptyDir` 中的报告中间文件不需要备份。
 
-1. 建立恢复专用 values，设置 `sync.cron.suspend: true`，并先执行一次 `helm upgrade` 使暂停状态由 Helm 持有；再停止 Web 与 Runner：`kubectl -n <namespace> scale deployment/meegle-rdhs-report-web --replicas=0`、`kubectl -n <namespace> scale deployment/meegle-rdhs-report-refresh --replicas=0`。不要仅用 `kubectl patch` 暂停 CronJob，后续 Helm 升级会覆盖该状态。
-2. 由存储团队从**同一时点**的 SQLite VolumeSnapshot 创建新的 RWO PVC（例如 `rdhs-report-restored`），并从 NFS 的同一恢复点创建新的导出目录（例如 `/exports/rdhs-report-restored`）；不要覆盖或删除原卷/目录。
-3. 在同一份恢复专用 values 中设置 `persistence.existingClaim: rdhs-report-restored` 与 `syncStorage.nfs.path: /exports/rdhs-report-restored`，保持 `sync.cron.suspend: true`，然后执行 `helm upgrade`。
-4. 等待 Web/Runner 恢复后检查 `/api/health`、周期列表、最近快照及一次受控当月刷新；确认无误后将恢复 values 的 `sync.cron.suspend` 改回 `false` 并执行 `helm upgrade`。确认无误前保留原 PVC 与原 NFS 目录。
+恢复时先将 `sync.cron.suspend: true` 通过 Helm 发布，停止 Runner/CronJob 写入，再按数据库平台流程将
+`rdhs_report` 恢复到目标时间点。恢复后检查 `/api/health`、周期列表、最近快照及一次受控当月刷新，确认无误后
+将 `sync.cron.suspend` 改回 `false` 并执行 Helm upgrade。应用回滚使用 Helm，数据库回滚按 MySQL 备份流程单独处理。
 
-应用回滚使用 Helm，数据回滚仍按上述 PVC 快照流程单独处理：
+应用回滚使用 Helm，数据回滚按 MySQL 备份流程单独处理：
 
 ```bash
 helm -n <namespace> history meegle-rdhs-report

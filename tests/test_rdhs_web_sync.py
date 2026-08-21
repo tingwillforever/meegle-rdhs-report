@@ -15,7 +15,10 @@ from urllib.error import HTTPError
 import scripts.rdhs_snapshot_sync as sync_module
 from scripts.rdhs_snapshot_sync import build_snapshot
 from scripts.rdhs_snapshot_sync import generate_report
+from scripts.rdhs_snapshot_sync import hydrate_remote_baseline
+from scripts.rdhs_snapshot_sync import persist_remote_baseline
 from scripts.rdhs_snapshot_sync import prune_report_output
+from scripts.rdhs_snapshot_sync import remote_sync_lease
 from scripts.rdhs_snapshot_sync import upload_snapshot
 
 
@@ -30,6 +33,136 @@ def _load_json(path: Path) -> dict[str, object]:
 
 
 class SnapshotSyncTests(unittest.TestCase):
+    def test_remote_baseline_is_restored_to_the_report_runtime_path(self) -> None:
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):  # noqa: ANN002
+                return False
+
+            def read(self) -> bytes:
+                return json.dumps(
+                    {
+                        "periodKey": "2026-07",
+                        "payload": {"rows": [["product-a", 60]]},
+                        "metadata": {
+                            "chart_id": "chart-previous",
+                            "fetched_at": "2026-08-01T09:00:00+08:00",
+                        },
+                    }
+                ).encode("utf-8")
+
+        class Opener:
+            request = None
+
+            def open(self, request, timeout):  # noqa: ANN001
+                self.request = request
+                self.timeout = timeout
+                return Response()
+
+        opener = Opener()
+        with tempfile.TemporaryDirectory() as directory:
+            restored = hydrate_remote_baseline(
+                "https://rdhs-report-web/meegle-rdhs-report",
+                "test-token",
+                Path(directory),
+                date(2026, 8, 31),
+                opener=opener,
+            )
+            baseline_path = Path(directory) / "2026-08" / "baselines" / "2026-07.json"
+            metadata_path = baseline_path.with_suffix(".metadata.json")
+            self.assertTrue(restored)
+            self.assertEqual(_load_json(baseline_path), {"rows": [["product-a", 60]]})
+            self.assertEqual(_load_json(metadata_path)["chart_id"], "chart-previous")
+
+        self.assertIn("period=2026-07", opener.request.full_url)
+        self.assertEqual(opener.request.headers["Authorization"], "Bearer test-token")
+
+    def test_generated_baseline_is_persisted_through_the_web_api(self) -> None:
+        class Response:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):  # noqa: ANN002
+                return False
+
+            def read(self) -> bytes:
+                return b'{"stored":true}'
+
+        class Opener:
+            request = None
+
+            def open(self, request, timeout):  # noqa: ANN001
+                self.request = request
+                return Response()
+
+        opener = Opener()
+        with tempfile.TemporaryDirectory() as directory:
+            baseline_path = Path(directory) / "2026-09" / "baselines" / "2026-08.json"
+            baseline_path.parent.mkdir(parents=True)
+            baseline_path.write_text('{"rows":[["product-a",61]]}', encoding="utf-8")
+            baseline_path.with_suffix(".metadata.json").write_text(
+                '{"chart_id":"chart-previous","fetched_at":"2026-09-01T09:00:00+08:00"}',
+                encoding="utf-8",
+            )
+
+            persist_remote_baseline(
+                "https://rdhs-report-web/meegle-rdhs-report",
+                "test-token",
+                Path(directory),
+                date(2026, 9, 1),
+                opener=opener,
+            )
+
+        body = json.loads(opener.request.data)
+        self.assertEqual(opener.request.method, "PUT")
+        self.assertEqual(body["periodKey"], "2026-08")
+        self.assertEqual(body["payload"]["rows"], [["product-a", 61]])
+
+    def test_remote_sync_lease_is_released_after_the_report_finishes(self) -> None:
+        requests = []
+
+        class Response:
+            def __init__(self, payload):  # noqa: ANN001
+                self.payload = payload
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *args):  # noqa: ANN002
+                return False
+
+            def read(self) -> bytes:
+                return json.dumps(self.payload).encode("utf-8")
+
+        class Opener:
+            def open(self, request, timeout):  # noqa: ANN001
+                requests.append(request)
+                if request.full_url.endswith("/lock/acquire"):
+                    return Response(
+                        {
+                            "acquired": True,
+                            "name": "report-sync",
+                            "owner": "owner-1",
+                            "expiresAt": "2026-08-21T10:30:00.000Z",
+                        }
+                    )
+                return Response({"released": True})
+
+        with remote_sync_lease(
+            "https://rdhs-report-web/meegle-rdhs-report",
+            "test-token",
+            owner="owner-1",
+            ttl_seconds=1800,
+            opener=Opener(),
+        ):
+            self.assertEqual(len(requests), 1)
+
+        self.assertEqual(len(requests), 2)
+        self.assertTrue(requests[0].full_url.endswith("/lock/acquire"))
+        self.assertTrue(requests[1].full_url.endswith("/lock/release"))
+
     def test_build_snapshot_preserves_master_driven_product_coverage(self) -> None:
         snapshot = build_snapshot(
             _load_json(REPORT_DIR / "report_data.json"),

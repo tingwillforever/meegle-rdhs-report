@@ -19,10 +19,12 @@ import sys
 from typing import Callable
 from typing import Mapping
 from typing import Optional
+import uuid
 from urllib.error import HTTPError
+from urllib.parse import urlencode
+from urllib.parse import urlparse
 from urllib.request import Request
 from urllib.request import build_opener
-from urllib.parse import urlparse
 from zoneinfo import ZoneInfo
 
 
@@ -407,13 +409,7 @@ def build_snapshot(
     }
 
 
-def upload_snapshot(
-    site_url: str,
-    token: str,
-    snapshot: dict[str, object],
-    *,
-    opener: object = None,
-) -> dict[str, object]:
+def _validate_remote_site(site_url: str, token: str) -> None:
     parsed_url = urlparse(site_url)
     is_local_http = parsed_url.scheme == "http" and parsed_url.hostname in {
         "localhost",
@@ -429,6 +425,23 @@ def upload_snapshot(
         raise ValueError("site URL must use HTTPS, localhost, or explicit internal HTTP opt-in")
     if not token:
         raise ValueError("RDHS ingest token is required")
+
+
+def _http_error_detail(error: HTTPError) -> str:
+    try:
+        return error.read().decode("utf-8")
+    except (AttributeError, KeyError, OSError):
+        return ""
+
+
+def upload_snapshot(
+    site_url: str,
+    token: str,
+    snapshot: dict[str, object],
+    *,
+    opener: object = None,
+) -> dict[str, object]:
+    _validate_remote_site(site_url, token)
     payload = json.dumps(snapshot, ensure_ascii=False).encode("utf-8")
     request = Request(
         f"{site_url.rstrip('/')}/api/snapshots",
@@ -445,15 +458,188 @@ def upload_snapshot(
         with response:
             body = response.read().decode("utf-8")
     except HTTPError as error:
-        try:
-            detail = error.read().decode("utf-8")
-        except (AttributeError, KeyError, OSError):
-            detail = ""
+        detail = _http_error_detail(error)
         raise RuntimeError(f"snapshot upload failed with HTTP {error.code}: {detail}") from error
     result = json.loads(body)
     if not isinstance(result, dict):
         raise RuntimeError("snapshot upload returned a non-object response")
     return result
+
+
+def _previous_month_key(report_date: date) -> str:
+    return (report_date.replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
+
+
+def _baseline_path(output_root: Path, report_date: date) -> Path:
+    return (
+        output_root
+        / report_date.strftime("%Y-%m")
+        / "baselines"
+        / f"{_previous_month_key(report_date)}.json"
+    )
+
+
+def _write_json_object(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def hydrate_remote_baseline(
+    site_url: str,
+    token: str,
+    output_root: Path,
+    report_date: date,
+    *,
+    opener: object = None,
+) -> bool:
+    """Restore the baseline required by one report date into its local emptyDir."""
+    _validate_remote_site(site_url, token)
+    period_key = _previous_month_key(report_date)
+    request = Request(
+        f"{site_url.rstrip('/')}/api/internal/sync/baseline?{urlencode({'period': period_key})}",
+        method="GET",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    active_opener = opener or build_opener()
+    try:
+        response = active_opener.open(request, timeout=30)
+        with response:
+            body = response.read().decode("utf-8")
+    except HTTPError as error:
+        if error.code == 404:
+            return False
+        raise RuntimeError(
+            f"baseline download failed with HTTP {error.code}: {_http_error_detail(error)}"
+        ) from error
+    result = json.loads(body)
+    if not isinstance(result, dict) or result.get("periodKey") != period_key:
+        raise RuntimeError("baseline download returned an invalid period")
+    payload = result.get("payload")
+    metadata = result.get("metadata")
+    if not isinstance(payload, dict) or not isinstance(metadata, dict):
+        raise RuntimeError("baseline download returned an invalid payload")
+    path = _baseline_path(output_root, report_date)
+    _write_json_object(path, payload)
+    _write_json_object(path.with_suffix(".metadata.json"), metadata)
+    return True
+
+
+def persist_remote_baseline(
+    site_url: str,
+    token: str,
+    output_root: Path,
+    report_date: date,
+    *,
+    opener: object = None,
+) -> bool:
+    """Persist a generated or late-backfilled baseline through the Web API."""
+    _validate_remote_site(site_url, token)
+    path = _baseline_path(output_root, report_date)
+    if not path.exists():
+        return False
+    metadata_path = path.with_suffix(".metadata.json")
+    if not metadata_path.exists():
+        raise RuntimeError(f"baseline metadata is missing: {metadata_path}")
+    request_body = {
+        "periodKey": _previous_month_key(report_date),
+        "payload": _load_json(path),
+        "metadata": _load_json(metadata_path),
+    }
+    request = Request(
+        f"{site_url.rstrip('/')}/api/internal/sync/baseline",
+        data=json.dumps(request_body, ensure_ascii=False).encode("utf-8"),
+        method="PUT",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json; charset=utf-8",
+        },
+    )
+    active_opener = opener or build_opener()
+    try:
+        response = active_opener.open(request, timeout=30)
+        with response:
+            body = response.read().decode("utf-8")
+    except HTTPError as error:
+        raise RuntimeError(
+            f"baseline upload failed with HTTP {error.code}: {_http_error_detail(error)}"
+        ) from error
+    result = json.loads(body)
+    if not isinstance(result, dict) or result.get("stored") is not True:
+        raise RuntimeError("baseline upload returned an invalid response")
+    return True
+
+
+def _lease_request(
+    site_url: str,
+    token: str,
+    action: str,
+    payload: dict[str, object],
+    *,
+    opener: object,
+) -> dict[str, object]:
+    request = Request(
+        f"{site_url.rstrip('/')}/api/internal/sync/lock/{action}",
+        data=json.dumps(payload).encode("utf-8"),
+        method="POST",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json; charset=utf-8",
+        },
+    )
+    try:
+        response = opener.open(request, timeout=30)
+        with response:
+            body = response.read().decode("utf-8")
+    except HTTPError as error:
+        detail = _http_error_detail(error)
+        if error.code == 409 and action == "acquire":
+            raise RuntimeError(f"another RDHS synchronization is already running: {detail}") from error
+        raise RuntimeError(
+            f"sync lease {action} failed with HTTP {error.code}: {detail}"
+        ) from error
+    result = json.loads(body)
+    if not isinstance(result, dict):
+        raise RuntimeError(f"sync lease {action} returned a non-object response")
+    return result
+
+
+@contextmanager
+def remote_sync_lease(
+    site_url: str,
+    token: str,
+    *,
+    owner: str,
+    ttl_seconds: int,
+    opener: object = None,
+):
+    """Serialize Runner and CronJob through a MySQL-backed Web API lease."""
+    _validate_remote_site(site_url, token)
+    if ttl_seconds < 60 or ttl_seconds > 3600:
+        raise ValueError("RDHS_SYNC_LEASE_TTL_SECONDS must be between 60 and 3600")
+    active_opener = opener or build_opener()
+    lease = {"name": "report-sync", "owner": owner, "ttlSeconds": ttl_seconds}
+    acquired = _lease_request(
+        site_url,
+        token,
+        "acquire",
+        lease,
+        opener=active_opener,
+    )
+    if acquired.get("acquired") is not True:
+        raise RuntimeError("another RDHS synchronization is already running")
+    try:
+        yield
+    finally:
+        _lease_request(
+            site_url,
+            token,
+            "release",
+            {"name": "report-sync", "owner": owner},
+            opener=active_opener,
+        )
 
 
 def _load_json(path: Path) -> dict[str, object]:
@@ -598,9 +784,20 @@ def _output_retention_months() -> int:
     return retention_months
 
 
+def _sync_lease_ttl_seconds() -> int:
+    raw_value = os.environ.get("RDHS_SYNC_LEASE_TTL_SECONDS", "1800")
+    try:
+        ttl_seconds = int(raw_value)
+    except ValueError as error:
+        raise ValueError("RDHS_SYNC_LEASE_TTL_SECONDS must be an integer") from error
+    if ttl_seconds < 60 or ttl_seconds > 3600:
+        raise ValueError("RDHS_SYNC_LEASE_TTL_SECONDS must be between 60 and 3600")
+    return ttl_seconds
+
+
 @contextmanager
 def _report_output_lock(output_root: Path):
-    """Serialize CronJob and Runner access to the shared report output."""
+    """Prevent overlapping writes inside one Pod's disposable output directory."""
     output_root.mkdir(parents=True, exist_ok=True)
     lock_path = output_root / ".rdhs-sync.lock"
     with lock_path.open("a+", encoding="utf-8") as lock_file:
@@ -617,6 +814,9 @@ def generate_report(
     as_of: Optional[str],
     *,
     current_month_cache: bool = False,
+    site_url: str = "",
+    token: str = "",
+    opener: object = None,
 ) -> Path:
     if cadence != "monthly":
         raise ValueError("cadence must be monthly")
@@ -629,23 +829,51 @@ def generate_report(
             else (today.replace(day=1) - timedelta(days=1)).isoformat()
         )
 
+    report_date = date.fromisoformat(snapshot_date)
+    use_remote_baseline = bool(site_url and token)
+    if use_remote_baseline:
+        hydrate_remote_baseline(
+            site_url,
+            token,
+            output_root,
+            report_date,
+            opener=opener,
+        )
+
     with _report_output_lock(output_root):
         if not current_month_cache and "RDHS_MONTHLY_BASELINE_COMMAND" in os.environ:
-            report_date = date.fromisoformat(snapshot_date)
+            baseline_report_date = _next_month_start(report_date)
             _run_report_command(
                 _report_command("RDHS_MONTHLY_BASELINE_COMMAND"),
                 output_root=output_root,
-                snapshot_date=_next_month_start(report_date).isoformat(),
+                snapshot_date=baseline_report_date.isoformat(),
             )
+            if use_remote_baseline:
+                persist_remote_baseline(
+                    site_url,
+                    token,
+                    output_root,
+                    baseline_report_date,
+                    opener=opener,
+                )
 
         command_variable = (
             "RDHS_CURRENT_REPORT_COMMAND" if current_month_cache else "RDHS_MONTHLY_REPORT_COMMAND"
         )
-        return _run_report_command(
+        run_dir = _run_report_command(
             _report_command(command_variable),
             output_root=output_root,
             snapshot_date=snapshot_date,
         )
+        if use_remote_baseline:
+            persist_remote_baseline(
+                site_url,
+                token,
+                output_root,
+                report_date,
+                opener=opener,
+            )
+        return run_dir
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -667,38 +895,57 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = build_parser().parse_args(argv)
-    source_dir = args.source_dir or generate_report(
-        args.cadence,
-        args.output_root,
-        args.as_of,
-        current_month_cache=args.current_month_cache,
-    )
-    snapshot = build_snapshot(
-        _load_json(source_dir / "report_data.json"),
-        _load_json(source_dir / "audit_manifest.json"),
-        cadence=args.cadence,
-    )
-    snapshot_dir = args.output_root / "site-snapshots"
-    snapshot_dir.mkdir(parents=True, exist_ok=True)
-    snapshot_path = snapshot_dir / f"{snapshot['cadence']}-{snapshot['periodKey']}.json"
-    snapshot_path.write_text(
-        json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    if args.dry_run:
-        result = {"snapshot_path": str(snapshot_path), "uploaded": False}
-    else:
-        result = {
-            "snapshot_path": str(snapshot_path),
-            "uploaded": True,
-            "remote": upload_snapshot(args.site_url, args.token, snapshot),
-        }
-        with _report_output_lock(args.output_root):
-            prune_report_output(
-                args.output_root,
-                current_date=datetime.now(SHANGHAI_TIME_ZONE).date(),
-                retention_months=_output_retention_months(),
-            )
+    use_remote_lease = not args.dry_run and args.source_dir is None
+
+    @contextmanager
+    def synchronization_guard():
+        if not use_remote_lease:
+            yield
+            return
+        owner = f"sync-{os.getpid()}-{uuid.uuid4().hex}"
+        with remote_sync_lease(
+            args.site_url,
+            args.token,
+            owner=owner,
+            ttl_seconds=_sync_lease_ttl_seconds(),
+        ):
+            yield
+
+    with synchronization_guard():
+        source_dir = args.source_dir or generate_report(
+            args.cadence,
+            args.output_root,
+            args.as_of,
+            current_month_cache=args.current_month_cache,
+            site_url=args.site_url if not args.dry_run else "",
+            token=args.token if not args.dry_run else "",
+        )
+        snapshot = build_snapshot(
+            _load_json(source_dir / "report_data.json"),
+            _load_json(source_dir / "audit_manifest.json"),
+            cadence=args.cadence,
+        )
+        snapshot_dir = args.output_root / "site-snapshots"
+        snapshot_dir.mkdir(parents=True, exist_ok=True)
+        snapshot_path = snapshot_dir / f"{snapshot['cadence']}-{snapshot['periodKey']}.json"
+        snapshot_path.write_text(
+            json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n",
+            encoding="utf-8",
+        )
+        if args.dry_run:
+            result = {"snapshot_path": str(snapshot_path), "uploaded": False}
+        else:
+            result = {
+                "snapshot_path": str(snapshot_path),
+                "uploaded": True,
+                "remote": upload_snapshot(args.site_url, args.token, snapshot),
+            }
+            with _report_output_lock(args.output_root):
+                prune_report_output(
+                    args.output_root,
+                    current_date=datetime.now(SHANGHAI_TIME_ZONE).date(),
+                    retention_months=_output_retention_months(),
+                )
     print(json.dumps(result, ensure_ascii=False))
     return 0
 

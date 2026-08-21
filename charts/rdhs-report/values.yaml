@@ -28,6 +28,7 @@ sync:
   runner:
     timeoutSeconds: 600
   reportCommandTimeoutSeconds: 540
+  leaseTtlSeconds: 1800
   outputRetentionMonths: 6
   cron:
     schedule: "0 9 1 * *"
@@ -39,26 +40,26 @@ sync:
     failedJobsHistoryLimit: 5
     ttlSecondsAfterFinished: 604800
 
-# The external reporting runtime stores month-start baselines here. Runner and
-# CronJob must see the same directory, so this is a shared NFS mount rather
-# than the Web SQLite RWO PVC.
-syncStorage:
+# Report files are disposable. Baselines and leases are persisted by Web in
+# MySQL, while each Runner/CronJob Pod gets its own emptyDir.
+syncOutput:
   mountPath: /var/lib/rdhs-sync
-  nfs:
-    server: ""
-    path: ""
 
-strategy:
-  type: Recreate
-
-persistence:
-  enabled: true
-  existingClaim: ""
-  storageClass: ""
-  accessModes:
-    - ReadWriteOnce
-  size: 20Gi
-  mountPath: /var/lib/rdhs
+database:
+  driver: mysql
+  mysql:
+    host: mysql.example.internal
+    port: 3306
+    database: rdhs_report
+    secretName: rdhs-report-db-secrets
+    credentials:
+      # Keep false in production. Set true only in an ignored local override.
+      create: false
+      user: ""
+      password: ""
+    connectionLimit: 10
+    tls: false
+    tlsRejectUnauthorized: true
 
 secrets:
   # Keep false for production and use an ExternalSecret/KMS-managed Secret.
@@ -105,3 +106,4 @@ networkPolicy:
     namespaceSelector: {}
     podSelector: {}
   meegleEgress: []
+  mysqlEgress: []

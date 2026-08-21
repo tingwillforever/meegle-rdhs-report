@@ -1,6 +1,6 @@
-# Production overlay. Cluster-owned storage values must match the namespace
-# before Helm install. Production should keep secrets.create=false and provide
-# the named Secret through ExternalSecret/KMS or a controlled kubectl flow.
+# Production smoke-test overlay. Credentials are intentionally inline for the
+# first deployment validation; move them to a managed Secret and rotate the
+# password after verification.
 image:
   repository: artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report
   tag: "4.0.4"
@@ -9,19 +9,20 @@ image:
 imagePullSecrets:
   - name: hub4iflytek
 
-# Runner and CronJob share this directory for report runs and month-start
-# baselines. Replace these two values with the provisioned production export.
-syncStorage:
-  nfs:
-    server: nfs.company.internal
-    path: /exports/rdhs-report
-
-persistence:
-  # Empty means use the cluster default StorageClass. It must support RWO.
-  storageClass: ""
-  accessModes:
-    - ReadWriteOnce
-  size: 20Gi
+database:
+  driver: mysql
+  mysql:
+    host: 172.31.114.194
+    port: 4302
+    database: rdhs_report
+    secretName: rdhs-report-db-secrets
+    credentials:
+      create: true
+      user: root
+      password: "htzhang16_M2099"
+    connectionLimit: 10
+    tls: false
+    tlsRejectUnauthorized: true
 
 secrets:
   create: false
@@ -41,3 +42,6 @@ ingress:
 # are supplied and validated by the network team.
 networkPolicy:
   enabled: false
+  mysqlEgress:
+    - ipBlock:
+        cidr: 172.31.114.194/32

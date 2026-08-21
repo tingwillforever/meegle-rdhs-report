@@ -8,7 +8,12 @@ function processEnv(): NodeJS.ProcessEnv | undefined {
 
 export function isSQLiteStorage(): boolean {
   const env = processEnv();
-  return env?.RDHS_STORAGE === "sqlite" || env?.DEPLOY_TARGET === "k8s";
+  return env?.RDHS_STORAGE === "sqlite" ||
+    (env?.DEPLOY_TARGET === "k8s" && env?.RDHS_STORAGE !== "mysql");
+}
+
+export function isMySQLStorage(): boolean {
+  return processEnv()?.RDHS_STORAGE === "mysql";
 }
 
 export function allowPreviewFallback(): boolean {
@@ -22,7 +27,7 @@ export function setRuntimeBindings(bindings: RuntimeBindings): void {
 }
 
 export function getRuntimeBinding(name: string): unknown {
-  if (isSQLiteStorage()) return processEnv()?.[name];
+  if (isSQLiteStorage() || isMySQLStorage()) return processEnv()?.[name];
   return (
     globalThis as typeof globalThis & { [RUNTIME_BINDINGS_KEY]?: RuntimeBindings }
   )[RUNTIME_BINDINGS_KEY]?.[name];

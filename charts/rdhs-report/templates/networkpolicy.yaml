@@ -34,6 +34,11 @@ spec:
           port: 3000
   egress:
     - to:
+        {{- toYaml .Values.networkPolicy.mysqlEgress | nindent 8 }}
+      ports:
+        - protocol: TCP
+          port: {{ .Values.database.mysql.port }}
+    - to:
         - podSelector:
             matchLabels:
               {{- include "rdhs-report.selectorLabels" . | nindent 14 }}

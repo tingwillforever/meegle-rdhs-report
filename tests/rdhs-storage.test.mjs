@@ -20,3 +20,8 @@ test("Kubernetes storage mode selects SQLite without requiring Cloudflare bindin
     else process.env.RDHS_DB_PATH = previousPath;
   }
 });
+
+test("MySQL storage module is available for the Kubernetes runtime", async () => {
+  const mysqlModule = await import("../lib/rdhs/mysql-repository.ts");
+  assert.equal(typeof mysqlModule.MySQLSnapshotRepository, "function");
+});

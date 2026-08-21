@@ -35,10 +35,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{ include "rdhs-report.fullname" . }}-sync
 {{- end }}
 
-{{- define "rdhs-report.sqliteClaimName" -}}
-{{- default (include "rdhs-report.fullname" .) .Values.persistence.existingClaim }}
-{{- end }}
-
 {{- define "rdhs-report.serviceAccountName" -}}
 {{- if .Values.serviceAccount.create }}
 {{- default (include "rdhs-report.fullname" .) .Values.serviceAccount.name }}
@@ -62,20 +58,27 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{- define "rdhs-report.validate" -}}
-{{- if ne (int .Values.web.replicaCount) 1 }}
-{{- fail "web.replicaCount must be 1 because the SQLite PVC has one writer" }}
-{{- end }}
-{{- if ne .Values.strategy.type "Recreate" }}
-{{- fail "strategy.type must be Recreate because the SQLite PVC is ReadWriteOnce" }}
-{{- end }}
-{{- if not .Values.persistence.enabled }}
-{{- fail "persistence.enabled must be true for the SQLite database" }}
-{{- end }}
-{{- if not (deepEqual .Values.persistence.accessModes (list "ReadWriteOnce")) }}
-{{- fail "persistence.accessModes must be exactly [ReadWriteOnce]" }}
+{{- if lt (int .Values.web.replicaCount) 1 }}
+{{- fail "web.replicaCount must be positive" }}
 {{- end }}
 {{- if ne (int .Values.sync.replicaCount) 1 }}
-{{- fail "sync.replicaCount must be 1 because the refresh Runner has no distributed lock" }}
+{{- fail "sync.replicaCount must be 1 for the single refresh endpoint" }}
+{{- end }}
+{{- if ne .Values.database.driver "mysql" }}
+{{- fail "database.driver must be mysql for Kubernetes production" }}
+{{- end }}
+{{- $_ := required "database.mysql.host is required" .Values.database.mysql.host }}
+{{- $_ := required "database.mysql.database is required" .Values.database.mysql.database }}
+{{- $_ := required "database.mysql.secretName is required" .Values.database.mysql.secretName }}
+{{- if .Values.database.mysql.credentials.create }}
+{{- $_ := required "database.mysql.credentials.user is required when credentials.create=true" .Values.database.mysql.credentials.user }}
+{{- $_ := required "database.mysql.credentials.password is required when credentials.create=true" .Values.database.mysql.credentials.password }}
+{{- end }}
+{{- if or (lt (int .Values.database.mysql.port) 1) (gt (int .Values.database.mysql.port) 65535) }}
+{{- fail "database.mysql.port must be between 1 and 65535" }}
+{{- end }}
+{{- if lt (int .Values.database.mysql.connectionLimit) 1 }}
+{{- fail "database.mysql.connectionLimit must be positive" }}
 {{- end }}
 {{- if ne .Values.sync.cron.schedule "0 9 1 * *" }}
 {{- fail "sync.cron.schedule must be 0 9 1 * *" }}
@@ -95,8 +98,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if lt (int .Values.sync.outputRetentionMonths) 1 }}
 {{- fail "sync.outputRetentionMonths must be positive" }}
 {{- end }}
-{{- $_ := required "syncStorage.nfs.server is required for the shared Runner/CronJob output" .Values.syncStorage.nfs.server }}
-{{- $_ := required "syncStorage.nfs.path is required for the shared Runner/CronJob output" .Values.syncStorage.nfs.path }}
+{{- if or (lt (int .Values.sync.leaseTtlSeconds) (int .Values.sync.cron.activeDeadlineSeconds)) (gt (int .Values.sync.leaseTtlSeconds) 3600) }}
+{{- fail "sync.leaseTtlSeconds must cover the CronJob deadline and not exceed 3600" }}
+{{- end }}
 {{- $_ := required "secrets.web.name is required" .Values.secrets.web.name -}}
 {{- if .Values.secrets.create }}
 {{- $_ := required "secrets.web.data.RDHS_INGEST_TOKEN is required when secrets.create=true" .Values.secrets.web.data.RDHS_INGEST_TOKEN -}}
@@ -118,6 +122,9 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- if not .Values.networkPolicy.meegleEgress }}
 {{- fail "networkPolicy.meegleEgress is required when NetworkPolicy is enabled" }}
+{{- end }}
+{{- if not .Values.networkPolicy.mysqlEgress }}
+{{- fail "networkPolicy.mysqlEgress is required when NetworkPolicy is enabled" }}
 {{- end }}
 {{- end }}
 {{- end }}

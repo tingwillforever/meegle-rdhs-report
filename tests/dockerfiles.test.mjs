@@ -25,6 +25,8 @@ test("the application image consumes the prebuilt RDHS dependency image", async 
     ),
   );
   assert.match(dockerfile, /RDHS_WORKSPACE_ROOT=\/opt\/rdhs-workspace/);
+  assert.match(dockerfile, /RDHS_STORAGE=mysql/);
+  assert.doesNotMatch(dockerfile, /RDHS_DB_PATH|rdhs\.sqlite/);
   assert.doesNotMatch(dockerfile, /apt-get install/);
   assert.doesNotMatch(dockerfile, /npm install --global/);
   assert.doesNotMatch(dockerfile, /python3 -m pip install/);

@@ -13,25 +13,28 @@ function renderHelm(extraArguments = [], releaseName = "rdhs-report") {
   );
 }
 
-test("production render creates one Web replica with RWO storage and a monthly sync CronJob", () => {
+test("production render creates one MySQL-backed Web replica and a monthly sync CronJob", () => {
   const result = renderHelm();
   assert.equal(result.status, 0, result.stderr);
 
   assert.match(
     result.stdout,
-    /kind: Deployment\nmetadata:\n {2}name: rdhs-report-web[\s\S]*?replicas: 1[\s\S]*?strategy:\n {4}type: Recreate/,
+    /kind: Deployment\nmetadata:\n {2}name: rdhs-report-web[\s\S]*?replicas: 1/,
   );
-  assert.match(
-    result.stdout,
-    /kind: PersistentVolumeClaim\nmetadata:\n {2}name: rdhs-report[\s\S]*?accessModes:\n {4}- ReadWriteOnce/,
-  );
+  assert.doesNotMatch(result.stdout, /^kind: PersistentVolumeClaim$/m);
+  assert.match(result.stdout, /name: RDHS_STORAGE\n\s+value: mysql/);
+  assert.match(result.stdout, /name: MYSQL_HOST\n\s+value: "172\.31\.114\.194"/);
+  assert.match(result.stdout, /name: MYSQL_PORT\n\s+value: "4302"/);
+  assert.match(result.stdout, /name: MYSQL_DATABASE\n\s+value: "rdhs_report"/);
+  assert.match(result.stdout, /secretRef:\n\s+name: rdhs-report-db-secrets/);
   assert.match(
     result.stdout,
     /kind: CronJob\nmetadata:\n {2}name: rdhs-report-sync[\s\S]*?schedule: "0 9 1 \* \*"[\s\S]*?timeZone: Asia\/Shanghai[\s\S]*?concurrencyPolicy: Forbid[\s\S]*?jobTemplate:\n {4}spec:\n {6}activeDeadlineSeconds: 1500\n {6}backoffLimit: 2\n {6}ttlSecondsAfterFinished: 604800/,
   );
   assert.doesNotMatch(result.stdout, /\n {2}activeDeadlineSeconds:/);
   assert.doesNotMatch(result.stdout, /\n {2}ttlSecondsAfterFinished:/);
-  assert.doesNotMatch(result.stdout, /^kind: Secret$/m);
+  assert.match(result.stdout, /^kind: Secret$/m);
+  assert.match(result.stdout, /name: rdhs-report-db-secrets/);
 });
 
 test("quick validation can render the application Secret from a local override", () => {
@@ -102,13 +105,14 @@ test("render rejects mutable image tags", () => {
   assert.match(result.stderr, /must not use the mutable latest tag/);
 });
 
-test("render rejects SQLite access modes other than exactly ReadWriteOnce", () => {
-  const result = renderHelm([
-    "--set-json",
-    'persistence.accessModes=["ReadWriteOnce","ReadWriteMany"]',
-  ]);
+test("render requires the MySQL host, database, and credential Secret", () => {
+  const result = renderHelm(["--set", "database.mysql.host="]);
   assert.notEqual(result.status, 0);
-  assert.match(result.stderr, /persistence\.accessModes must be exactly \[ReadWriteOnce\]/);
+  assert.match(result.stderr, /database\.mysql\.host is required/);
+
+  const secret = renderHelm(["--set", "database.mysql.secretName="]);
+  assert.notEqual(secret.status, 0);
+  assert.match(secret.stderr, /database\.mysql\.secretName is required/);
 });
 
 test("render fixes the monthly schedule to Shanghai 09:00 on the first day", () => {
@@ -131,17 +135,13 @@ test("a recovery values file can keep the CronJob suspended across Helm upgrades
   assert.match(cronJob, /suspend: true/);
 });
 
-test("render fixes the Runner at one replica and requires shared NFS storage", () => {
+test("render fixes the Runner at one replica", () => {
   const replicas = renderHelm(["--set", "sync.replicaCount=2"]);
   assert.notEqual(replicas.status, 0);
   assert.match(replicas.stderr, /sync\.replicaCount must be 1/);
-
-  const nfs = renderHelm(["--set", "syncStorage.nfs.path="]);
-  assert.notEqual(nfs.status, 0);
-  assert.match(nfs.stderr, /syncStorage\.nfs\.path is required/);
 });
 
-test("runner and CronJob share the NFS-backed report output directory", () => {
+test("runner and CronJob use disposable local report output without NFS", () => {
   const result = renderHelm();
   assert.equal(result.status, 0, result.stderr);
   for (const name of ["rdhs-report-refresh", "rdhs-report-sync"]) {
@@ -151,7 +151,8 @@ test("runner and CronJob share the NFS-backed report output directory", () => {
     assert.ok(workload, `${name} workload must render`);
     assert.match(workload, /name: RDHS_OUTPUT_ROOT\n\s+value: "\/var\/lib\/rdhs-sync"/);
     assert.match(workload, /name: sync-output\n\s+mountPath: "\/var\/lib\/rdhs-sync"/);
-    assert.match(workload, /name: sync-output\n\s+nfs:\n\s+server: "nfs\.company\.internal"\n\s+path: "\/exports\/rdhs-report"/);
+    assert.match(workload, /name: sync-output\n\s+emptyDir: \{\}/);
+    assert.doesNotMatch(workload, /\bnfs:/);
     assert.match(workload, /name: RDHS_SITE_URL\n\s+value: "http:\/\/rdhs-report-web:3000\/meegle-rdhs-report"/);
     assert.match(workload, /name: RDHS_ALLOW_INSECURE_SITE_URL\n\s+value: "true"/);
   }
@@ -183,6 +184,8 @@ test("NetworkPolicy keeps the runner and monthly sync upload path to Web open", 
   assert.ok(webPolicy);
   assert.match(webPolicy, /app\.kubernetes\.io\/component: runner/);
   assert.match(webPolicy, /app\.kubernetes\.io\/component: sync/);
+  assert.match(webPolicy, /cidr: 172\.31\.114\.194\/32/);
+  assert.match(webPolicy, /port: 4302/);
 });
 
 test("private registries can supply pull credentials without putting them in values", () => {
@@ -194,21 +197,33 @@ test("private registries can supply pull credentials without putting them in val
   assert.match(result.stdout, /imagePullSecrets:\n {8}- name: rdhs-registry-credentials/);
 });
 
-test("a restored SQLite PVC can replace the chart-managed claim without deleting the original", () => {
-  const defaultRender = renderHelm();
-  assert.equal(defaultRender.status, 0, defaultRender.stderr);
-  assert.match(
-    defaultRender.stdout,
-    /kind: PersistentVolumeClaim\nmetadata:\n {2}name: rdhs-report[\s\S]*?annotations:\n {4}helm\.sh\/resource-policy: keep/,
-  );
+test("database credentials are injected into Web only", () => {
+  const result = renderHelm();
+  assert.equal(result.status, 0, result.stderr);
+  const web = result.stdout.match(
+    /kind: Deployment\nmetadata:\n {2}name: rdhs-report-web[\s\S]*?(?=\n---|$)/,
+  )?.[0];
+  assert.ok(web);
+  assert.match(web, /name: rdhs-report-db-secrets/);
+  for (const name of ["rdhs-report-refresh", "rdhs-report-sync"]) {
+    const workload = result.stdout.match(
+      new RegExp(`kind: (?:Deployment|CronJob)\\nmetadata:\\n {2}name: ${name}[\\s\\S]*?(?=\\n---|$)`),
+    )?.[0];
+    assert.ok(workload, `${name} workload must render`);
+    assert.doesNotMatch(workload, /rdhs-report-db-secrets/);
+  }
+});
 
+test("local values can render the MySQL Secret for smoke testing", () => {
   const result = renderHelm([
-    "--set",
-    "persistence.existingClaim=rdhs-report-restored",
+    "--set", "database.mysql.credentials.create=true",
+    "--set-string", "database.mysql.credentials.user=rdhs_report",
+    "--set-string", "database.mysql.credentials.password=smoke-db-password",
   ]);
   assert.equal(result.status, 0, result.stderr);
-  assert.match(result.stdout, /claimName: rdhs-report-restored/);
-  assert.doesNotMatch(result.stdout, /^kind: PersistentVolumeClaim$/m);
+  assert.match(result.stdout, /kind: Secret\nmetadata:\n {2}name: rdhs-report-db-secrets/);
+  assert.match(result.stdout, /MYSQL_USER: "rdhs_report"/);
+  assert.match(result.stdout, /MYSQL_PASSWORD: "smoke-db-password"/);
 });
 
 test("the monthly job receives only the Web write token it needs", () => {

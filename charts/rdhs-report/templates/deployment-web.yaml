@@ -7,9 +7,7 @@ metadata:
     {{- include "rdhs-report.labels" . | nindent 4 }}
     app.kubernetes.io/component: web
 spec:
-  replicas: 1
-  strategy:
-    type: Recreate
+  replicas: {{ .Values.web.replicaCount }}
   selector:
     matchLabels:
       {{- include "rdhs-report.selectorLabels" . | nindent 6 }}
@@ -44,9 +42,19 @@ spec:
             - name: DEPLOY_TARGET
               value: k8s
             - name: RDHS_STORAGE
-              value: sqlite
-            - name: RDHS_DB_PATH
-              value: {{ printf "%s/rdhs.sqlite" .Values.persistence.mountPath | quote }}
+              value: mysql
+            - name: MYSQL_HOST
+              value: {{ .Values.database.mysql.host | quote }}
+            - name: MYSQL_PORT
+              value: {{ .Values.database.mysql.port | quote }}
+            - name: MYSQL_DATABASE
+              value: {{ .Values.database.mysql.database | quote }}
+            - name: MYSQL_CONNECTION_LIMIT
+              value: {{ .Values.database.mysql.connectionLimit | quote }}
+            - name: MYSQL_TLS
+              value: {{ .Values.database.mysql.tls | quote }}
+            - name: MYSQL_TLS_REJECT_UNAUTHORIZED
+              value: {{ .Values.database.mysql.tlsRejectUnauthorized | quote }}
             - name: RDHS_ALLOW_DEMO_FALLBACK
               value: "false"
             - name: RDHS_REFRESH_WEBHOOK_URL
@@ -54,9 +62,8 @@ spec:
           envFrom:
             - secretRef:
                 name: {{ required "secrets.web.name is required" .Values.secrets.web.name }}
-          volumeMounts:
-            - name: sqlite
-              mountPath: {{ .Values.persistence.mountPath }}
+            - secretRef:
+                name: {{ required "database.mysql.secretName is required" .Values.database.mysql.secretName }}
           livenessProbe:
             httpGet:
               path: {{ printf "%s/api/health/live" .Values.ingress.pathPrefix | quote }}
@@ -83,7 +90,3 @@ spec:
             readOnlyRootFilesystem: false
             runAsNonRoot: true
             runAsUser: 1000
-      volumes:
-        - name: sqlite
-          persistentVolumeClaim:
-            claimName: {{ include "rdhs-report.sqliteClaimName" . }}

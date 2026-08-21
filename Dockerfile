@@ -21,8 +21,7 @@ ENV HOME=/home/node \
     NODE_ENV=production \
     DEPLOY_TARGET=k8s \
     RDHS_BASE_PATH=${RDHS_BASE_PATH} \
-    RDHS_STORAGE=sqlite \
-    RDHS_DB_PATH=/var/lib/rdhs/rdhs.sqlite \
+    RDHS_STORAGE=mysql \
     RDHS_WORKSPACE_ROOT=/opt/rdhs-workspace \
     RDHS_PYTHON_BIN=python3 \
     RDHS_OUTPUT_ROOT=/var/lib/rdhs-sync \
@@ -44,8 +43,8 @@ COPY vendor/rdhs-workspace/topics/rdhs-operations/impl/product_improvement_enric
 COPY vendor/rdhs-workspace/topics/rdhs-operations/config/periodic_report.yaml /opt/rdhs-workspace/topics/rdhs-operations/config/periodic_report.yaml
 COPY vendor/rdhs-workspace/topics/rdhs-operations/config/initial_super_team_mappings.csv /opt/rdhs-workspace/topics/rdhs-operations/config/initial_super_team_mappings.csv
 
-RUN mkdir -p /home/node /var/lib/rdhs /var/lib/rdhs-sync \
-  && chown -R node:node /app /home/node /var/lib/rdhs /var/lib/rdhs-sync /opt/rdhs-workspace
+RUN mkdir -p /home/node /var/lib/rdhs-sync \
+  && chown -R node:node /app /home/node /var/lib/rdhs-sync /opt/rdhs-workspace
 USER node
 
 EXPOSE 3000 8765

@@ -53,7 +53,9 @@ spec:
                 - name: RDHS_WORKSPACE_ROOT
                   value: {{ .Values.report.workspaceRoot | quote }}
                 - name: RDHS_OUTPUT_ROOT
-                  value: {{ .Values.syncStorage.mountPath | quote }}
+                  value: {{ .Values.syncOutput.mountPath | quote }}
+                - name: RDHS_SYNC_LEASE_TTL_SECONDS
+                  value: {{ .Values.sync.leaseTtlSeconds | quote }}
                 - name: RDHS_REPORT_COMMAND_TIMEOUT_SECONDS
                   value: {{ .Values.sync.reportCommandTimeoutSeconds | quote }}
                 - name: RDHS_OUTPUT_RETENTION_MONTHS
@@ -81,9 +83,7 @@ spec:
                 runAsUser: 1000
               volumeMounts:
                 - name: sync-output
-                  mountPath: {{ .Values.syncStorage.mountPath | quote }}
+                  mountPath: {{ .Values.syncOutput.mountPath | quote }}
           volumes:
             - name: sync-output
-              nfs:
-                server: {{ .Values.syncStorage.nfs.server | quote }}
-                path: {{ .Values.syncStorage.nfs.path | quote }}
+              emptyDir: {}

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { allowPreviewFallback } from "../lib/rdhs/runtime.ts";
+import { allowPreviewFallback, isMySQLStorage } from "../lib/rdhs/runtime.ts";
 
 test("Kubernetes mode rejects preview data fallback unless explicitly enabled", () => {
   const previousTarget = process.env.DEPLOY_TARGET;
@@ -17,5 +17,16 @@ test("Kubernetes mode rejects preview data fallback unless explicitly enabled", 
     else process.env.DEPLOY_TARGET = previousTarget;
     if (previousFallback === undefined) delete process.env.RDHS_ALLOW_DEMO_FALLBACK;
     else process.env.RDHS_ALLOW_DEMO_FALLBACK = previousFallback;
+  }
+});
+
+test("Kubernetes production can select MySQL storage explicitly", () => {
+  const previousStorage = process.env.RDHS_STORAGE;
+  process.env.RDHS_STORAGE = "mysql";
+  try {
+    assert.equal(isMySQLStorage(), true);
+  } finally {
+    if (previousStorage === undefined) delete process.env.RDHS_STORAGE;
+    else process.env.RDHS_STORAGE = previousStorage;
   }
 });
