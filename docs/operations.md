@@ -236,6 +236,9 @@ meegle-mcp 的内网仓库前缀，使用不可变的受保护发布 tag（或�
 不可覆盖），不要使用 `latest`。Web 镜像默认以 `RDHS_BASE_PATH=/meegle-rdhs-report` 构建，若调整
 Ingress path 后缀，必须同时传入相同的 `--build-arg RDHS_BASE_PATH=/your-prefix` 并修改 values：
 
+Dockerfile 不声明远端 Dockerfile frontend，避免 Jenkins 在内网构建时访问 Docker Hub。构建命令必须显式传入
+`rdhs-workspace` named context；不能替换为不带该参数的普通 `docker build`，否则报告代码无法复制进镜像。
+
 ```bash
 BASE_IMAGE=artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report-base:node22-python3-meegle-cli-1.1.5
 

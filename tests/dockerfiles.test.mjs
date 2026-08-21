@@ -5,6 +5,7 @@ import test from "node:test";
 test("the application image consumes the prebuilt RDHS dependency image", async () => {
   const dockerfile = await readFile(new URL("../Dockerfile", import.meta.url), "utf8");
 
+  assert.doesNotMatch(dockerfile, /^# syntax=/m);
   assert.match(
     dockerfile,
     /ARG RDHS_BASE_IMAGE=artifacts\.iflytek\.com\/cbg-docker-repo\/cbbywkf\/meegle-rdhs-report-base:node22-python3-meegle-cli-1\.1\.5/,

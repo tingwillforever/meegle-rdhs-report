@@ -1,4 +1,3 @@
-# syntax=docker/dockerfile:1.7
 ARG RDHS_BASE_IMAGE=artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report-base:node22-python3-meegle-cli-1.1.5
 ARG RDHS_BASE_PATH=/meegle-rdhs-report
 
