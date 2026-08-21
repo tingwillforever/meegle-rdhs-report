@@ -66,7 +66,7 @@ Secret，以及可拉取内部镜像的凭据（如需要）。
 现网入口沿用 meegle-mcp 的域名和镜像仓库约定：
 `https://ossptest.voicecloud.cn/meegle-rdhs-report/`。生产 values 已将统一镜像指向
 `artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report`，并引用集群预置的 `hub4iflytek` pull Secret；
-令牌仍由 Secret/ExternalSecret 注入，Chart 不创建 Secret。
+生产令牌仍由 Secret/ExternalSecret 注入；仅快速验证时可用未提交的本地 values 临时让 Chart 创建 Secret。
 
 共享 NFS 默认只保留最近 6 个自然月的报告运行目录和站点快照；月初基线、运行产物与日志容量应按此窗口
 预留，并由存储团队设置配额和告警。每条 Meegle 报告命令最多运行 540 秒，CronJob 最多运行 1,500 秒，

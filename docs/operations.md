@@ -211,9 +211,10 @@ Chart 默认每条报告命令超时 540 秒，CronJob 的 `activeDeadlineSecond
 
 ### 10.2 预创建 Secret
 
-Chart 不渲染 Secret，也不会把令牌写入 values 或镜像。通过现有 ExternalSecret/KMS 流程创建以下两项
-Secret；下列命令仅说明 Key，执行时从受控终端提供真实值。`RDHS_REFRESH_WEBHOOK_TOKEN` 必须是非空高熵
-随机值；Runner 会在该 Key 缺失或为空时拒绝启动：
+生产默认不渲染 Secret，也不会把令牌写入仓库或镜像。通过现有 ExternalSecret/KMS 流程创建以下两项
+Secret；下列命令仅说明 Key，执行时从受控终端提供真实值。为快速验证，也可以使用未提交的本地 values
+覆盖 `secrets.create=true` 让 Chart 临时生成 Secret，但不要把该覆盖文件提交或用于正式生产。`RDHS_REFRESH_WEBHOOK_TOKEN`
+必须是非空高熵随机值；Runner 会在该 Key 缺失或为空时拒绝启动：
 
 ```bash
 kubectl -n <namespace> create secret generic rdhs-report-web-secrets \
@@ -224,6 +225,26 @@ kubectl -n <namespace> create secret generic rdhs-report-meegle-secrets \
   --from-literal=MEEGLE_HOST='https://<meegle-internal-host>' \
   --from-literal=MEEGLE_USER_ACCESS_TOKEN='<machine-account-token>'
 ```
+
+快速验证时可使用未提交的 `charts/rdhs-report/values-prod.local.yaml` 覆盖文件：
+
+```yaml
+secrets:
+  create: true
+  web:
+    name: rdhs-report-web-secrets
+    data:
+      RDHS_INGEST_TOKEN: "<write-token>"
+      RDHS_REFRESH_WEBHOOK_TOKEN: "<runner-token>"
+  meegle:
+    name: rdhs-report-meegle-secrets
+    data:
+      MEEGLE_HOST: "https://<meegle-internal-host>"
+      MEEGLE_USER_ACCESS_TOKEN: "<machine-account-token>"
+```
+
+使用时追加 `-f charts/rdhs-report/values-prod.local.yaml`；验证完成后删除该文件，并将
+`secrets.create` 恢复为 `false`。Helm 会把这类覆盖值保存到 Release Secret，因此不要将其用于正式生产。
 
 Web 使用第一项 Secret；Runner 使用两个写入 Key 与两个 Meegle Key；CronJob 仅使用
 `RDHS_INGEST_TOKEN` 与两个 Meegle Key。为私有仓库创建的 pull Secret 通过
@@ -295,7 +316,7 @@ https://ossptest.voicecloud.cn/meegle-rdhs-report/api/health/live
 https://ossptest.voicecloud.cn/meegle-rdhs-report/api/health
 ```
 
-渲染结果不得出现 `kind: Secret` 或任意明文令牌。`/api/health/live` 用于 liveness，`/api/health`
+正式生产渲染结果不得出现 `kind: Secret` 或任意明文令牌；快速验证模式会按本地覆盖生成两个 Secret。`/api/health/live` 用于 liveness，`/api/health`
 会读取 SQLite，作为 readiness；首次部署在导入快照前返回就绪但页面会明确显示“数据暂不可用”，不会展示演示数据。
 
 ### 10.5 首次历史导入和月度验收

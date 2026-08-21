@@ -14,7 +14,7 @@
 
 - Web uses `DEPLOY_TARGET=k8s`, `RDHS_STORAGE=sqlite` and `RDHS_DB_PATH=/var/lib/rdhs/rdhs.sqlite`.
 - SQLite uses one writer only: `replicaCount: 1`, RWO PVC, no HPA and `Recreate` updates.
-- Every token is provided by a pre-existing Kubernetes Secret; no rendered Secret manifests or plaintext secrets.
+- Production tokens are provided by pre-existing Kubernetes Secrets; the chart can optionally render temporary Secrets for a local smoke-test override, but that override must not be committed.
 - Meegle CLI exists only in the synchronization image, never the Web image.
 - Runner and CronJob share an NFS output directory with advisory file locking; it is separate from the SQLite PVC.
 - Runner fails closed without a webhook token; report commands, CronJob duration, NFS retention and capacity are bounded.

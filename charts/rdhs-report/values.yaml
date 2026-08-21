@@ -61,10 +61,19 @@ persistence:
   mountPath: /var/lib/rdhs
 
 secrets:
+  # Keep false for production and use an ExternalSecret/KMS-managed Secret.
+  # Set true only with a local, uncommitted values override for smoke testing.
+  create: false
   web:
     name: ""
+    data:
+      RDHS_INGEST_TOKEN: ""
+      RDHS_REFRESH_WEBHOOK_TOKEN: ""
   meegle:
     name: ""
+    data:
+      MEEGLE_HOST: ""
+      MEEGLE_USER_ACCESS_TOKEN: ""
 
 report:
   workspaceRoot: /opt/rdhs-workspace
