@@ -1,12 +1,12 @@
-import { D1SnapshotRepository } from "@/lib/rdhs/d1-repository";
 import { cadenceFromUrl } from "@/lib/rdhs/http";
+import { createSnapshotRepository } from "@/lib/rdhs/storage";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
   try {
     const cadence = cadenceFromUrl(new URL(request.url));
-    const records = await new D1SnapshotRepository().listPeriods(cadence);
+    const records = await (await createSnapshotRepository()).listPeriods(cadence);
     return Response.json({
       periods: records.map((record) => ({
         periodKey: record.periodKey,
@@ -20,4 +20,3 @@ export async function GET(request: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 }
-

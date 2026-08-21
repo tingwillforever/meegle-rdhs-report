@@ -1,0 +1,106 @@
+fullnameOverride: ""
+imagePullSecrets: []
+
+image:
+  repository: registry.example.invalid/meegle-rdhs-report
+  tag: v1.0.0
+  pullPolicy: IfNotPresent
+
+web:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+sync:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+  runner:
+    timeoutSeconds: 600
+  reportCommandTimeoutSeconds: 540
+  outputRetentionMonths: 6
+  cron:
+    schedule: "0 9 1 * *"
+    timeZone: Asia/Shanghai
+    suspend: false
+    activeDeadlineSeconds: 1500
+    backoffLimit: 2
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 5
+    ttlSecondsAfterFinished: 604800
+
+# The external reporting runtime stores month-start baselines here. Runner and
+# CronJob must see the same directory, so this is a shared NFS mount rather
+# than the Web SQLite RWO PVC.
+syncStorage:
+  mountPath: /var/lib/rdhs-sync
+  nfs:
+    server: ""
+    path: ""
+
+strategy:
+  type: Recreate
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+  mountPath: /var/lib/rdhs
+
+secrets:
+  web:
+    name: ""
+  meegle:
+    name: ""
+
+report:
+  workspaceRoot: /opt/rdhs-workspace
+  monthlyBaselineCommand: >-
+    python3 /opt/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py
+    --mode monthly-baseline
+  monthlyCommand: >-
+    python3 /opt/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py
+    --mode weekly
+  currentCommand: >-
+    python3 /opt/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py
+    --mode weekly
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+ingress:
+  enabled: true
+  className: nginx
+  host: rdhs.example.internal
+  pathPrefix: /meegle-rdhs-report
+  annotations: {}
+  tls: []
+  refresh:
+    enabled: false
+    annotations: {}
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
+networkPolicy:
+  enabled: false
+  ingressController:
+    namespaceSelector: {}
+    podSelector: {}
+  meegleEgress: []

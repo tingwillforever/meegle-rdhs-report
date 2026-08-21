@@ -9,14 +9,14 @@ if [[ "$cadence" != "monthly" ]]; then
 fi
 
 env_file="${RDHS_SYNC_ENV:-$site_root/.env.sync}"
-if [[ ! -f "$env_file" ]]; then
+if [[ -f "$env_file" ]]; then
+  set -a
+  source "$env_file"
+  set +a
+elif [[ -z "${RDHS_SITE_URL:-}" || -z "${RDHS_INGEST_TOKEN:-}" ]]; then
   echo "RDHS sync environment not found: $env_file" >&2
   exit 1
 fi
-
-set -a
-source "$env_file"
-set +a
 : "${RDHS_SITE_URL:?RDHS_SITE_URL is required}"
 : "${RDHS_INGEST_TOKEN:?RDHS_INGEST_TOKEN is required}"
 

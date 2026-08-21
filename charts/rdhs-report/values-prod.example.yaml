@@ -1,0 +1,63 @@
+image:
+  repository: artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report
+  tag: v1.0.0
+
+imagePullSecrets:
+  - name: hub4iflytek
+
+# Shared report-workspace output. This is intentionally separate from the
+# SQLite RWO PVC and is mounted only by Runner and CronJob.
+syncStorage:
+  nfs:
+    server: nfs.company.internal
+    path: /exports/rdhs-report
+
+# Reference an existing image-pull Secret when the internal registry requires it.
+# imagePullSecrets:
+#   - name: rdhs-registry-credentials
+
+persistence:
+  storageClass: fast-rwo
+  accessModes:
+    - ReadWriteOnce
+  size: 20Gi
+# Recovery only: set existingClaim to a PVC restored from a VolumeSnapshot.
+# existingClaim: rdhs-report-restored
+
+secrets:
+  web:
+    name: rdhs-report-web-secrets
+  meegle:
+    name: rdhs-report-meegle-secrets
+
+ingress:
+  className: nginx
+  host: ossptest.voicecloud.cn
+  pathPrefix: /meegle-rdhs-report
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+  refresh:
+    enabled: true
+    annotations:
+      nginx.ingress.kubernetes.io/auth-url: >-
+        https://sso.iflytek.com:8443/auth?required_group=rdhs-operators
+      nginx.ingress.kubernetes.io/use-regex: "true"
+      nginx.ingress.kubernetes.io/rewrite-target: /$2
+
+# Enable only after replacing these selectors and CIDRs with values supplied by
+# the cluster and Meegle network owners.
+networkPolicy:
+  enabled: false
+  ingressController:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: ingress-nginx
+    podSelector:
+      matchLabels:
+        app.kubernetes.io/component: controller
+  meegleEgress:
+    - ipBlock:
+        cidr: 10.0.0.0/8

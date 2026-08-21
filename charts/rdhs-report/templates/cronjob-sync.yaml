@@ -1,0 +1,97 @@
+{{- include "rdhs-report.validate" . }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "rdhs-report.syncName" . }}
+  labels:
+    {{- include "rdhs-report.labels" . | nindent 4 }}
+    app.kubernetes.io/component: sync
+spec:
+  schedule: {{ .Values.sync.cron.schedule | quote }}
+  timeZone: {{ .Values.sync.cron.timeZone }}
+  suspend: {{ .Values.sync.cron.suspend }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.sync.cron.successfulJobsHistoryLimit }}
+  failedJobsHistoryLimit: {{ .Values.sync.cron.failedJobsHistoryLimit }}
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: {{ .Values.sync.cron.activeDeadlineSeconds }}
+      backoffLimit: {{ .Values.sync.cron.backoffLimit }}
+      {{- with .Values.sync.cron.ttlSecondsAfterFinished }}
+      ttlSecondsAfterFinished: {{ . }}
+      {{- end }}
+      template:
+        metadata:
+          labels:
+            {{- include "rdhs-report.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: sync
+        spec:
+          serviceAccountName: {{ include "rdhs-report.serviceAccountName" . }}
+          automountServiceAccountToken: false
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          restartPolicy: OnFailure
+          securityContext:
+            fsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: sync
+              image: {{ include "rdhs-report.image" .Values.image | quote }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              command:
+                - bash
+                - scripts/run-sync-job.sh
+                - monthly
+              env:
+                - name: RDHS_SITE_URL
+                  value: {{ printf "http://%s:3000" (include "rdhs-report.webName" .) | quote }}
+                - name: RDHS_WORKSPACE_ROOT
+                  value: {{ .Values.report.workspaceRoot | quote }}
+                - name: RDHS_OUTPUT_ROOT
+                  value: {{ .Values.syncStorage.mountPath | quote }}
+                - name: RDHS_REPORT_COMMAND_TIMEOUT_SECONDS
+                  value: {{ .Values.sync.reportCommandTimeoutSeconds | quote }}
+                - name: RDHS_OUTPUT_RETENTION_MONTHS
+                  value: {{ .Values.sync.outputRetentionMonths | quote }}
+                - name: RDHS_MONTHLY_BASELINE_COMMAND
+                  value: {{ .Values.report.monthlyBaselineCommand | quote }}
+                - name: RDHS_MONTHLY_REPORT_COMMAND
+                  value: {{ .Values.report.monthlyCommand | quote }}
+                - name: RDHS_CURRENT_REPORT_COMMAND
+                  value: {{ .Values.report.currentCommand | quote }}
+                - name: RDHS_INGEST_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ required "secrets.web.name is required" .Values.secrets.web.name }}
+                      key: RDHS_INGEST_TOKEN
+                - name: MEEGLE_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ required "secrets.meegle.name is required" .Values.secrets.meegle.name }}
+                      key: MEEGLE_HOST
+                - name: MEEGLE_USER_ACCESS_TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ required "secrets.meegle.name is required" .Values.secrets.meegle.name }}
+                      key: MEEGLE_USER_ACCESS_TOKEN
+              resources:
+                {{- toYaml .Values.sync.resources | nindent 16 }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                readOnlyRootFilesystem: false
+                runAsNonRoot: true
+                runAsUser: 1000
+              volumeMounts:
+                - name: sync-output
+                  mountPath: {{ .Values.syncStorage.mountPath | quote }}
+          volumes:
+            - name: sync-output
+              nfs:
+                server: {{ .Values.syncStorage.nfs.server | quote }}
+                path: {{ .Values.syncStorage.nfs.path | quote }}

@@ -1,13 +1,14 @@
-import { env } from "cloudflare:workers";
-
-import { D1SnapshotRepository } from "@/lib/rdhs/d1-repository";
 import { authorizeBearer } from "@/lib/rdhs/http";
-import { SnapshotService } from "@/lib/rdhs/repository";
+import {
+  SnapshotService,
+  supportsFailureRecording,
+} from "@/lib/rdhs/repository";
+import { createSnapshotRepository, getRuntimeSetting } from "@/lib/rdhs/storage";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
-  const expectedToken = String(env.RDHS_INGEST_TOKEN ?? "");
+  const expectedToken = await getRuntimeSetting("RDHS_INGEST_TOKEN");
   if (!authorizeBearer(request.headers.get("authorization"), expectedToken)) {
     return Response.json({ error: "未授权的快照写入" }, { status: 401 });
   }
@@ -19,14 +20,16 @@ export async function POST(request: Request) {
     return Response.json({ error: "请求体必须是 JSON" }, { status: 400 });
   }
 
-  const repository = new D1SnapshotRepository();
+  const repository = await createSnapshotRepository();
   try {
     const result = await new SnapshotService(repository).ingest(payload);
     return Response.json(result, { status: result.created ? 201 : 200 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "快照写入失败";
     try {
-      await repository.recordFailure(payload, message);
+      if (supportsFailureRecording(repository)) {
+        await repository.recordFailure(payload, message);
+      }
     } catch {
       // Keep the original validation or persistence error as the API response.
     }
@@ -34,4 +37,3 @@ export async function POST(request: Request) {
     return Response.json({ error: message }, { status: isValidationError ? 422 : 500 });
   }
 }
-

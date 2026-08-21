@@ -1,0 +1,13 @@
+RDHS 已渲染为单副本 SQLite 部署：{{ include "rdhs-report.webName" . }}。
+
+访问地址（生产 values）：https://ossptest.voicecloud.cn/meegle-rdhs-report/
+存活探针：https://ossptest.voicecloud.cn/meegle-rdhs-report/api/health/live
+就绪探针：https://ossptest.voicecloud.cn/meegle-rdhs-report/api/health
+
+上线前确认：
+1. {{ required "secrets.web.name is required" .Values.secrets.web.name }} 含 RDHS_INGEST_TOKEN 与 RDHS_REFRESH_WEBHOOK_TOKEN。
+2. {{ required "secrets.meegle.name is required" .Values.secrets.meegle.name }} 含 MEEGLE_HOST 与 MEEGLE_USER_ACCESS_TOKEN，仅同步工作负载挂载。
+3. PVC {{ include "rdhs-report.fullname" . }} 的 StorageClass 支持 ReadWriteOnce，并已配置每日 CSI VolumeSnapshot。
+4. NFS {{ .Values.syncStorage.nfs.server }}:{{ .Values.syncStorage.nfs.path }} 支持文件锁，且容器 UID/GID 1000 可读写；它仅供 Runner 与 CronJob 共享报告输出。
+5. NFS 已配置容量配额和告警；同步器默认只保留最近 {{ .Values.sync.outputRetentionMonths }} 个自然月的运行产物。
+6. 刷新 Ingress 的企业 SSO annotation 已限制为运营人员组，且 {{ required "secrets.web.name is required" .Values.secrets.web.name }} 中的 RDHS_REFRESH_WEBHOOK_TOKEN 非空。

@@ -1,4 +1,4 @@
-import { env } from "cloudflare:workers";
+import { getRuntimeSetting } from "@/lib/rdhs/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const refreshUrl = String(env.RDHS_REFRESH_WEBHOOK_URL ?? "");
+  const refreshUrl = await getRuntimeSetting("RDHS_REFRESH_WEBHOOK_URL");
   if (!refreshUrl) {
     return Response.json(
       {
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   const headers: HeadersInit = {
     "Content-Type": "application/json; charset=utf-8",
   };
-  const token = String(env.RDHS_REFRESH_WEBHOOK_TOKEN ?? "");
+  const token = await getRuntimeSetting("RDHS_REFRESH_WEBHOOK_TOKEN");
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const response = await fetch(refreshUrl, {

@@ -62,6 +62,14 @@ function currentMonthKey() {
   return `${year}-${month}`;
 }
 
+function appApiUrl(path: string) {
+  if (typeof window === "undefined") return path;
+  const basePath = window.location.pathname.endsWith("/")
+    ? window.location.pathname
+    : `${window.location.pathname}/`;
+  return `${basePath}${path}`;
+}
+
 function sortSnapshots(snapshots: RdhsSnapshot[]) {
   return snapshots
     .filter((snapshot) => snapshot.cadence === "monthly")
@@ -448,7 +456,9 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
     setRefreshState("loading");
     setRefreshMessage("");
     try {
-      const response = await fetch("/api/report/refresh", {
+      // Resolve through the current app path so the dashboard also works
+      // behind the production Ingress prefix (/meegle-rdhs-report/).
+      const response = await fetch(appApiUrl("api/report/refresh"), {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
         body: JSON.stringify({ periodKey: snapshot.periodKey }),
@@ -456,7 +466,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
       const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
       if (!response.ok) throw new Error(payload.error ?? "当月数据刷新失败");
 
-      const reportResponse = await fetch(`/api/report?period=${snapshot.periodKey}`, { cache: "no-store" });
+      const reportResponse = await fetch(appApiUrl(`api/report?period=${snapshot.periodKey}`), { cache: "no-store" });
       if (reportResponse.ok) {
         const report = await reportResponse.json() as { record: { snapshot: RdhsSnapshot } };
         setSnapshots((current) => sortSnapshots([

@@ -1,0 +1,121 @@
+{{- include "rdhs-report.validate" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rdhs-report.runnerName" . }}
+  labels:
+    {{- include "rdhs-report.labels" . | nindent 4 }}
+    app.kubernetes.io/component: runner
+spec:
+  replicas: {{ .Values.sync.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rdhs-report.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: runner
+  template:
+    metadata:
+      labels:
+        {{- include "rdhs-report.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: runner
+    spec:
+      serviceAccountName: {{ include "rdhs-report.serviceAccountName" . }}
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: runner
+          image: {{ include "rdhs-report.image" .Values.image | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python3
+            - scripts/local-refresh-runner.py
+            - --host
+            - 0.0.0.0
+            - --port
+            - "8765"
+            - --env-file
+            - /etc/rdhs/runtime.env
+          args:
+            - --timeout
+            - {{ .Values.sync.runner.timeoutSeconds | quote }}
+          ports:
+            - name: http
+              containerPort: 8765
+              protocol: TCP
+          env:
+            - name: RDHS_SITE_URL
+              value: {{ printf "http://%s:3000" (include "rdhs-report.webName" .) | quote }}
+            - name: RDHS_WORKSPACE_ROOT
+              value: {{ .Values.report.workspaceRoot | quote }}
+            - name: RDHS_OUTPUT_ROOT
+              value: {{ .Values.syncStorage.mountPath | quote }}
+            - name: RDHS_REPORT_COMMAND_TIMEOUT_SECONDS
+              value: {{ .Values.sync.reportCommandTimeoutSeconds | quote }}
+            - name: RDHS_OUTPUT_RETENTION_MONTHS
+              value: {{ .Values.sync.outputRetentionMonths | quote }}
+            - name: RDHS_MONTHLY_BASELINE_COMMAND
+              value: {{ .Values.report.monthlyBaselineCommand | quote }}
+            - name: RDHS_MONTHLY_REPORT_COMMAND
+              value: {{ .Values.report.monthlyCommand | quote }}
+            - name: RDHS_CURRENT_REPORT_COMMAND
+              value: {{ .Values.report.currentCommand | quote }}
+            - name: RDHS_INGEST_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secrets.web.name is required" .Values.secrets.web.name }}
+                  key: RDHS_INGEST_TOKEN
+            - name: RDHS_REFRESH_WEBHOOK_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secrets.web.name is required" .Values.secrets.web.name }}
+                  key: RDHS_REFRESH_WEBHOOK_TOKEN
+            - name: MEEGLE_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secrets.meegle.name is required" .Values.secrets.meegle.name }}
+                  key: MEEGLE_HOST
+            - name: MEEGLE_USER_ACCESS_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "secrets.meegle.name is required" .Values.secrets.meegle.name }}
+                  key: MEEGLE_USER_ACCESS_TOKEN
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.sync.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 1000
+          volumeMounts:
+            - name: sync-output
+              mountPath: {{ .Values.syncStorage.mountPath | quote }}
+      volumes:
+        - name: sync-output
+          nfs:
+            server: {{ .Values.syncStorage.nfs.server | quote }}
+            path: {{ .Values.syncStorage.nfs.path | quote }}

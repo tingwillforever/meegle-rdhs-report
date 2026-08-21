@@ -3,10 +3,17 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 from datetime import date
+from datetime import datetime
+from datetime import timedelta
+import fcntl
 import json
 import os
 from pathlib import Path
+import re
+import shlex
+import shutil
 import subprocess
 import sys
 from typing import Callable
@@ -15,9 +22,13 @@ from typing import Optional
 from urllib.error import HTTPError
 from urllib.request import Request
 from urllib.request import build_opener
+from zoneinfo import ZoneInfo
 
 
 SITE_ROOT = Path(__file__).resolve().parents[1]
+SHANGHAI_TIME_ZONE = ZoneInfo("Asia/Shanghai")
+MONTH_KEY_PATTERN = re.compile(r"^(\d{4})-(\d{2})$")
+SITE_SNAPSHOT_PATTERN = re.compile(r"^monthly-(\d{4}-\d{2})\.json$")
 
 
 def _resolve_workspace_root() -> Path:
@@ -31,7 +42,9 @@ def _resolve_workspace_root() -> Path:
 
 
 WORKSPACE_ROOT = _resolve_workspace_root()
-DEFAULT_OUTPUT_ROOT = SITE_ROOT / "runtime" / "sync-runs"
+DEFAULT_OUTPUT_ROOT = Path(
+    os.environ.get("RDHS_OUTPUT_ROOT", str(SITE_ROOT / "runtime" / "sync-runs"))
+)
 
 RDHS_FIELD = "RDHS(100')"
 COMPONENT_FIELDS = {
@@ -438,35 +451,54 @@ def _load_json(path: Path) -> dict[str, object]:
     return payload
 
 
-def generate_report(
-    cadence: str,
-    output_root: Path,
-    as_of: Optional[str],
+def _report_command(command_variable: str) -> list[str]:
+    if command_variable in os.environ:
+        configured = os.environ[command_variable].strip()
+        if not configured:
+            raise ValueError(f"{command_variable} must not be empty")
+        command = shlex.split(configured)
+        if not command:
+            raise ValueError(f"{command_variable} must not be empty")
+        return command
+    return [
+        sys.executable,
+        str(WORKSPACE_ROOT / "run_periodic_report.py"),
+        "--mode",
+        "weekly",
+    ]
+
+
+def _run_report_command(
+    command: list[str],
     *,
-    current_month_cache: bool = False,
+    output_root: Path,
+    snapshot_date: str,
 ) -> Path:
-    if cadence != "monthly":
-        raise ValueError("cadence must be monthly")
-    command = [sys.executable, str(WORKSPACE_ROOT / "run_periodic_report.py")]
-    if current_month_cache:
-        command.extend(["--mode", "monthly"])
-    else:
-        command.append("last-month")
-    command.extend(["--no-publish", "--output-root", str(output_root)])
-    if as_of:
-        command.extend(["--as-of", as_of])
-    elif current_month_cache:
-        command.extend(["--as-of", date.today().isoformat()])
-    environment = dict(os.environ)
-    environment["PATH"] = f"{Path.home() / '.local' / 'bin'}:{environment.get('PATH', '')}"
-    completed = subprocess.run(
-        command,
-        cwd=WORKSPACE_ROOT,
-        env=environment,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
+    timeout_seconds = _report_command_timeout_seconds()
+    try:
+        completed = subprocess.run(
+            [
+                *command,
+                "--no-publish",
+                "--output-root",
+                str(output_root),
+                "--as-of",
+                snapshot_date,
+            ],
+            cwd=WORKSPACE_ROOT,
+            env={
+                **os.environ,
+                "PATH": f"{Path.home() / '.local' / 'bin'}:{os.environ.get('PATH', '')}",
+            },
+            text=True,
+            capture_output=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError(
+            f"RDHS report generation exceeded {timeout_seconds} seconds"
+        ) from error
     if completed.returncode != 0:
         raise RuntimeError(f"RDHS report generation failed: {completed.stderr.strip()}")
     lines = [line for line in completed.stdout.splitlines() if line.strip()]
@@ -477,6 +509,131 @@ def generate_report(
     if not run_dir.is_absolute():
         run_dir = WORKSPACE_ROOT / run_dir
     return run_dir
+
+
+def _report_command_timeout_seconds() -> int:
+    raw_value = os.environ.get("RDHS_REPORT_COMMAND_TIMEOUT_SECONDS", "540")
+    try:
+        timeout_seconds = int(raw_value)
+    except ValueError as error:
+        raise ValueError("RDHS_REPORT_COMMAND_TIMEOUT_SECONDS must be a positive integer") from error
+    if timeout_seconds < 1:
+        raise ValueError("RDHS_REPORT_COMMAND_TIMEOUT_SECONDS must be a positive integer")
+    return timeout_seconds
+
+
+def _next_month_start(report_date: date) -> date:
+    if report_date.month == 12:
+        return date(report_date.year + 1, 1, 1)
+    return date(report_date.year, report_date.month + 1, 1)
+
+
+def _month_start_from_key(month_key: str) -> date | None:
+    match = MONTH_KEY_PATTERN.fullmatch(month_key)
+    if not match:
+        return None
+    try:
+        return date(int(match.group(1)), int(match.group(2)), 1)
+    except ValueError:
+        return None
+
+
+def _earliest_retained_month(current_date: date, retention_months: int) -> date:
+    if retention_months < 1:
+        raise ValueError("retention_months must be at least 1")
+    month_index = current_date.year * 12 + current_date.month - retention_months
+    return date(month_index // 12, month_index % 12 + 1, 1)
+
+
+def prune_report_output(
+    output_root: Path,
+    *,
+    current_date: date,
+    retention_months: int,
+) -> None:
+    """Remove only dated, expired report output while preserving unrelated files."""
+    if not output_root.exists():
+        return
+    earliest_month = _earliest_retained_month(current_date, retention_months)
+    for path in output_root.iterdir():
+        month_start = _month_start_from_key(path.name)
+        if (
+            month_start is not None
+            and month_start < earliest_month
+            and path.is_dir()
+            and not path.is_symlink()
+        ):
+            shutil.rmtree(path)
+
+    snapshot_dir = output_root / "site-snapshots"
+    if not snapshot_dir.is_dir() or snapshot_dir.is_symlink():
+        return
+    for path in snapshot_dir.iterdir():
+        match = SITE_SNAPSHOT_PATTERN.fullmatch(path.name)
+        month_start = _month_start_from_key(match.group(1)) if match else None
+        if month_start is not None and month_start < earliest_month and path.is_file():
+            path.unlink()
+
+
+def _output_retention_months() -> int:
+    raw_value = os.environ.get("RDHS_OUTPUT_RETENTION_MONTHS", "6")
+    try:
+        retention_months = int(raw_value)
+    except ValueError as error:
+        raise ValueError("RDHS_OUTPUT_RETENTION_MONTHS must be a positive integer") from error
+    if retention_months < 1:
+        raise ValueError("RDHS_OUTPUT_RETENTION_MONTHS must be a positive integer")
+    return retention_months
+
+
+@contextmanager
+def _report_output_lock(output_root: Path):
+    """Serialize CronJob and Runner access to the shared report output."""
+    output_root.mkdir(parents=True, exist_ok=True)
+    lock_path = output_root / ".rdhs-sync.lock"
+    with lock_path.open("a+", encoding="utf-8") as lock_file:
+        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+
+
+def generate_report(
+    cadence: str,
+    output_root: Path,
+    as_of: Optional[str],
+    *,
+    current_month_cache: bool = False,
+) -> Path:
+    if cadence != "monthly":
+        raise ValueError("cadence must be monthly")
+    snapshot_date = as_of
+    if not snapshot_date:
+        today = datetime.now(SHANGHAI_TIME_ZONE).date()
+        snapshot_date = (
+            today.isoformat()
+            if current_month_cache
+            else (today.replace(day=1) - timedelta(days=1)).isoformat()
+        )
+
+    with _report_output_lock(output_root):
+        if not current_month_cache and "RDHS_MONTHLY_BASELINE_COMMAND" in os.environ:
+            report_date = date.fromisoformat(snapshot_date)
+            _run_report_command(
+                _report_command("RDHS_MONTHLY_BASELINE_COMMAND"),
+                output_root=output_root,
+                snapshot_date=_next_month_start(report_date).isoformat(),
+            )
+
+        command_variable = (
+            "RDHS_CURRENT_REPORT_COMMAND" if current_month_cache else "RDHS_MONTHLY_REPORT_COMMAND"
+        )
+        return _run_report_command(
+            _report_command(command_variable),
+            output_root=output_root,
+            snapshot_date=snapshot_date,
+        )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -524,6 +681,12 @@ def main(argv: Optional[list[str]] = None) -> int:
             "uploaded": True,
             "remote": upload_snapshot(args.site_url, args.token, snapshot),
         }
+        with _report_output_lock(args.output_root):
+            prune_report_output(
+                args.output_root,
+                current_date=datetime.now(SHANGHAI_TIME_ZONE).date(),
+                retention_months=_output_retention_months(),
+            )
     print(json.dumps(result, ensure_ascii=False))
     return 0
 

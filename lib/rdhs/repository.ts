@@ -25,6 +25,16 @@ export interface SnapshotRepository {
   listPeriods(cadence: Cadence): Promise<StoredSnapshot[]>;
 }
 
+export type SnapshotFailureRepository = SnapshotRepository & {
+  recordFailure(input: unknown, error: string): Promise<void>;
+};
+
+export function supportsFailureRecording(
+  repository: SnapshotRepository,
+): repository is SnapshotFailureRepository {
+  return "recordFailure" in repository && typeof repository.recordFailure === "function";
+}
+
 export class MemorySnapshotRepository implements SnapshotRepository {
   readonly records: StoredSnapshot[] = [];
 

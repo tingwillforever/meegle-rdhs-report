@@ -23,3 +23,16 @@ test("scheduled jobs load their private sync environment before invoking Python"
   assert.doesNotMatch(installer, /com\.rdhs\.operations\.weekly/);
   assert.doesNotMatch(installer, /RDHS_INGEST_TOKEN.*<string>/);
 });
+
+test("the chart build script follows the versioned meegle-mcp release flow", async () => {
+  const script = await readFile(new URL("../charts/build-chart.sh", import.meta.url), "utf8");
+
+  assert.match(script, /PROJECT_VERSION/);
+  assert.match(script, /BUILD_ID/);
+  assert.match(script, /SERVICE_NAME/);
+  assert.match(script, /values-\$\{ENV\}\.example\.yaml/);
+  assert.match(script, /helm lint/);
+  assert.match(script, /helm package/);
+  assert.match(script, /helm push-artifactory/);
+  assert.match(script, /meegle-rdhs-report/);
+});

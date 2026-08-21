@@ -1,5 +1,5 @@
-import { D1SnapshotRepository } from "@/lib/rdhs/d1-repository";
 import { cadenceFromUrl, periodFromUrl } from "@/lib/rdhs/http";
+import { createSnapshotRepository } from "@/lib/rdhs/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const url = new URL(request.url);
     const cadence = cadenceFromUrl(url);
     const period = periodFromUrl(url, cadence);
-    const record = await new D1SnapshotRepository().getCurrent(cadence, period);
+    const record = await (await createSnapshotRepository()).getCurrent(cadence, period);
     if (!record) return Response.json({ error: "该周期暂无有效报告" }, { status: 404 });
     return Response.json({ record });
   } catch (error) {
@@ -16,4 +16,3 @@ export async function GET(request: Request) {
     return Response.json({ error: message }, { status: 400 });
   }
 }
-

@@ -19,7 +19,9 @@ from zoneinfo import ZoneInfo
 
 
 SITE_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_OUTPUT_ROOT = SITE_ROOT / "runtime" / "local-refresh-runs"
+DEFAULT_OUTPUT_ROOT = Path(
+    os.environ.get("RDHS_OUTPUT_ROOT", str(SITE_ROOT / "runtime" / "local-refresh-runs"))
+)
 DEFAULT_PORT = 8765
 
 
@@ -83,6 +85,13 @@ def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict[s
     handler.send_header("Content-Length", str(len(body)))
     handler.end_headers()
     handler.wfile.write(body)
+
+
+def required_refresh_webhook_token() -> str:
+    token = os.environ.get("RDHS_REFRESH_WEBHOOK_TOKEN", "").strip()
+    if not token:
+        raise RuntimeError("RDHS_REFRESH_WEBHOOK_TOKEN is required for the refresh runner")
+    return token
 
 
 class RefreshRunner:
@@ -154,7 +163,7 @@ def _handler_factory(runner: RefreshRunner, runner_token: str):
             if self.path != "/rdhs/refresh":
                 _json_response(self, 404, {"error": "not found"})
                 return
-            if runner_token and self.headers.get("Authorization") != f"Bearer {runner_token}":
+            if self.headers.get("Authorization") != f"Bearer {runner_token}":
                 _json_response(self, 401, {"error": "unauthorized"})
                 return
 
@@ -195,7 +204,7 @@ def main() -> int:
     args = build_parser().parse_args()
     _load_env_file(args.env_file)
     runner = RefreshRunner(output_root=args.output_root, timeout=args.timeout)
-    handler = _handler_factory(runner, os.environ.get("RDHS_REFRESH_WEBHOOK_TOKEN", ""))
+    handler = _handler_factory(runner, required_refresh_webhook_token())
     server = ThreadingHTTPServer((args.host, args.port), handler)
     print(f"RDHS local refresh runner listening on http://{args.host}:{args.port}", flush=True)
     server.serve_forever()
