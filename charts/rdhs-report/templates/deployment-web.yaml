@@ -26,8 +26,10 @@ spec:
       {{- end }}
       securityContext:
         fsGroup: 1000
+        {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
         seccompProfile:
           type: RuntimeDefault
+        {{- end }}
       containers:
         - name: web
           image: {{ include "rdhs-report.image" .Values.image | quote }}

@@ -100,5 +100,5 @@ exit 1
   assert.match(builtValues, /^report:\n/m);
   assert.match(builtValues, /^serviceAccount:\n/m);
   assert.match(builtValues, /^pdb:\n/m);
-  assert.match(builtValues, /^    host: 172\.31\.114\.194$/m);
+  assert.match(builtValues, /^\x20{4}host: 172\.31\.114\.194$/m);
 });

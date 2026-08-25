@@ -1,5 +1,9 @@
 {{- include "rdhs-report.validate" . }}
+{{- if semverCompare ">=1.21-0" .Capabilities.KubeVersion.GitVersion }}
 apiVersion: batch/v1
+{{- else }}
+apiVersion: batch/v1beta1
+{{- end }}
 kind: CronJob
 metadata:
   name: {{ include "rdhs-report.syncName" . }}
@@ -8,7 +12,9 @@ metadata:
     app.kubernetes.io/component: sync
 spec:
   schedule: {{ .Values.sync.cron.schedule | quote }}
+  {{- if semverCompare ">=1.27-0" .Capabilities.KubeVersion.GitVersion }}
   timeZone: {{ .Values.sync.cron.timeZone }}
+  {{- end }}
   suspend: {{ .Values.sync.cron.suspend }}
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: {{ .Values.sync.cron.successfulJobsHistoryLimit }}
@@ -17,8 +23,10 @@ spec:
     spec:
       activeDeadlineSeconds: {{ .Values.sync.cron.activeDeadlineSeconds }}
       backoffLimit: {{ .Values.sync.cron.backoffLimit }}
+      {{- if semverCompare ">=1.23-0" .Capabilities.KubeVersion.GitVersion }}
       {{- with .Values.sync.cron.ttlSecondsAfterFinished }}
       ttlSecondsAfterFinished: {{ . }}
+      {{- end }}
       {{- end }}
       template:
         metadata:
@@ -35,8 +43,10 @@ spec:
           restartPolicy: OnFailure
           securityContext:
             fsGroup: 1000
+            {{- if semverCompare ">=1.19-0" .Capabilities.KubeVersion.GitVersion }}
             seccompProfile:
               type: RuntimeDefault
+            {{- end }}
           containers:
             - name: sync
               image: {{ include "rdhs-report.image" .Values.image | quote }}

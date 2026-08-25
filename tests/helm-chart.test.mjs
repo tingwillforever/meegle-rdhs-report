@@ -37,6 +37,21 @@ test("production render creates one MySQL-backed Web replica and a monthly sync 
   assert.match(result.stdout, /name: rdhs-report-db-secrets/);
 });
 
+test("production chart renders on Kubernetes 1.15 using legacy API versions", () => {
+  const result = renderHelm([
+    "--kube-version", "1.15.12",
+    "--set", "pdb.enabled=true",
+  ]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /apiVersion: networking\.k8s\.io\/v1beta1\nkind: Ingress/);
+  assert.match(result.stdout, /apiVersion: batch\/v1beta1\nkind: CronJob/);
+  assert.match(result.stdout, /apiVersion: policy\/v1beta1\nkind: PodDisruptionBudget/);
+  assert.doesNotMatch(result.stdout, /timeZone: Asia\/Shanghai/);
+  assert.doesNotMatch(result.stdout, /seccompProfile:/);
+  assert.match(result.stdout, /kubernetes\.io\/ingress\.class: nginx/);
+  assert.match(result.stdout, /serviceName: rdhs-report-web\n\s+servicePort: http/);
+});
+
 test("quick validation can render the application Secret from a local override", () => {
   const result = renderHelm([
     "--set", "secrets.create=true",
