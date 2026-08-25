@@ -619,7 +619,7 @@ def remote_sync_lease(
     ttl_seconds: int,
     opener: object = None,
 ):
-    """Serialize Runner and CronJob through a MySQL-backed Web API lease."""
+    """Serialize Web-triggered refreshes and CronJob through a MySQL-backed lease."""
     _validate_remote_site(site_url, token)
     if ttl_seconds < 60 or ttl_seconds > 3600:
         raise ValueError("RDHS_SYNC_LEASE_TTL_SECONDS must be between 60 and 3600")

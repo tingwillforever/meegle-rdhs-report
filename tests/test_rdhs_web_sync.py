@@ -5,7 +5,6 @@ from datetime import date
 import json
 import os
 from pathlib import Path
-import runpy
 import subprocess
 import sys
 import tempfile
@@ -741,30 +740,6 @@ with _report_output_lock(Path(sys.argv[1])):
 
         self.assertEqual(captured["timeout"], 90)
 
-    def test_refresh_runner_refuses_an_empty_webhook_token(self) -> None:
-        module = runpy.run_path(str(SITE_ROOT / "scripts" / "local-refresh-runner.py"))
-        previous = os.environ.get("RDHS_REFRESH_WEBHOOK_TOKEN")
-        os.environ.pop("RDHS_REFRESH_WEBHOOK_TOKEN", None)
-        try:
-            with self.assertRaisesRegex(RuntimeError, "RDHS_REFRESH_WEBHOOK_TOKEN"):
-                module["required_refresh_webhook_token"]()
-        finally:
-            if previous is not None:
-                os.environ["RDHS_REFRESH_WEBHOOK_TOKEN"] = previous
-
-    def test_refresh_runner_selects_python_with_report_dependencies(self) -> None:
-        module = runpy.run_path(str(SITE_ROOT / "scripts" / "local-refresh-runner.py"))
-        selected = module["_select_python"]()
-
-        completed = subprocess.run(
-            [selected, "-c", "import yaml"],
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-
     def test_monthly_sync_uses_month_start_baseline_and_previous_month_end_report(self) -> None:
         captured: list[list[str]] = []
 
@@ -827,28 +802,6 @@ with _report_output_lock(Path(sys.argv[1])):
             )
 
         self.assertEqual(completed.returncode, 0, completed.stderr)
-
-    def test_refresh_runner_uses_the_container_output_root(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            environment = {**os.environ, "RDHS_OUTPUT_ROOT": directory}
-            completed = subprocess.run(
-                [
-                    sys.executable,
-                    "-c",
-                    (
-                        "import runpy; module = runpy.run_path('scripts/local-refresh-runner.py'); "
-                        "print(module['build_parser']().parse_args([]).output_root)"
-                    ),
-                ],
-                cwd=SITE_ROOT,
-                env=environment,
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(completed.stdout.strip(), directory)
 
     def test_monthly_sync_uses_the_container_output_root(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

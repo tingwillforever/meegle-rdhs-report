@@ -32,6 +32,8 @@ test("the application image consumes the prebuilt RDHS dependency image", async 
   assert.doesNotMatch(dockerfile, /python3 -m pip install/);
   assert.match(dockerfile, /COPY package\*\.json/);
   assert.match(dockerfile, /COPY --from=builder \/app\/dist \.\/dist/);
+  assert.match(dockerfile, /^EXPOSE 3000$/m);
+  assert.doesNotMatch(dockerfile, /8765/);
 });
 
 test("the sync image copies only the periodic report import closure", async () => {

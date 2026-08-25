@@ -39,7 +39,7 @@ sync:
     ttlSecondsAfterFinished: 604800
 
 # Report files are disposable. Baselines and leases are persisted by Web in
-# MySQL, while each Runner/CronJob Pod gets its own emptyDir.
+# MySQL, while each Web/CronJob Pod gets its own emptyDir.
 syncOutput:
   mountPath: /var/lib/rdhs-sync
 

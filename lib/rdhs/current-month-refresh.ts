@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { resolve } from "node:path";
 
 const MAX_OUTPUT_LENGTH = 8_000;
 let refreshInProgress = false;
@@ -38,6 +39,9 @@ export async function refreshCurrentMonth(): Promise<{ message: string }> {
   refreshInProgress = true;
   try {
     const timeoutSeconds = refreshTimeoutSeconds();
+    const outputRoot = resolve(
+      process.env.RDHS_OUTPUT_ROOT || "./runtime/local-refresh-runs",
+    );
     const child = spawn(
       process.env.RDHS_PYTHON_BIN || "python3",
       [
@@ -46,11 +50,11 @@ export async function refreshCurrentMonth(): Promise<{ message: string }> {
         "--as-of",
         currentDate(),
         "--output-root",
-        process.env.RDHS_OUTPUT_ROOT || "./runtime/local-refresh-runs",
+        outputRoot,
       ],
       {
         cwd: process.cwd(),
-        env: process.env,
+        env: { ...process.env, RDHS_OUTPUT_ROOT: outputRoot },
         stdio: ["ignore", "pipe", "pipe"],
       },
     );

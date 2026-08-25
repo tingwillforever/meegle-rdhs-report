@@ -1,20 +1,24 @@
 import assert from "node:assert/strict";
-import { access, readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { access, chmod, cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import test from "node:test";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 
 test("scheduled jobs load their private sync environment before invoking Python", async () => {
   const wrapper = await readFile(new URL("../scripts/run-sync-job.sh", import.meta.url), "utf8");
   const installer = await readFile(new URL("../scripts/install-launchd.sh", import.meta.url), "utf8");
-  const localRunner = await readFile(new URL("../scripts/local-refresh-runner.py", import.meta.url), "utf8");
   const localMigration = await readFile(new URL("../scripts/migrate-local-d1.py", import.meta.url), "utf8");
 
   assert.match(wrapper, /\.env\.sync/);
   assert.match(wrapper, /source "\$env_file"/);
   assert.match(wrapper, /sync-rdhs-snapshot\.py/);
-  assert.match(localRunner, /sync-rdhs-snapshot\.py/);
-  assert.match(localRunner, /RDHS_REFRESH_WEBHOOK_TOKEN/);
-  assert.match(localRunner, /version_info.*3, 10/);
-  assert.match(localRunner, /--current-month-cache/);
+  await assert.rejects(
+    () => access(new URL("../scripts/local-refresh-runner.py", import.meta.url)),
+  );
   assert.match(localMigration, /miniflare-D1DatabaseObject/);
   assert.match(localMigration, /0000_normal_zemo\.sql/);
   assert.match(wrapper, /version_info.*3, 10/);
@@ -34,15 +38,57 @@ test("production D1 access does not retain the unused Drizzle notes adapter", as
   );
 });
 
-test("the chart build script follows the versioned meegle-mcp release flow", async () => {
-  const script = await readFile(new URL("../charts/build-chart.sh", import.meta.url), "utf8");
+test("chart build publishes after a successful build without an opt-in flag", async (t) => {
+  const tempRoot = await mkdtemp(join(tmpdir(), "rdhs-chart-publish-"));
+  t.after(() => rm(tempRoot, { force: true, recursive: true }));
 
-  assert.match(script, /PROJECT_VERSION/);
-  assert.match(script, /BUILD_ID/);
-  assert.match(script, /SERVICE_NAME/);
-  assert.match(script, /values-\$\{ENV\}\.example\.yaml/);
-  assert.match(script, /helm lint/);
-  assert.match(script, /helm package/);
-  assert.match(script, /helm push-artifactory/);
-  assert.match(script, /meegle-rdhs-report/);
+  const chartsDir = join(tempRoot, "charts");
+  const binDir = join(tempRoot, "bin");
+  const pushLog = join(tempRoot, "push.log");
+  const helmPath = join(binDir, "helm");
+  await cp(new URL("../charts", import.meta.url), chartsDir, { recursive: true });
+  await mkdir(binDir);
+  await writeFile(
+    helmPath,
+    `#!/usr/bin/env bash
+case "$1" in
+  lint) exit 0 ;;
+  package)
+    while [[ "$#" -gt 0 ]]; do
+      if [[ "$1" == "--destination" ]]; then
+        shift
+        mkdir -p "$1"
+        touch "$1/test-chart.tgz"
+        echo "Successfully packaged chart and saved it to: $1/test-chart.tgz"
+        exit 0
+      fi
+      shift
+    done
+    exit 1
+    ;;
+  push-artifactory)
+    printf '%s\\n' "$*" >> "$PUSH_LOG"
+    exit 0
+    ;;
+esac
+exit 1
+`,
+  );
+  await chmod(helmPath, 0o755);
+
+  await execFileAsync("bash", [join(chartsDir, "build-chart.sh")], {
+    cwd: tempRoot,
+    env: {
+      ...process.env,
+      BUILD_ID: "42",
+      ENV: "prod",
+      PATH: `${binDir}:${process.env.PATH}`,
+      PROJECT_VERSION: "0.1",
+      PUSH_LOG: pushLog,
+      SERVICE_NAME: "meegle-rdhs-report",
+    },
+  });
+
+  const pushed = await readFile(pushLog, "utf8");
+  assert.match(pushed, /^push-artifactory meegle-rdhs-report-prod cbg-helm-local --skip-reindex$/m);
 });

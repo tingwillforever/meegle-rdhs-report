@@ -47,5 +47,5 @@ RUN mkdir -p /home/node /var/lib/rdhs-sync \
   && chown -R node:node /app /home/node /var/lib/rdhs-sync /opt/rdhs-workspace
 USER node
 
-EXPOSE 3000 8765
+EXPOSE 3000
 CMD ["npm", "run", "start:k8s"]

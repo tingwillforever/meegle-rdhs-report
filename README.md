@@ -26,15 +26,11 @@ Cloudflare/Sites 模式使用 D1；Kubernetes 模式使用 Node/Vinext + MySQL�
 只在同步工作负载中注入，浏览器和 Web 工作负载均不会接触 Meegle 凭据。
 
 ```text
-业务用户 -> 现有内网网关 -> Web（Vinext） -> MySQL（快照、基线、租约）
-                              |  ^
-                              v  |
-                   Refresh Runner（Python + Meegle CLI + emptyDir）
-                              ^
-每月 1 日 09:00 -> Sync CronJob（Python + Meegle CLI + emptyDir）
+业务用户 -> 现有内网网关 -> Web（Vinext + Python + Meegle CLI + emptyDir） -> MySQL（快照、基线、租约）
+每月 1 日 09:00 -> Sync CronJob（Python + Meegle CLI + emptyDir） -----------^
 ```
 
-当月刷新由 `POST /api/report/refresh` 触发内网 runner；历史月份由每月 1 日任务生成并写入。
+当月刷新由 `POST /api/report/refresh` 在 Web 进程内直接执行 Python + Meegle CLI；历史月份由每月 1 日任务生成并写入。
 同一任务会先以**当月 1 日**固化供当月刷新复用的上月基线，再以**上月末**生成可上传报告。基线和
 跨 Pod 租约经 Web 内部 API 保存到 MySQL；报告运行目录只使用 Pod 的 `emptyDir`，不需要 NFS 或 PVC。
 详细上线、备份和恢复流程见[运行手册](docs/operations.md)。
@@ -49,15 +45,16 @@ npm run dev
 ```
 
 `npm run dev` 只启动 Web（`3000`）：页面、API 与当月 Python + Meegle CLI 刷新都由该进程承载。
-实际刷新时，在 `.dev.vars` 中配置 `RDHS_SITE_URL` 与 `RDHS_INGEST_TOKEN`（可从 `.env.example` 复制）。
+该命令使用 Node 运行时（不使用 Workers），并自动加载 `.dev.vars`；实际刷新时在其中配置
+`RDHS_SITE_URL` 与 `RDHS_INGEST_TOKEN`（可从 `.env.example` 复制）。
 D1 尚无数据时，首页使用仓库内两份已验证月度快照并明确标记为预览快照。
 
 ## 内网 K8s 生产部署
 
-Kubernetes 生产环境使用 MySQL 作为唯一持久化存储。Web 是唯一 MySQL 客户端；Runner/CronJob
+Kubernetes 生产环境使用 MySQL 作为唯一持久化存储。Web 是唯一 MySQL 客户端；Web 刷新和 CronJob
 通过 Bearer 保护的 Web 内部 API 读写月初基线和分布式租约，不安装 Python MySQL 驱动。
 
-生产交付在 [charts/rdhs-report](charts/rdhs-report) 中，包含 Web、内网 Runner、月度 CronJob、
+生产交付在 [charts/rdhs-report](charts/rdhs-report) 中，包含 Web、月度 CronJob、
 Ingress 与可选 NetworkPolicy。必须预先提供：MySQL 数据库与应用账号、应用 Secret、
 Kubernetes 到 `172.31.114.194:4302` 的网络连通，以及可拉取内部镜像的凭据（如需要）。
 数据库初始化脚本为 [`database/mysql/001_initial.sql`](database/mysql/001_initial.sql)。当前
@@ -84,7 +81,7 @@ RDHS_STORAGE=mysql MYSQL_HOST=127.0.0.1 MYSQL_PORT=3306 \
 ```
 
 生产镜像入口为 `Dockerfile`，它直接依赖预构建的 Node 22、Python、Meegle CLI 基础镜像，并复制
-报告代码和同步脚本；Web、Refresh Runner、Sync CronJob 通过不同启动命令复用同一个应用镜像。`/api/health/live` 是进程存活探针，
+报告代码和同步脚本；Web 和 Sync CronJob 通过不同启动命令复用同一个应用镜像。`/api/health/live` 是进程存活探针，
 `/api/health` 是 MySQL 就绪探针。
 
 ## 验证
@@ -96,7 +93,6 @@ npx tsc --noEmit
 npm run build:k8s
 helm lint charts/rdhs-report -f charts/rdhs-report/values-prod.yaml
 bash -n charts/build-chart.sh scripts/run-sync-job.sh scripts/install-launchd.sh
-bash -c 'PROJECT_VERSION=1.0 BUILD_ID=0 charts/build-chart.sh'
 ```
 
 `npm test` 依次执行领域/接口/筛选单元测试、Python 同步器测试、生产构建和服务端渲染测试。
