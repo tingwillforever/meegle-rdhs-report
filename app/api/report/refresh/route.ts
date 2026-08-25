@@ -1,4 +1,7 @@
-import { getRuntimeSetting } from "@/lib/rdhs/storage";
+import {
+  CurrentRefreshInProgressError,
+  refreshCurrentMonth,
+} from "@/lib/rdhs/current-month-refresh";
 
 export const dynamic = "force-dynamic";
 
@@ -37,53 +40,20 @@ export async function POST(request: Request) {
     );
   }
 
-  const refreshUrl = await getRuntimeSetting("RDHS_REFRESH_WEBHOOK_URL");
-  if (!refreshUrl) {
-    return Response.json(
-      {
-        error: "当前部署未配置实时刷新服务，页面继续展示当月缓存数据",
-        mode: "cache",
-      },
-      { status: 501 },
-    );
-  }
-
-  const headers: HeadersInit = {
-    "Content-Type": "application/json; charset=utf-8",
-  };
-  const token = await getRuntimeSetting("RDHS_REFRESH_WEBHOOK_TOKEN");
-  if (token) headers.Authorization = `Bearer ${token}`;
-
-  const response = await fetch(refreshUrl, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      cadence: "monthly",
+  try {
+    const result = await refreshCurrentMonth();
+    return Response.json({
+      status: "triggered",
+      message: result.message,
       periodKey,
-      mode: "current-month-cache-refresh",
-    }),
-  });
-  const detail = await response.text();
-  if (!response.ok) {
+    });
+  } catch (error) {
+    if (error instanceof CurrentRefreshInProgressError) {
+      return Response.json({ error: error.message }, { status: 409 });
+    }
     return Response.json(
-      { error: detail || "实时刷新服务触发失败" },
+      { error: error instanceof Error ? error.message : "实时刷新服务触发失败" },
       { status: 502 },
     );
   }
-  let runnerPayload: { message?: unknown } = {};
-  try {
-    const parsed = JSON.parse(detail) as unknown;
-    runnerPayload = typeof parsed === "object" && parsed !== null ? parsed : {};
-  } catch {
-    // Plain-text runners are also accepted; the standard message below remains enough.
-  }
-
-  return Response.json({
-    status: "triggered",
-    message:
-      typeof runnerPayload.message === "string"
-        ? runnerPayload.message
-        : "已触发当月实时刷新，完成后将覆盖当月缓存",
-    periodKey,
-  });
 }
