@@ -210,22 +210,22 @@ Chart 默认每条报告命令超时 540 秒，CronJob 的 `activeDeadlineSecond
 - 本仓库 `vendor/rdhs-workspace` 中已审核、固定版本的 RDHS 报告运行源码。更新该快照时，只能同步报告实际所需文件，不能带入 `.env`、临时输出或未审核工作目录。
 - 基础镜像或运行时提供可用的 Meegle CLI profile/auth；NetworkPolicy 启用前还需由网络团队提供 Meegle 出口 CIDR。
 
-### 10.2 预创建 Secret
+### 10.2 应用令牌与数据库 Secret
 
-应用令牌不写入仓库或镜像，生产通过现有 ExternalSecret/KMS 流程创建
-`rdhs-report-web-secrets`；下列命令仅说明 Key，执行时从受控终端提供真实值。当前上线前验证的
-`values-prod.yaml` 临时以内联方式生成 `rdhs-report-db-secrets`，验证完成后必须改回托管 Secret 并轮换密码。
+当前生产方案将 `RDHS_INGEST_TOKEN` 直接写入 `charts/rdhs-report/values-prod.yaml`，并由 Helm
+分别注入 Web 与 CronJob；该方式会使令牌暴露在 Git、Helm Release 和渲染后的 Manifest 中，
+仅适用于当前受控环境。令牌必须使用长随机值，禁止复用数据库密码。
+
+数据库凭据仍使用 Secret。当前上线前验证的 `values-prod.yaml` 临时以内联方式生成
+`rdhs-report-db-secrets`，验证完成后必须改回托管 Secret 并轮换密码。
 ```bash
-kubectl -n <namespace> create secret generic rdhs-report-web-secrets \
-  --from-literal=RDHS_INGEST_TOKEN='<write-token>'
-
 kubectl -n <namespace> create secret generic rdhs-report-db-secrets \
   --from-literal=MYSQL_USER='<rdhs-db-user>' \
   --from-literal=MYSQL_PASSWORD='<rdhs-db-password>'
 
 ```
 
-快速验证时可使用未提交的 `charts/rdhs-report/values-prod.local.yaml` 覆盖文件：
+如需临时回退到本地 Secret 模式，可使用未提交的 `charts/rdhs-report/values-prod.local.yaml` 覆盖文件：
 
 ```yaml
 secrets:
@@ -237,9 +237,9 @@ secrets:
 ```
 
 使用时追加 `-f charts/rdhs-report/values-prod.local.yaml`；验证完成后删除该文件，并将
-`secrets.create` 恢复为 `false`。Helm 会把这类覆盖值保存到 Release Secret，因此不要将其用于正式生产。
+`secrets.create` 恢复为 `false`。生产默认不渲染 `rdhs-report-web-secrets`。
 
-Web 使用 Web Secret 和数据库 Secret；CronJob 使用 `RDHS_INGEST_TOKEN`。
+Web 使用直接注入的 `RDHS_INGEST_TOKEN` 和数据库 Secret；CronJob 使用同一个直接注入的令牌。
 Meegle 数据访问由容器内 `meegle` CLI 的 profile/auth 运行态负责，不再通过 `MEEGLE_*` 环境变量注入。
 为私有仓库创建的 pull Secret 通过 `imagePullSecrets` 引用，不放在应用 Secret 中。
 
@@ -282,7 +282,7 @@ PROJECT_VERSION=1.0 BUILD_ID=42 SERVICE_NAME=meegle-rdhs-report ENV=prod \
 - 统一 `image.repository`、不可变 `tag`、Ingress 域名，以及 `database.mysql.host/port/database`。
 - 如有容量或时长要求，调整 `sync.outputRetentionMonths`、`sync.reportCommandTimeoutSeconds` 与
   `sync.cron.activeDeadlineSeconds`；Chart 要求 Cron deadline 能容纳两次报告命令和 60 秒退出余量。
-- `secrets.web.name`；确认基础镜像或运行时提供 Meegle CLI profile/auth；如需镜像凭据，配置 `imagePullSecrets` 的现有 Secret 名称。
+- `sync.ingestToken`；确认基础镜像或运行时提供 Meegle CLI profile/auth；如需镜像凭据，配置 `imagePullSecrets` 的现有 Secret 名称。
 - Chart 不渲染独立 refresh Ingress；刷新 API 随主 Ingress 转发，由现有内网网关负责访问控制。
 - 启用 NetworkPolicy 时，允许 Web/CronJob 到 Meegle 的 egress，并允许 Web 到 `172.31.114.194:4302` 的 egress。
 - 仅在填入 ingress controller selector 与 Meegle CIDR 后设置 `networkPolicy.enabled: true`。

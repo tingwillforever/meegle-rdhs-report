@@ -81,9 +81,9 @@ spec:
               value: {{ .Values.report.monthlyCommand | quote }}
             - name: RDHS_CURRENT_REPORT_COMMAND
               value: {{ .Values.report.currentCommand | quote }}
+            - name: RDHS_INGEST_TOKEN
+              value: {{ include "rdhs-report.ingestToken" . | quote }}
           envFrom:
-            - secretRef:
-                name: {{ required "secrets.web.name is required" .Values.secrets.web.name }}
             - secretRef:
                 name: {{ required "database.mysql.secretName is required" .Values.database.mysql.secretName }}
           livenessProbe:

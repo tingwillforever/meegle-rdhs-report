@@ -17,6 +17,9 @@ web:
       memory: 1Gi
 
 sync:
+  # Direct application token used by the Web and monthly sync workloads.
+  # Production values must provide a long random value.
+  ingestToken: ""
   resources:
     requests:
       cpu: 250m
@@ -60,8 +63,8 @@ database:
     tlsRejectUnauthorized: true
 
 secrets:
-  # Keep false for production and use an ExternalSecret/KMS-managed Secret.
-  # Set true only with a local, uncommitted values override for smoke testing.
+  # Optional local smoke-test Secret mode. Production uses sync.ingestToken
+  # directly and does not render an application Secret.
   create: false
   web:
     name: ""

@@ -43,6 +43,14 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- printf "http://%s:3000%s" (include "rdhs-report.webName" .) .Values.ingress.pathPrefix -}}
 {{- end }}
 
+{{- define "rdhs-report.ingestToken" -}}
+{{- if .Values.secrets.create -}}
+{{- required "secrets.web.data.RDHS_INGEST_TOKEN is required when secrets.create=true" .Values.secrets.web.data.RDHS_INGEST_TOKEN -}}
+{{- else -}}
+{{- required "sync.ingestToken is required when secrets.create=false" .Values.sync.ingestToken -}}
+{{- end -}}
+{{- end }}
+
 {{- define "rdhs-report.image" -}}
 {{- $image := . -}}
 {{- $repository := required "image.repository is required" $image.repository -}}
@@ -94,9 +102,11 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if or (lt (int .Values.sync.leaseTtlSeconds) (int .Values.sync.cron.activeDeadlineSeconds)) (gt (int .Values.sync.leaseTtlSeconds) 3600) }}
 {{- fail "sync.leaseTtlSeconds must cover the CronJob deadline and not exceed 3600" }}
 {{- end }}
-{{- $_ := required "secrets.web.name is required" .Values.secrets.web.name -}}
 {{- if .Values.secrets.create }}
+{{- $_ := required "secrets.web.name is required when secrets.create=true" .Values.secrets.web.name -}}
 {{- $_ := required "secrets.web.data.RDHS_INGEST_TOKEN is required when secrets.create=true" .Values.secrets.web.data.RDHS_INGEST_TOKEN -}}
+{{- else }}
+{{- $_ := required "sync.ingestToken is required when secrets.create=false" .Values.sync.ingestToken -}}
 {{- end }}
 {{- $pathPrefix := required "ingress.pathPrefix is required" .Values.ingress.pathPrefix }}
 {{- if not (hasPrefix "/" $pathPrefix) }}

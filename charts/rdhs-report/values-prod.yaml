@@ -21,6 +21,9 @@ web:
       memory: 1Gi
 
 sync:
+  # This is injected directly into the Web and CronJob containers. Keep it
+  # long and random; do not reuse the database password.
+  ingestToken: "90f5e9f3d76e593285f89ee2e8c6a9bf94943bfa848e5310dcb30d6c7921ad15"
   resources:
     requests:
       cpu: 250m
@@ -59,13 +62,6 @@ database:
     connectionLimit: 10
     tls: false
     tlsRejectUnauthorized: true
-
-secrets:
-  create: false
-  web:
-    name: rdhs-report-web-secrets
-    data:
-      RDHS_INGEST_TOKEN: ""
 
 report:
   workspaceRoot: /opt/rdhs-workspace

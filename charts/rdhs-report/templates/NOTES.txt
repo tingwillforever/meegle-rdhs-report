@@ -5,7 +5,7 @@ RDHS 已渲染为 MySQL 部署：{{ include "rdhs-report.webName" . }}。
 就绪探针：https://ossptest.voicecloud.cn/meegle-rdhs-report/api/health
 
 上线前确认：
-1. {{ required "secrets.web.name is required" .Values.secrets.web.name }} 含 RDHS_INGEST_TOKEN。
+1. Web/CronJob 已从生产 values 直接注入 RDHS_INGEST_TOKEN；该值必须是长随机字符串。
 2. {{ required "database.mysql.secretName is required" .Values.database.mysql.secretName }} 含 MYSQL_USER 与 MYSQL_PASSWORD。
 3. MySQL {{ .Values.database.mysql.host }}:{{ .Values.database.mysql.port }}/{{ .Values.database.mysql.database }} 已执行 database/mysql/001_initial.sql，且 Web Pod 网络可达。
 4. Meegle CLI 的 profile/auth 运行态已随基础镜像或运行时配置提供，且容器内 `meegle auth status` 正常。

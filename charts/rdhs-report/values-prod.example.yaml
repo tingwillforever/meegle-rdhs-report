@@ -20,6 +20,8 @@ web:
       memory: 1Gi
 
 sync:
+  # Replace with a long random token before production deployment.
+  ingestToken: "replace-with-a-long-random-token"
   resources:
     requests:
       cpu: 250m
@@ -62,13 +64,6 @@ database:
 # Reference an existing image-pull Secret when the internal registry requires it.
 # imagePullSecrets:
 #   - name: rdhs-registry-credentials
-
-secrets:
-  create: false
-  web:
-    name: rdhs-report-web-secrets
-    data:
-      RDHS_INGEST_TOKEN: ""
 
 report:
   workspaceRoot: /opt/rdhs-workspace

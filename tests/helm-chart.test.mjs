@@ -37,6 +37,25 @@ test("production render creates one MySQL-backed Web replica and a monthly sync 
   assert.match(result.stdout, /name: rdhs-report-db-secrets/);
 });
 
+test("production injects the RDHS ingest token directly into Web and CronJob", () => {
+  const result = renderHelm();
+  assert.equal(result.status, 0, result.stderr);
+
+  const web = result.stdout.match(
+    /kind: Deployment\nmetadata:\n {2}name: rdhs-report-web[\s\S]*?(?=\n---|$)/,
+  )?.[0];
+  assert.ok(web);
+  assert.match(web, /name: RDHS_INGEST_TOKEN\n\s+value: "[^"]+"/);
+  assert.doesNotMatch(web, /rdhs-report-web-secrets/);
+
+  const cronJob = result.stdout.match(
+    /kind: CronJob\nmetadata:\n {2}name: rdhs-report-sync[\s\S]*?(?=\n---|$)/,
+  )?.[0];
+  assert.ok(cronJob);
+  assert.match(cronJob, /name: RDHS_INGEST_TOKEN\n\s+value: "[^"]+"/);
+  assert.doesNotMatch(cronJob, /secretKeyRef|rdhs-report-web-secrets/);
+});
+
 test("production chart renders on Kubernetes 1.15 using legacy API versions", () => {
   const result = renderHelm([
     "--kube-version", "1.15.12",
@@ -55,6 +74,7 @@ test("production chart renders on Kubernetes 1.15 using legacy API versions", ()
 test("quick validation can render the application Secret from a local override", () => {
   const result = renderHelm([
     "--set", "secrets.create=true",
+    "--set", "secrets.web.name=rdhs-report-web-secrets",
     "--set-string", "secrets.web.data.RDHS_INGEST_TOKEN=ingest-test-token",
   ]);
   assert.equal(result.status, 0, result.stderr);
@@ -65,7 +85,10 @@ test("quick validation can render the application Secret from a local override",
 });
 
 test("inline Secret mode fails closed when a credential is missing", () => {
-  const result = renderHelm(["--set", "secrets.create=true"]);
+  const result = renderHelm([
+    "--set", "secrets.create=true",
+    "--set", "secrets.web.name=rdhs-report-web-secrets",
+  ]);
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /secrets\.web\.data\.RDHS_INGEST_TOKEN is required/);
 });

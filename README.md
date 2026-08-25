@@ -64,7 +64,7 @@ Kubernetes 到 `172.31.114.194:4302` 的网络连通，以及可拉取内部镜�
 现网入口沿用 meegle-mcp 的域名和镜像仓库约定：
 `https://ossptest.voicecloud.cn/meegle-rdhs-report/`。生产 values 已将统一镜像指向
 `artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report`，并引用集群预置的 `hub4iflytek` pull Secret；
-生产令牌仍由 `rdhs-report-web-secrets`/ExternalSecret 注入；数据库凭据的明文配置仅用于本轮快速验证，
+生产 `RDHS_INGEST_TOKEN` 由 `values-prod.yaml` 直接注入 Web 与 CronJob；数据库凭据的明文配置仅用于本轮快速验证，
 不得作为长期生产配置保留。
 
 `database/mysql/001_initial.sql` 创建快照、基线和租约表。每条 Meegle 报告命令最多运行 540 秒，
