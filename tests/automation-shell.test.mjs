@@ -101,4 +101,13 @@ exit 1
   assert.match(builtValues, /^serviceAccount:\n/m);
   assert.match(builtValues, /^pdb:\n/m);
   assert.match(builtValues, /^\x20{4}host: 172\.31\.114\.194$/m);
+
+  const realPath = (process.env.PATH ?? "")
+    .split(":")
+    .filter((entry) => entry !== binDir)
+    .join(":");
+  await execFileAsync("helm", ["lint", join(chartsDir, "meegle-rdhs-report-prod")], {
+    cwd: tempRoot,
+    env: { ...process.env, PATH: realPath },
+  });
 });
