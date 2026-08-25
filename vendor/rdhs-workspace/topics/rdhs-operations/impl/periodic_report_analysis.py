@@ -11,6 +11,8 @@ from impl.periodic_report_models import PeriodicImprovementRow
 from impl.periodic_report_models import PeriodicOverviewRow
 from impl.periodic_report_models import PeriodicReportData
 from impl.periodic_report_models import ProductMetricRecord
+from impl.product_improvement_enrichment import FullImprovementRow
+from impl.product_improvement_enrichment import ResearchProductPortfolio
 
 
 _MODE_PRIORITY = {"重点治理": 0, "风险改进": 1, "持续优化": 2, "常规跟踪": 3}
@@ -183,47 +185,52 @@ def build_periodic_report_data(
     *,
     current: ChartSnapshot,
     previous: ChartSnapshot | None,
+    portfolio: ResearchProductPortfolio,
+    enriched_rows: tuple[FullImprovementRow, ...],
 ) -> PeriodicReportData:
-    """生成模板两张表与待办项；所有结论均来自快照中的产品记录。"""
-    previous_by_key = _previous_record_map(previous)
-    records_by_line: dict[str, list[ProductMetricRecord]] = defaultdict(list)
-    for record in current.records:
-        records_by_line[record.business_line].append(record)
+    """以研发中产品主数据为统计底表，生成可对账的周期报告。"""
+    products_by_line = defaultdict(list)
+    for product in portfolio.records:
+        products_by_line[product.business_line].append(product)
+
+    def governance_mode(metric: ProductMetricRecord | None) -> str:
+        return "重点治理" if metric is None else _mode_for_rdhs(metric.rdhs)
+
+    def focus_text(line_products: list[object]) -> str:
+        metrics = [product.metric for product in line_products]
+        unmeasured_count = sum(metric is None for metric in metrics)
+        governance_count = sum(
+            metric is None or metric.rdhs < 70 for metric in metrics
+        )
+        if governance_count == 0:
+            return "暂无<70产品，保持常规跟踪。"
+        if unmeasured_count:
+            return (
+                f"{governance_count}个产品纳入治理：未度量/待关联 {unmeasured_count} 个，"
+                "优先补齐产品关联、研发责任角色和过程数据。"
+            )
+        return (
+            f"{governance_count}个产品纳入治理：优先修复价值链路闭环，"
+            "过程能力短板同步跟踪。"
+        )
 
     overview_rows: list[PeriodicOverviewRow] = []
-    improvement_rows: list[PeriodicImprovementRow] = []
-    for business_line in sorted(records_by_line):
-        line_records = records_by_line[business_line]
-        selected = _select_line_records(line_records)
-        counts = Counter(_mode_for_rdhs(record.rdhs) for record in line_records)
-        line_mode = min(
-            (_mode_for_rdhs(record.rdhs) for record in line_records),
-            key=lambda mode: _MODE_PRIORITY[mode],
-        )
+    for business_line in sorted(products_by_line):
+        line_products = products_by_line[business_line]
+        counts = Counter(governance_mode(product.metric) for product in line_products)
+        line_mode = min(counts, key=lambda mode: _MODE_PRIORITY[mode])
         overview_rows.append(
             PeriodicOverviewRow(
                 business_line=business_line,
-                product_total=len(line_records),
+                product_total=len(line_products),
                 key_governance_count=counts["重点治理"],
                 risk_improvement_count=counts["风险改进"],
                 continuous_optimization_count=counts["持续优化"],
+                regular_tracking_count=counts["常规跟踪"],
                 mode=line_mode,
-                focus=_focus_text(selected, previous_by_key=previous_by_key),
+                focus=focus_text(line_products),
             )
         )
-        for record in selected:
-            improvement_rows.append(
-                PeriodicImprovementRow(
-                    business_line=business_line,
-                    product=record.product,
-                    governance_mode=_mode_for_rdhs(record.rdhs),
-                    rdhs=record.rdhs,
-                    lowest_component=_lowest_component_label(record),
-                    problem=_problem_text(record, previous_by_key=previous_by_key),
-                    action=_action_text(record, previous_by_key=previous_by_key),
-                    source_key=(record.business_line, record.product),
-                )
-            )
 
     overview_rows.sort(
         key=lambda row: (
@@ -233,26 +240,68 @@ def build_periodic_report_data(
             row.business_line,
         )
     )
-    improvement_rows.sort(
-        key=lambda row: (row.business_line, -row.rdhs, row.product)
+    total_counts = Counter()
+    for row in overview_rows:
+        total_counts.update(
+            {
+                "重点治理": row.key_governance_count,
+                "风险改进": row.risk_improvement_count,
+                "持续优化": row.continuous_optimization_count,
+                "常规跟踪": row.regular_tracking_count,
+            }
+        )
+    total_mode = min(
+        (mode for mode, count in total_counts.items() if count),
+        key=lambda mode: _MODE_PRIORITY[mode],
     )
-    key_count = sum(row.governance_mode == "重点治理" for row in improvement_rows)
-    risk_count = sum(row.governance_mode == "风险改进" for row in improvement_rows)
+    total_products = list(portfolio.records)
+    overview_rows.append(
+        PeriodicOverviewRow(
+            business_line="消费者BG（合计）",
+            product_total=len(total_products),
+            key_governance_count=total_counts["重点治理"],
+            risk_improvement_count=total_counts["风险改进"],
+            continuous_optimization_count=total_counts["持续优化"],
+            regular_tracking_count=total_counts["常规跟踪"],
+            mode=total_mode,
+            focus=focus_text(total_products),
+        )
+    )
+
+    improvement_rows = tuple(
+        PeriodicImprovementRow(
+            business_line=row.business_line,
+            product=row.product,
+            governance_mode=row.governance_mode,
+            rdhs=row.rdhs,
+            lowest_component=row.lowest_component,
+            problem=row.problem,
+            action=row.action,
+            source_key=(row.business_line, row.product),
+            priority=row.priority,
+            super_team=" / ".join(row.team_names) if row.team_names else "—",
+        )
+        for row in enriched_rows
+    )
     full_product_headers = ("业务线", "产品", *current.quota_titles)
     full_product_rows = tuple(
         (
-            record.business_line,
-            record.product,
-            *(record.metric(field) for field in current.quota_titles),
+            product.business_line,
+            product.product,
+            *(product.metric.metric(field) for field in current.quota_titles),
         )
-        for record in sorted(
-            current.records,
-            key=lambda item: (item.business_line, item.product),
-        )
+        for product in portfolio.records
+        if product.metric is not None
     )
+    priority_counts = Counter(row.priority for row in enriched_rows)
     todo_items = (
         f"各业务线质量改进负责人认领本期 {len(improvement_rows)} 个治理产品，并确认产品、研发责任人与本期动作。",
-        f"本期优先推动 {key_count} 项重点治理和 {risk_count} 项风险改进，周快照只复核主数据、动作启动与改善迹象。",
+        "优先推动 P0 {p0} 项过程数据补齐，其次推动 P1 {p1} 项价值链路闭环，"
+        "同步跟踪 P2 {p2} 项过程能力优化。".format(
+            p0=priority_counts["P0"],
+            p1=priority_counts["P1"],
+            p2=priority_counts["P2"],
+        ),
         "对长期未反馈、无责任人或无行动计划的事项，升级至业务线技术总监协调处理。",
     )
     return PeriodicReportData(
@@ -265,7 +314,11 @@ def build_periodic_report_data(
             "current_accepted_row_count": current.audit.accepted_row_count,
             "previous_accepted_row_count": previous.audit.accepted_row_count if previous else None,
             "selected_improvement_count": len(improvement_rows),
-            "selection_limit_per_business_line": 3,
+            "selection_limit_per_business_line": None,
+            "priority_counts": {
+                priority: priority_counts[priority] for priority in ("P0", "P1", "P2")
+            },
+            **portfolio.audit,
         },
         full_product_headers=full_product_headers,
         full_product_rows=full_product_rows,

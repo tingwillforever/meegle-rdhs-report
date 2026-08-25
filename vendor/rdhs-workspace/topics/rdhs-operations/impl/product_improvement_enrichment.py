@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections import defaultdict
 import csv
 from dataclasses import dataclass
@@ -21,6 +22,8 @@ _COMPONENT_LABELS = {
 }
 _TAG_PRIORITY = {
     "过程数据缺失": 0,
+    "价值链路不完整": 1,
+    "过程能力优化": 2,
     "需求链路缺失": 1,
     "需求积压": 2,
     "质量管理风险": 3,
@@ -29,6 +32,8 @@ _TAG_PRIORITY = {
     "需求粒度问题": 6,
 }
 _ASSOCIATION_PRIORITY = {"已关联": 0, "关联待确认": 1, "已确认无关联": 2}
+_EXCLUDED_BUSINESS_LINES = ("测试业务线",)
+_EXCLUDED_PRODUCT_ATTRIBUTES = ("hmeckpgbh", "交付定制")
 
 
 @dataclass(frozen=True)
@@ -37,6 +42,29 @@ class ProductMasterRecord:
     business_line: str
     product: str
     raw_status: str
+    product_attribute_label: str
+    product_attribute_value: str
+
+
+@dataclass(frozen=True)
+class ResearchProductRecord:
+    master: ProductMasterRecord
+    metric: ProductMetricRecord | None
+    team_names: tuple[str, ...]
+
+    @property
+    def business_line(self) -> str:
+        return self.master.business_line
+
+    @property
+    def product(self) -> str:
+        return self.master.product
+
+
+@dataclass(frozen=True)
+class ResearchProductPortfolio:
+    records: tuple[ResearchProductRecord, ...]
+    audit: dict[str, object]
 
 
 @dataclass(frozen=True)
@@ -72,7 +100,7 @@ class FullImprovementRow:
     super_team_count: int | str
     association_state: str
     governance_mode: str
-    rdhs: float
+    rdhs: float | None
     lowest_component: str
     problem: str
     main_problem_tag: str
@@ -81,6 +109,7 @@ class FullImprovementRow:
     master_id: int | None
     master_status_raw: str | None
     team_names: tuple[str, ...]
+    priority: str
 
 
 def _text(value: object) -> str:
@@ -155,6 +184,12 @@ def parse_product_master_records(
         product = _text(item.get("name"))
         status = item.get("work_item_status")
         raw_status = _text(status.get("state_key") if isinstance(status, dict) else "")
+        product_attribute = _field_value(item, "field_22acd7")
+        product_attribute_label = ""
+        product_attribute_value = ""
+        if isinstance(product_attribute, dict):
+            product_attribute_label = _text(product_attribute.get("label"))
+            product_attribute_value = _text(product_attribute.get("value"))
         if business_line and product:
             records.append(
                 ProductMasterRecord(
@@ -162,9 +197,121 @@ def parse_product_master_records(
                     business_line=business_line,
                     product=product,
                     raw_status=raw_status,
+                    product_attribute_label=product_attribute_label,
+                    product_attribute_value=product_attribute_value,
                 )
             )
     return tuple(records)
+
+
+def _is_excluded_product_attribute(master: ProductMasterRecord) -> bool:
+    return bool(
+        {
+            master.product_attribute_label,
+            master.product_attribute_value,
+        }
+        & set(_EXCLUDED_PRODUCT_ATTRIBUTES)
+    )
+
+
+def build_research_product_portfolio(
+    snapshot: ChartSnapshot,
+    product_masters: tuple[ProductMasterRecord, ...],
+    team_mappings: tuple[TeamMapping, ...],
+) -> ResearchProductPortfolio:
+    """以研发中产品主数据为底表，左关联有效 RDHS 图表记录。"""
+    all_masters_by_key: dict[tuple[str, str], list[ProductMasterRecord]] = defaultdict(list)
+    for master in product_masters:
+        all_masters_by_key[_key(master.business_line, master.product)].append(master)
+
+    excluded_business_line_master_total = 0
+    excluded_product_attribute_master_total = 0
+    clean_masters_by_key: dict[tuple[str, str], ProductMasterRecord] = {}
+    for master in product_masters:
+        if master.raw_status != "In Progress":
+            continue
+        if master.business_line in _EXCLUDED_BUSINESS_LINES:
+            excluded_business_line_master_total += 1
+            continue
+        if _is_excluded_product_attribute(master):
+            excluded_product_attribute_master_total += 1
+            continue
+        key = _key(master.business_line, master.product)
+        if key in clean_masters_by_key:
+            raise ValueError(
+                "duplicate research product master: "
+                f"{master.business_line} / {master.product}"
+            )
+        clean_masters_by_key[key] = master
+
+    metrics_by_key: dict[tuple[str, str], ProductMetricRecord] = {}
+    excluded_business_line_chart_record_total = 0
+    excluded_product_attribute_chart_record_total = 0
+    excluded_finished = 0
+    chart_orphan_record_total = 0
+    unknown_status_counts: Counter[str] = Counter()
+    for metric in snapshot.records:
+        key = _key(metric.business_line, metric.product)
+        matches = all_masters_by_key.get(key, [])
+        if metric.business_line in _EXCLUDED_BUSINESS_LINES:
+            excluded_business_line_chart_record_total += 1
+            continue
+        if any(
+            master.raw_status == "In Progress" and _is_excluded_product_attribute(master)
+            for master in matches
+        ):
+            excluded_product_attribute_chart_record_total += 1
+            continue
+        if key in clean_masters_by_key:
+            metrics_by_key[key] = metric
+            continue
+        if any(master.raw_status == "Finished" for master in matches):
+            excluded_finished += 1
+            continue
+        if matches:
+            unknown_status_counts.update(master.raw_status or "(空)" for master in matches)
+            continue
+        chart_orphan_record_total += 1
+
+    teams_by_key: dict[tuple[str, str], set[str]] = defaultdict(set)
+    for mapping in team_mappings:
+        if mapping.team:
+            teams_by_key[_key(mapping.business_line, mapping.product)].add(mapping.team)
+
+    records = tuple(
+        ResearchProductRecord(
+            master=master,
+            metric=metrics_by_key.get(key),
+            team_names=tuple(sorted(teams_by_key[key])),
+        )
+        for key, master in sorted(clean_masters_by_key.items())
+    )
+    measured_total = sum(record.metric is not None for record in records)
+    unmeasured_total = len(records) - measured_total
+    measured_lt70_total = sum(
+        record.metric is not None and record.metric.rdhs < 70 for record in records
+    )
+    return ResearchProductPortfolio(
+        records=records,
+        audit={
+            "clean_research_product_total": len(records),
+            "clean_research_lt70_total": measured_lt70_total,
+            "measured_research_product_total": measured_total,
+            "unmeasured_or_pending_total": unmeasured_total,
+            "chart_orphan_record_total": chart_orphan_record_total,
+            "excluded_business_lines": list(_EXCLUDED_BUSINESS_LINES),
+            "excluded_business_line_master_total": excluded_business_line_master_total,
+            "excluded_business_line_chart_record_total": excluded_business_line_chart_record_total,
+            "excluded_product_attributes": list(_EXCLUDED_PRODUCT_ATTRIBUTES),
+            "excluded_product_attribute_master_total": excluded_product_attribute_master_total,
+            "excluded_product_attribute_chart_record_total": excluded_product_attribute_chart_record_total,
+            "excluded_finished": excluded_finished,
+            "status_raw_counts": dict(
+                sorted(Counter(record.master.raw_status for record in records).items())
+            ),
+            "unknown_status_counts": dict(sorted(unknown_status_counts.items())),
+        },
+    )
 
 
 def _mode_for_rdhs(rdhs: float) -> str:
@@ -259,61 +406,68 @@ def _action(record: ProductMetricRecord, tag: str) -> str:
     return action + "。"
 
 
-def _master_status(matches: list[ProductMasterRecord]) -> tuple[str, str, int | None, str | None]:
-    if len(matches) != 1:
-        return "主数据待匹配", "未唯一匹配", None, None
-    match = matches[0]
-    display = "研发中" if match.raw_status == "In Progress" else "状态待映射"
-    return display, "唯一匹配", match.id, match.raw_status
-
-
 def build_full_improvement_rows(
-    snapshot: ChartSnapshot,
-    product_masters: tuple[ProductMasterRecord, ...],
-    team_mappings: tuple[TeamMapping, ...],
+    portfolio: ResearchProductPortfolio,
 ) -> tuple[FullImprovementRow, ...]:
-    """生成全量低 RDHS 治理底库，不改变正文行动队列。"""
-    masters_by_key: dict[tuple[str, str], list[ProductMasterRecord]] = defaultdict(list)
-    for master in product_masters:
-        masters_by_key[_key(master.business_line, master.product)].append(master)
-    teams_by_key: dict[tuple[str, str], set[str]] = defaultdict(set)
-    for mapping in team_mappings:
-        if mapping.team:
-            teams_by_key[_key(mapping.business_line, mapping.product)].add(mapping.team)
-
+    """生成研发中产品的全量治理底库，保留未度量产品。"""
     rows: list[FullImprovementRow] = []
-    for record in snapshot.records:
-        if record.rdhs >= 70:
+    for research_product in portfolio.records:
+        record = research_product.metric
+        if record is not None and record.rdhs >= 70:
             continue
-        key = _key(record.business_line, record.product)
-        teams = tuple(sorted(teams_by_key[key]))
+        master = research_product.master
+        teams = research_product.team_names
         association_state = "已关联" if teams else "关联待确认"
-        tag = _main_problem_tag(record)
-        product_status, master_match_state, master_id, master_status_raw = _master_status(masters_by_key[key])
+        if record is None:
+            tag = "过程数据缺失"
+            governance_mode = "重点治理"
+            lowest_component = "未形成有效 RDHS 度量"
+            problem = "产品主数据为研发中，但未关联到本期有效 RDHS 度量。"
+            action = "确认产品主数据与度量源关联，补齐研发责任角色、需求、缺陷和验收记录；下期复核 RDHS。"
+            priority = "P0"
+        else:
+            participants = record.metric("有效参与人数")
+            throughput = record.metric("人均需求吞吐量")
+            if participants == 0:
+                tag = "过程数据缺失"
+                priority = "P0"
+            elif throughput == 0:
+                tag = "价值链路不完整"
+                priority = "P1"
+            else:
+                tag = "过程能力优化"
+                priority = "P2"
+            governance_mode = _mode_for_rdhs(record.rdhs)
+            lowest_component = _lowest_component(record)
+            problem = _problem(record, tag)
+            action = _action(record, tag)
         rows.append(
             FullImprovementRow(
-                business_line=record.business_line,
-                product=record.product,
-                product_status=product_status,
+                business_line=master.business_line,
+                product=master.product,
+                product_status="研发中",
                 super_team_count=len(teams) if teams else "—",
                 association_state=association_state,
-                governance_mode=_mode_for_rdhs(record.rdhs),
-                rdhs=record.rdhs,
-                lowest_component=_lowest_component(record),
-                problem=_problem(record, tag),
+                governance_mode=governance_mode,
+                rdhs=record.rdhs if record is not None else None,
+                lowest_component=lowest_component,
+                problem=problem,
                 main_problem_tag=tag,
-                action=_action(record, tag),
-                master_match_state=master_match_state,
-                master_id=master_id,
-                master_status_raw=master_status_raw,
+                action=action,
+                master_match_state="唯一匹配",
+                master_id=master.id,
+                master_status_raw=master.raw_status,
                 team_names=teams,
+                priority=priority,
             )
         )
+    priority_order = {"P0": 0, "P1": 1, "P2": 2}
     rows.sort(
         key=lambda row: (
-            row.business_line,
+            priority_order[row.priority],
             _ASSOCIATION_PRIORITY[row.association_state],
-            row.rdhs,
+            row.business_line,
+            row.rdhs if row.rdhs is not None else -1,
             _TAG_PRIORITY[row.main_problem_tag],
             row.product,
         )

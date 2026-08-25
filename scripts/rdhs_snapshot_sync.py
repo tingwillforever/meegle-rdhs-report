@@ -38,7 +38,11 @@ def _resolve_workspace_root() -> Path:
     configured = os.environ.get("RDHS_WORKSPACE_ROOT")
     if configured:
         return Path(configured).expanduser().resolve()
-    for candidate in (SITE_ROOT, SITE_ROOT.parent):
+    for candidate in (
+        SITE_ROOT / "vendor" / "rdhs-workspace" / "topics" / "rdhs-operations",
+        SITE_ROOT,
+        SITE_ROOT.parent,
+    ):
         if (candidate / "run_periodic_report.py").exists():
             return candidate
     return SITE_ROOT
@@ -895,7 +899,10 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = build_parser().parse_args(argv)
-    use_remote_lease = not args.dry_run and args.source_dir is None
+    use_remote_sync_state = os.environ.get("RDHS_STORAGE", "").lower() == "mysql"
+    use_remote_lease = (
+        use_remote_sync_state and not args.dry_run and args.source_dir is None
+    )
 
     @contextmanager
     def synchronization_guard():
@@ -917,8 +924,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             args.output_root,
             args.as_of,
             current_month_cache=args.current_month_cache,
-            site_url=args.site_url if not args.dry_run else "",
-            token=args.token if not args.dry_run else "",
+            site_url=args.site_url if use_remote_sync_state and not args.dry_run else "",
+            token=args.token if use_remote_sync_state and not args.dry_run else "",
         )
         snapshot = build_snapshot(
             _load_json(source_dir / "report_data.json"),

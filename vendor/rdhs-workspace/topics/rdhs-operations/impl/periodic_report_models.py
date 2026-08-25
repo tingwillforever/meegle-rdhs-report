@@ -68,6 +68,7 @@ class PeriodicOverviewRow:
     key_governance_count: int
     risk_improvement_count: int
     continuous_optimization_count: int
+    regular_tracking_count: int
     mode: str
     focus: str
 
@@ -77,11 +78,13 @@ class PeriodicImprovementRow:
     business_line: str
     product: str
     governance_mode: str
-    rdhs: float
+    rdhs: float | None
     lowest_component: str
     problem: str
     action: str
     source_key: tuple[str, str]
+    priority: str
+    super_team: str
 
 
 @dataclass(frozen=True)

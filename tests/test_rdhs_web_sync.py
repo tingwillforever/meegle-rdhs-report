@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import date
 import json
 import os
@@ -24,6 +25,33 @@ from scripts.rdhs_snapshot_sync import upload_snapshot
 
 SITE_ROOT = Path(__file__).resolve().parents[1]
 REPORT_DIR = SITE_ROOT / "tests" / "fixtures" / "monthly-report"
+VENDORED_REPORT_ROOT = (
+    SITE_ROOT / "vendor" / "rdhs-workspace" / "topics" / "rdhs-operations"
+)
+sys.path.insert(0, str(VENDORED_REPORT_ROOT))
+
+from impl.periodic_report_runtime import run_periodic_report  # noqa: E402
+
+
+REPORT_QUOTAS = (
+    "RDHS(100')",
+    "链路闭环得分(25')",
+    "交付闭环得分(15')",
+    "时效节奏合理性(20')",
+    "颗粒度对齐度(20')",
+    "质量敏锐度(20')",
+    "有效参与人数",
+    "人均需求吞吐量",
+    "人均缺陷关闭量",
+    "需求交付周期",
+    "需求开发周期",
+    "严重缺陷占比",
+    "低级缺陷占比",
+    "应发布需求数",
+    "有效发布需求数",
+    "需求总量",
+    "积压需求占比",
+)
 
 
 def _load_json(path: Path) -> dict[str, object]:
@@ -32,7 +60,262 @@ def _load_json(path: Path) -> dict[str, object]:
     return payload
 
 
+def _chart_payload(rows: list[tuple[str, str, float]]) -> dict[str, object]:
+    chart_rows = []
+    for business_line, product, rdhs in rows:
+        values = [
+            rdhs,
+            min(rdhs, 25),
+            min(rdhs, 15),
+            min(rdhs, 20),
+            min(rdhs, 20),
+            min(rdhs, 20),
+            1,
+            1,
+            1,
+            10,
+            10,
+            0,
+            0,
+            1,
+            1,
+            1,
+            0,
+        ]
+        chart_rows.append(
+            {
+                "dim": {"0": business_line, "1": product},
+                "value": {str(index): value for index, value in enumerate(values)},
+            }
+        )
+    return {
+        "data": {
+            "name": "RDHS test chart",
+            "dim_titles": ["一级业务线", "产品"],
+            "quota_titles": list(REPORT_QUOTAS),
+            "chart_data_list": chart_rows,
+        }
+    }
+
+
+def _product_master(
+    identifier: int,
+    business_id: str,
+    product: str,
+    *,
+    status: str = "In Progress",
+    attribute_label: str = "",
+    attribute_value: str = "",
+) -> dict[str, object]:
+    fields: list[dict[str, object]] = [
+        {
+            "field_alias": "business",
+            "field_key": "business",
+            "field_value": business_id,
+        }
+    ]
+    if attribute_label or attribute_value:
+        fields.append(
+            {
+                "field_alias": "",
+                "field_key": "field_22acd7",
+                "field_value": {
+                    "label": attribute_label,
+                    "value": attribute_value,
+                },
+            }
+        )
+    return {
+        "id": identifier,
+        "name": product,
+        "fields": fields,
+        "work_item_status": {"state_key": status},
+    }
+
+
+def _run_vendored_contract_fixture(output_root: Path) -> tuple[dict[str, object], dict[str, object]]:
+    current = _chart_payload(
+        [
+            ("主营业务线", "低分产品", 40),
+            ("主营业务线", "积压产品", 65),
+            ("主营业务线", "常规产品", 80),
+            ("主营业务线", "交付定制产品", 30),
+            ("主营业务线", "已结束产品", 30),
+            ("主营业务线", "孤儿产品", 30),
+            ("测试业务线", "测试产品", 30),
+        ]
+    )
+    backlog_row = next(
+        row for row in current["data"]["chart_data_list"]
+        if row["dim"]["1"] == "积压产品"
+    )
+    backlog_row["value"]["16"] = 0.8
+    masters = {
+        "data": [
+            _product_master(1, "main", "低分产品"),
+            _product_master(7, "main", "积压产品"),
+            _product_master(
+                2,
+                "main",
+                "常规产品",
+                attribute_label="标准产品",
+                attribute_value="standard",
+            ),
+            _product_master(3, "main", "未度量产品"),
+            _product_master(
+                4,
+                "main",
+                "交付定制产品",
+                attribute_label="交付定制",
+                attribute_value="hmeckpgbh",
+            ),
+            _product_master(5, "main", "已结束产品", status="Finished"),
+            _product_master(6, "test", "测试产品"),
+        ]
+    }
+    business_lines = {
+        "data": [
+            {"id": "main", "name": "主营业务线"},
+            {"id": "test", "name": "测试业务线"},
+        ]
+    }
+    result = run_periodic_report(
+        mode="weekly",
+        as_of=date(2026, 8, 24),
+        output_root=output_root,
+        project_key="test-project",
+        current_chart_id="current-chart",
+        previous_chart_id="previous-chart",
+        current_payload=current,
+        previous_payload=current,
+        product_master_payload=masters,
+        business_lines_payload=business_lines,
+        publish=False,
+    )
+    return _load_json(result.report_data_path), _load_json(result.audit_manifest_path)
+
+
+class VendoredReportContractTests(unittest.TestCase):
+    def test_research_product_master_is_the_report_coverage_base(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            report, _manifest = _run_vendored_contract_fixture(Path(directory))
+
+        headers = report["full_product_headers"]
+        measured = [dict(zip(headers, row, strict=True)) for row in report["full_product_rows"]]
+        improvement_headers = report["full_improvement_headers"]
+        improvements = [
+            dict(zip(improvement_headers, row, strict=True))
+            for row in report["full_improvement_rows"]
+        ]
+
+        self.assertEqual(
+            {(row["业务线"], row["产品"]) for row in measured},
+            {
+                ("主营业务线", "低分产品"),
+                ("主营业务线", "积压产品"),
+                ("主营业务线", "常规产品"),
+            },
+        )
+        unmeasured = next(row for row in improvements if row["产品"] == "未度量产品")
+        self.assertEqual(unmeasured["RDHS"], "—")
+
+    def test_non_research_products_are_excluded_with_reconciling_audit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            report, manifest = _run_vendored_contract_fixture(Path(directory))
+
+        audit = report["audit"]
+        self.assertEqual(audit["clean_research_product_total"], 4)
+        self.assertEqual(audit["measured_research_product_total"], 3)
+        self.assertEqual(audit["unmeasured_or_pending_total"], 1)
+        self.assertEqual(audit["excluded_business_line_master_total"], 1)
+        self.assertEqual(audit["excluded_business_line_chart_record_total"], 1)
+        self.assertEqual(audit["excluded_product_attribute_master_total"], 1)
+        self.assertEqual(audit["excluded_product_attribute_chart_record_total"], 1)
+        self.assertEqual(audit["excluded_finished"], 1)
+        self.assertEqual(audit["chart_orphan_record_total"], 1)
+        self.assertEqual(audit["priority_counts"], {"P0": 1, "P1": 0, "P2": 2})
+        self.assertEqual(manifest["report"], audit)
+
+    def test_overview_includes_regular_tracking_and_reconciled_bg_total(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            report, _manifest = _run_vendored_contract_fixture(Path(directory))
+
+        rows = {row["business_line"]: row for row in report["overview_rows"]}
+        detail = rows["主营业务线"]
+        total = rows["消费者BG（合计）"]
+
+        self.assertEqual(detail["product_total"], 4)
+        self.assertEqual(detail["key_governance_count"], 2)
+        self.assertEqual(detail["continuous_optimization_count"], 1)
+        self.assertEqual(detail["regular_tracking_count"], 1)
+        self.assertEqual(total["product_total"], 4)
+        self.assertEqual(total["regular_tracking_count"], 1)
+        self.assertEqual(
+            detail["key_governance_count"]
+            + detail["risk_improvement_count"]
+            + detail["continuous_optimization_count"]
+            + detail["regular_tracking_count"],
+            detail["product_total"],
+        )
+
+
 class SnapshotSyncTests(unittest.TestCase):
+    def test_default_report_command_points_to_the_vendored_runtime(self) -> None:
+        variable = "RDHS_CURRENT_REPORT_COMMAND"
+        previous = os.environ.pop(variable, None)
+        try:
+            command = sync_module._report_command(variable)
+        finally:
+            if previous is not None:
+                os.environ[variable] = previous
+
+        self.assertTrue(
+            Path(command[1]).is_file(),
+            f"default report entrypoint does not exist: {command[1]}",
+        )
+
+    def test_local_d1_refresh_does_not_require_mysql_sync_state(self) -> None:
+        @contextmanager
+        def reject_remote_lease(*args, **kwargs):  # noqa: ANN002, ANN003
+            raise AssertionError("local D1 refresh must not acquire a MySQL lease")
+            yield
+
+        def local_report(*args, **kwargs):  # noqa: ANN002, ANN003
+            if kwargs.get("site_url") or kwargs.get("token"):
+                raise AssertionError("local D1 refresh must keep baselines on local storage")
+            return REPORT_DIR
+
+        def accept_upload(*args, **kwargs):  # noqa: ANN002, ANN003
+            return {"stored": True}
+
+        original_lease = sync_module.remote_sync_lease
+        original_generate = sync_module.generate_report
+        original_upload = sync_module.upload_snapshot
+        previous_storage = os.environ.pop("RDHS_STORAGE", None)
+        sync_module.remote_sync_lease = reject_remote_lease
+        sync_module.generate_report = local_report
+        sync_module.upload_snapshot = accept_upload
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                result = sync_module.main([
+                    "--current-month-cache",
+                    "--as-of",
+                    "2026-08-24",
+                    "--output-root",
+                    directory,
+                    "--site-url",
+                    "http://localhost:3000",
+                    "--token",
+                    "test-token",
+                ])
+            self.assertEqual(result, 0)
+        finally:
+            sync_module.remote_sync_lease = original_lease
+            sync_module.generate_report = original_generate
+            sync_module.upload_snapshot = original_upload
+            if previous_storage is not None:
+                os.environ["RDHS_STORAGE"] = previous_storage
+
     def test_remote_baseline_is_restored_to_the_report_runtime_path(self) -> None:
         class Response:
             def __enter__(self):
@@ -468,6 +751,19 @@ with _report_output_lock(Path(sys.argv[1])):
         finally:
             if previous is not None:
                 os.environ["RDHS_REFRESH_WEBHOOK_TOKEN"] = previous
+
+    def test_refresh_runner_selects_python_with_report_dependencies(self) -> None:
+        module = runpy.run_path(str(SITE_ROOT / "scripts" / "local-refresh-runner.py"))
+        selected = module["_select_python"]()
+
+        completed = subprocess.run(
+            [selected, "-c", "import yaml"],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+
+        self.assertEqual(completed.returncode, 0, completed.stderr)
 
     def test_monthly_sync_uses_month_start_baseline_and_previous_month_end_report(self) -> None:
         captured: list[list[str]] = []

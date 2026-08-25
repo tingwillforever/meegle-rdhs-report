@@ -67,7 +67,7 @@ def _select_python() -> str:
             [
                 resolved,
                 "-c",
-                "import sys; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)",
+                "import sys, yaml; raise SystemExit(0 if sys.version_info >= (3, 10) else 1)",
             ],
             text=True,
             capture_output=True,
@@ -75,7 +75,9 @@ def _select_python() -> str:
         )
         if completed.returncode == 0:
             return resolved
-    raise RuntimeError("Python 3.10 or newer is required for RDHS synchronization")
+    raise RuntimeError(
+        "Python 3.10 or newer with PyYAML is required for RDHS synchronization"
+    )
 
 
 def _json_response(handler: BaseHTTPRequestHandler, status: int, payload: dict[str, Any]) -> None:

@@ -24,6 +24,7 @@ from impl.periodic_report_models import PeriodicReportData
 from impl.periodic_report_renderer import render_periodic_report_xml
 from impl.periodic_report_renderer import report_document_title
 from impl.product_improvement_enrichment import build_full_improvement_rows
+from impl.product_improvement_enrichment import build_research_product_portfolio
 from impl.product_improvement_enrichment import load_team_mappings
 from impl.product_improvement_enrichment import parse_business_line_names
 from impl.product_improvement_enrichment import parse_product_master_records
@@ -36,6 +37,7 @@ _OVERVIEW_HEADERS = [
     "重点治理(<45')",
     "风险改进\n(45'~60')",
     "持续优化\n(60'~70')",
+    "常规跟踪(>=70')",
     "本期模式",
     "本期关注重点",
 ]
@@ -332,6 +334,7 @@ def _write_csvs(report: PeriodicReportData, run_dir: Path) -> None:
                     row.key_governance_count,
                     row.risk_improvement_count,
                     row.continuous_optimization_count,
+                    row.regular_tracking_count,
                     row.mode,
                     row.focus,
                 ]
@@ -443,6 +446,7 @@ def _workbook_payload(report: PeriodicReportData) -> dict[str, object]:
                     "重点治理(<45')": "int64",
                     "风险改进\n(45'~60')": "int64",
                     "持续优化\n(60'~70')": "int64",
+                    "常规跟踪(>=70')": "int64",
                 },
                 "data": [
                     [
@@ -451,6 +455,7 @@ def _workbook_payload(report: PeriodicReportData) -> dict[str, object]:
                         row.key_governance_count,
                         row.risk_improvement_count,
                         row.continuous_optimization_count,
+                        row.regular_tracking_count,
                         row.mode,
                         row.focus,
                     ]
@@ -934,9 +939,10 @@ def run_periodic_report(
     product_masters = parse_product_master_records(
         raw_product_masters, parse_business_line_names(raw_business_lines)
     )
-    enriched_rows = build_full_improvement_rows(
+    portfolio = build_research_product_portfolio(
         current_snapshot, product_masters, load_team_mappings(team_mapping_path)
     )
+    enriched_rows = build_full_improvement_rows(portfolio)
     full_improvement_rows = tuple(
         (
             row.business_line,
@@ -944,7 +950,7 @@ def run_periodic_report(
             row.product_status,
             row.super_team_count,
             row.governance_mode,
-            row.rdhs,
+            row.rdhs if row.rdhs is not None else "—",
             row.lowest_component,
             row.problem,
             row.main_problem_tag,
@@ -967,7 +973,12 @@ def run_periodic_report(
         for row in enriched_rows
     ]
     _write_json(run_dir / "product_master_match_audit.json", {"rows": match_audit})
-    report = build_periodic_report_data(current=current_snapshot, previous=previous_snapshot)
+    report = build_periodic_report_data(
+        current=current_snapshot,
+        previous=previous_snapshot,
+        portfolio=portfolio,
+        enriched_rows=enriched_rows,
+    )
     report = replace(
         report,
         full_improvement_headers=tuple(_FULL_IMPROVEMENT_HEADERS),
