@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from datetime import date
 from datetime import datetime
 from datetime import timedelta
+from datetime import timezone
 import fcntl
 import json
 import os
@@ -26,10 +27,26 @@ from urllib.parse import urlparse
 from urllib.request import Request
 from urllib.request import build_opener
 from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfoNotFoundError
 
 
 SITE_ROOT = Path(__file__).resolve().parents[1]
-SHANGHAI_TIME_ZONE = ZoneInfo("Asia/Shanghai")
+
+
+def _load_shanghai_time_zone():
+    """Use IANA tzdata when available, with a safe Shanghai fallback.
+
+    The production base image may omit both system zoneinfo files and the
+    Python tzdata package. Shanghai has remained UTC+8 without DST, so a fixed
+    offset preserves the report's current-date semantics in that environment.
+    """
+    try:
+        return ZoneInfo("Asia/Shanghai")
+    except ZoneInfoNotFoundError:
+        return timezone(timedelta(hours=8), "Asia/Shanghai")
+
+
+SHANGHAI_TIME_ZONE = _load_shanghai_time_zone()
 MONTH_KEY_PATTERN = re.compile(r"^(\d{4})-(\d{2})$")
 SITE_SNAPSHOT_PATTERN = re.compile(r"^monthly-(\d{4}-\d{2})\.json$")
 

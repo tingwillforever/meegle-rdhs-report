@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from dataclasses import replace
 from datetime import date
 from datetime import datetime
+from datetime import timedelta
+from datetime import timezone
 from io import StringIO
 import json
 from math import isclose
@@ -16,6 +18,7 @@ import re
 import subprocess
 from typing import Callable
 from zoneinfo import ZoneInfo
+from zoneinfo import ZoneInfoNotFoundError
 
 from impl.periodic_report_analysis import build_periodic_report_data
 from impl.periodic_report_data import parse_chart_snapshot
@@ -65,6 +68,16 @@ _FULL_IMPROVEMENT_HEADERS = [
 _PRODUCT_MASTER_TYPE_KEY = "693f665435b354b7ca0085dc"
 _PRODUCT_MASTER_PAGE_SIZE = 200
 _DEFAULT_TEAM_MAPPING_PATH = Path(__file__).resolve().parent.parent / "config" / "initial_super_team_mappings.csv"
+
+
+def _load_shanghai_time_zone():
+    try:
+        return ZoneInfo("Asia/Shanghai")
+    except ZoneInfoNotFoundError:
+        return timezone(timedelta(hours=8), "Asia/Shanghai")
+
+
+SHANGHAI_TIME_ZONE = _load_shanghai_time_zone()
 
 
 @dataclass(frozen=True)
@@ -243,7 +256,7 @@ def _load_json(path: Path) -> dict[str, object]:
 
 
 def _snapshot_time() -> str:
-    return datetime.now(ZoneInfo("Asia/Shanghai")).isoformat(timespec="seconds")
+    return datetime.now(SHANGHAI_TIME_ZONE).isoformat(timespec="seconds")
 
 
 def _baseline_metadata_path(baseline_path: Path) -> Path:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from datetime import date
+from datetime import timedelta
 import json
 import os
 from pathlib import Path
@@ -11,11 +12,13 @@ import tempfile
 import time
 import unittest
 from urllib.error import HTTPError
+from unittest.mock import patch
 
 import scripts.rdhs_snapshot_sync as sync_module
 from scripts.rdhs_snapshot_sync import build_snapshot
 from scripts.rdhs_snapshot_sync import generate_report
 from scripts.rdhs_snapshot_sync import hydrate_remote_baseline
+from scripts.rdhs_snapshot_sync import _load_shanghai_time_zone
 from scripts.rdhs_snapshot_sync import persist_remote_baseline
 from scripts.rdhs_snapshot_sync import prune_report_output
 from scripts.rdhs_snapshot_sync import remote_sync_lease
@@ -30,6 +33,7 @@ VENDORED_REPORT_ROOT = (
 sys.path.insert(0, str(VENDORED_REPORT_ROOT))
 
 from impl.periodic_report_runtime import run_periodic_report  # noqa: E402
+from impl import periodic_report_runtime as runtime_module  # noqa: E402
 
 
 REPORT_QUOTAS = (
@@ -259,6 +263,25 @@ class VendoredReportContractTests(unittest.TestCase):
 
 
 class SnapshotSyncTests(unittest.TestCase):
+    def test_shanghai_timezone_falls_back_when_system_tzdata_is_missing(self) -> None:
+        with patch.object(
+            sync_module,
+            "ZoneInfo",
+            side_effect=sync_module.ZoneInfoNotFoundError("tzdata missing"),
+        ):
+            fallback = _load_shanghai_time_zone()
+
+        self.assertEqual(fallback.utcoffset(None), timedelta(hours=8))
+
+        with patch.object(
+            runtime_module,
+            "ZoneInfo",
+            side_effect=runtime_module.ZoneInfoNotFoundError("tzdata missing"),
+        ):
+            vendored_fallback = runtime_module._load_shanghai_time_zone()
+
+        self.assertEqual(vendored_fallback.utcoffset(None), timedelta(hours=8))
+
     def test_default_report_command_points_to_the_vendored_runtime(self) -> None:
         variable = "RDHS_CURRENT_REPORT_COMMAND"
         previous = os.environ.pop(variable, None)
