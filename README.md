@@ -48,7 +48,9 @@ npm install
 npm run dev
 ```
 
-本地地址为 `http://localhost:3000`。D1 尚无数据时，首页使用仓库内两份已验证月度快照并明确标记为预览快照。
+`npm run dev` 只启动 Web（`3000`）：页面、API 与当月 Python + Meegle CLI 刷新都由该进程承载。
+实际刷新时，在 `.dev.vars` 中配置 `RDHS_SITE_URL` 与 `RDHS_INGEST_TOKEN`（可从 `.env.example` 复制）。
+D1 尚无数据时，首页使用仓库内两份已验证月度快照并明确标记为预览快照。
 
 ## 内网 K8s 生产部署
 
