@@ -1,9 +1,48 @@
+# Complete, safe production template. Like values-prod.yaml, this file can
+# replace values.yaml in the release build flow.
+fullnameOverride: ""
+
+imagePullSecrets:
+  - name: hub4iflytek
+
 image:
   repository: artifacts.iflytek.com/cbg-docker-repo/cbbywkf/meegle-rdhs-report
   tag: v1.0.0
 
-imagePullSecrets:
-  - name: hub4iflytek
+web:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 1Gi
+
+sync:
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: "1"
+      memory: 2Gi
+  currentRefreshTimeoutSeconds: 600
+  reportCommandTimeoutSeconds: 540
+  leaseTtlSeconds: 1800
+  outputRetentionMonths: 6
+  cron:
+    schedule: "0 9 1 * *"
+    timeZone: Asia/Shanghai
+    suspend: false
+    activeDeadlineSeconds: 1500
+    backoffLimit: 2
+    successfulJobsHistoryLimit: 3
+    failedJobsHistoryLimit: 5
+    ttlSecondsAfterFinished: 604800
+
+syncOutput:
+  mountPath: /var/lib/rdhs-sync
 
 database:
   driver: mysql
@@ -12,6 +51,10 @@ database:
     port: 4302
     database: rdhs_report
     secretName: rdhs-report-db-secrets
+    credentials:
+      create: false
+      user: ""
+      password: ""
     connectionLimit: 10
     tls: false
     tlsRejectUnauthorized: true
@@ -21,16 +64,43 @@ database:
 #   - name: rdhs-registry-credentials
 
 secrets:
+  create: false
   web:
     name: rdhs-report-web-secrets
+    data:
+      RDHS_INGEST_TOKEN: ""
+
+report:
+  workspaceRoot: /opt/rdhs-workspace
+  monthlyBaselineCommand: >-
+    python3 /opt/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py
+    --mode monthly-baseline
+  monthlyCommand: >-
+    python3 /opt/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py
+    --mode weekly
+  currentCommand: >-
+    python3 /opt/rdhs-workspace/topics/rdhs-operations/run_periodic_report.py
+    --mode weekly
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
 
 ingress:
+  enabled: true
   className: nginx
   host: ossptest.voicecloud.cn
   pathPrefix: /meegle-rdhs-report
   annotations:
     nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
     nginx.ingress.kubernetes.io/proxy-body-size: "20m"
+  tls: []
+
+pdb:
+  enabled: false
+  minAvailable: 1
+
 # Enable only after replacing these selectors and CIDRs with values supplied by
 # the cluster and Meegle network owners.
 networkPolicy:

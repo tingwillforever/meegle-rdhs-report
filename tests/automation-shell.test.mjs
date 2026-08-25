@@ -91,4 +91,14 @@ exit 1
 
   const pushed = await readFile(pushLog, "utf8");
   assert.match(pushed, /^push-artifactory meegle-rdhs-report-prod cbg-helm-local --skip-reindex$/m);
+  const builtValues = await readFile(
+    join(chartsDir, "meegle-rdhs-report-prod", "values.yaml"),
+    "utf8",
+  );
+  assert.match(builtValues, /^web:\n/m);
+  assert.match(builtValues, /^sync:\n/m);
+  assert.match(builtValues, /^report:\n/m);
+  assert.match(builtValues, /^serviceAccount:\n/m);
+  assert.match(builtValues, /^pdb:\n/m);
+  assert.match(builtValues, /^    host: 172\.31\.114\.194$/m);
 });

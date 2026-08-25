@@ -274,7 +274,8 @@ PROJECT_VERSION=1.0 BUILD_ID=42 SERVICE_NAME=meegle-rdhs-report ENV=prod \
 
 ### 10.4 配置与发布
 
-使用仓库内的 `charts/rdhs-report/values-prod.yaml`。当前文件仅为上线前验证临时包含数据库明文凭据，
+使用仓库内的 `charts/rdhs-report/values-prod.yaml`。该文件遵循 meegle-mcp 的发布契约，是可直接替换
+`values.yaml` 的完整生产配置，不是 Helm overlay。当前文件仅为上线前验证临时包含数据库明文凭据，
 不得作为长期生产配置；验证完成后改回外部 `rdhs-report-db-secrets` 并轮换密码。
 至少确认：
 
