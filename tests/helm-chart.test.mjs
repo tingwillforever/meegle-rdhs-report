@@ -41,11 +41,11 @@ test("quick validation can render the application Secret from a local override",
   const result = renderHelm([
     "--set", "secrets.create=true",
     "--set-string", "secrets.web.data.RDHS_INGEST_TOKEN=ingest-test-token",
-    "--set-string", "secrets.web.data.RDHS_REFRESH_WEBHOOK_TOKEN=refresh-test-token",
   ]);
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /kind: Secret\nmetadata:\n {2}name: rdhs-report-web-secrets/);
   assert.match(result.stdout, /RDHS_INGEST_TOKEN: "ingest-test-token"/);
+  assert.doesNotMatch(result.stdout, /RDHS_REFRESH_WEBHOOK_TOKEN/);
   assert.doesNotMatch(result.stdout, /MEEGLE_HOST|MEEGLE_USER_ACCESS_TOKEN|rdhs-report-meegle-secrets/);
 });
 
@@ -68,7 +68,7 @@ test("production render follows the meegle-mcp domain and registry conventions w
   );
   assert.equal(
     (result.stdout.match(/image: "artifacts\.iflytek\.com\/cbg-docker-repo\/cbbywkf\/meegle-rdhs-report:4\.0\.4"/g) ?? []).length,
-    3,
+    2,
   );
   assert.match(result.stdout, /imagePullSecrets:\n {8}- name: hub4iflytek/);
   assert.doesNotMatch(result.stdout, /auth-url|required_group|rdhs-operators/);
@@ -80,7 +80,7 @@ test("the production path prefix is normalized and release names flow to workloa
   const result = renderHelm([], "meegle-rdhs-report");
   assert.equal(result.status, 0, result.stderr);
   assert.match(result.stdout, /name: meegle-rdhs-report-web/);
-  assert.match(result.stdout, /name: meegle-rdhs-report-refresh/);
+  assert.doesNotMatch(result.stdout, /name: meegle-rdhs-report-refresh/);
   assert.match(result.stdout, /name: meegle-rdhs-report-sync/);
 
   const invalid = renderHelm(["--set", "ingress.pathPrefix=/bad/"]);
@@ -135,16 +135,10 @@ test("a recovery values file can keep the CronJob suspended across Helm upgrades
   assert.match(cronJob, /suspend: true/);
 });
 
-test("render fixes the Runner at one replica", () => {
-  const replicas = renderHelm(["--set", "sync.replicaCount=2"]);
-  assert.notEqual(replicas.status, 0);
-  assert.match(replicas.stderr, /sync\.replicaCount must be 1/);
-});
-
-test("runner and CronJob use disposable local report output without NFS", () => {
+test("Web and CronJob use disposable local report output without NFS", () => {
   const result = renderHelm();
   assert.equal(result.status, 0, result.stderr);
-  for (const name of ["rdhs-report-refresh", "rdhs-report-sync"]) {
+  for (const name of ["rdhs-report-web", "rdhs-report-sync"]) {
     const workload = result.stdout.match(
       new RegExp(`kind: (?:Deployment|CronJob)\\nmetadata:\\n {2}name: ${name}[\\s\\S]*?(?=\\n---|$)`),
     )?.[0];
@@ -165,7 +159,7 @@ test("production values do not render a separate refresh Ingress", () => {
   assert.doesNotMatch(result.stdout, /auth-url|required_group|rdhs-operators/);
 });
 
-test("NetworkPolicy keeps the runner and monthly sync upload path to Web open", () => {
+test("NetworkPolicy lets Web and monthly sync reach Meegle without a runner", () => {
   const result = renderHelm([
     "--set",
     "networkPolicy.enabled=true",
@@ -182,9 +176,9 @@ test("NetworkPolicy keeps the runner and monthly sync upload path to Web open", 
     /kind: NetworkPolicy\nmetadata:\n {2}name: rdhs-report-web[\s\S]*?(?=\n---|$)/,
   )?.[0];
   assert.ok(webPolicy);
-  assert.match(webPolicy, /app\.kubernetes\.io\/component: runner/);
   assert.match(webPolicy, /app\.kubernetes\.io\/component: sync/);
   assert.match(webPolicy, /cidr: 172\.31\.114\.194\/32/);
+  assert.match(webPolicy, /cidr: 10\.0\.0\.0\/8/);
   assert.match(webPolicy, /port: 4302/);
 });
 
@@ -205,7 +199,7 @@ test("database credentials are injected into Web only", () => {
   )?.[0];
   assert.ok(web);
   assert.match(web, /name: rdhs-report-db-secrets/);
-  for (const name of ["rdhs-report-refresh", "rdhs-report-sync"]) {
+  for (const name of ["rdhs-report-sync"]) {
     const workload = result.stdout.match(
       new RegExp(`kind: (?:Deployment|CronJob)\\nmetadata:\\n {2}name: ${name}[\\s\\S]*?(?=\\n---|$)`),
     )?.[0];
@@ -237,16 +231,11 @@ test("the monthly job receives only the Web write token it needs", () => {
   assert.doesNotMatch(cronJob, /RDHS_REFRESH_WEBHOOK_TOKEN/);
 });
 
-test("the refresh runner starts its image command before passing the timeout argument", () => {
+test("single-service render has no runner workload, port, or webhook token", () => {
   const result = renderHelm();
   assert.equal(result.status, 0, result.stderr);
-  const runner = result.stdout.match(
-    /kind: Deployment\nmetadata:\n {2}name: rdhs-report-refresh[\s\S]*?(?=\n---|$)/,
-  )?.[0];
-  assert.ok(runner);
-  assert.match(
-    runner,
-    /command:\n {12}- python3\n {12}- scripts\/local-refresh-runner\.py\n {12}- --host\n {12}- 0\.0\.0\.0/,
-  );
-  assert.match(runner, /args:\n {12}- --timeout\n {12}- "600"/);
+  assert.doesNotMatch(result.stdout, /app\.kubernetes\.io\/component: runner/);
+  assert.doesNotMatch(result.stdout, /8765|RDHS_REFRESH_WEBHOOK_/);
+  assert.match(result.stdout, /name: RDHS_CURRENT_REFRESH_TIMEOUT_SECONDS/);
+  assert.match(result.stdout, /name: RDHS_CURRENT_REPORT_COMMAND/);
 });

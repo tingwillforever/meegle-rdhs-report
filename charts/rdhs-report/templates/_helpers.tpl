@@ -27,10 +27,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{ include "rdhs-report.fullname" . }}-web
 {{- end }}
 
-{{- define "rdhs-report.runnerName" -}}
-{{ include "rdhs-report.fullname" . }}-refresh
-{{- end }}
-
 {{- define "rdhs-report.syncName" -}}
 {{ include "rdhs-report.fullname" . }}-sync
 {{- end }}
@@ -61,9 +57,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if lt (int .Values.web.replicaCount) 1 }}
 {{- fail "web.replicaCount must be positive" }}
 {{- end }}
-{{- if ne (int .Values.sync.replicaCount) 1 }}
-{{- fail "sync.replicaCount must be 1 for the single refresh endpoint" }}
-{{- end }}
 {{- if ne .Values.database.driver "mysql" }}
 {{- fail "database.driver must be mysql for Kubernetes production" }}
 {{- end }}
@@ -89,8 +82,8 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- if lt (int .Values.sync.reportCommandTimeoutSeconds) 1 }}
 {{- fail "sync.reportCommandTimeoutSeconds must be positive" }}
 {{- end }}
-{{- if le (int .Values.sync.runner.timeoutSeconds) (int .Values.sync.reportCommandTimeoutSeconds) }}
-{{- fail "sync.runner.timeoutSeconds must exceed sync.reportCommandTimeoutSeconds" }}
+{{- if le (int .Values.sync.currentRefreshTimeoutSeconds) (int .Values.sync.reportCommandTimeoutSeconds) }}
+{{- fail "sync.currentRefreshTimeoutSeconds must exceed sync.reportCommandTimeoutSeconds" }}
 {{- end }}
 {{- if lt (int .Values.sync.cron.activeDeadlineSeconds) (add (mul 2 (int .Values.sync.reportCommandTimeoutSeconds)) 60) }}
 {{- fail "sync.cron.activeDeadlineSeconds must allow two report commands plus shutdown time" }}
@@ -104,7 +97,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- $_ := required "secrets.web.name is required" .Values.secrets.web.name -}}
 {{- if .Values.secrets.create }}
 {{- $_ := required "secrets.web.data.RDHS_INGEST_TOKEN is required when secrets.create=true" .Values.secrets.web.data.RDHS_INGEST_TOKEN -}}
-{{- $_ := required "secrets.web.data.RDHS_REFRESH_WEBHOOK_TOKEN is required when secrets.create=true" .Values.secrets.web.data.RDHS_REFRESH_WEBHOOK_TOKEN -}}
 {{- end }}
 {{- $pathPrefix := required "ingress.pathPrefix is required" .Values.ingress.pathPrefix }}
 {{- if not (hasPrefix "/" $pathPrefix) }}

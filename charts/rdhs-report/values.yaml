@@ -17,7 +17,6 @@ web:
       memory: 1Gi
 
 sync:
-  replicaCount: 1
   resources:
     requests:
       cpu: 250m
@@ -25,8 +24,7 @@ sync:
     limits:
       cpu: "1"
       memory: 2Gi
-  runner:
-    timeoutSeconds: 600
+  currentRefreshTimeoutSeconds: 600
   reportCommandTimeoutSeconds: 540
   leaseTtlSeconds: 1800
   outputRetentionMonths: 6
@@ -69,7 +67,6 @@ secrets:
     name: ""
     data:
       RDHS_INGEST_TOKEN: ""
-      RDHS_REFRESH_WEBHOOK_TOKEN: ""
 
 report:
   workspaceRoot: /opt/rdhs-workspace
