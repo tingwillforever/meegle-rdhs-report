@@ -136,6 +136,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 23.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -204,6 +210,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 36.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -274,6 +286,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 54.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -342,6 +360,12 @@
         "quality": 10.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 2.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -412,6 +436,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 0.0,
+          "unit": "人",
+          "tone": "critical"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -480,6 +510,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 16.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -550,6 +586,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 8.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -618,6 +660,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 9.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 1.0,
@@ -688,6 +736,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 7.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -756,6 +810,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 8.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 1.0,
@@ -826,6 +886,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 11.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -894,6 +960,12 @@
         "quality": 5.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 13.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 2.0,
@@ -964,6 +1036,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 7.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -1032,6 +1110,12 @@
         "quality": 5.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 10.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 1.0,
@@ -1102,6 +1186,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 11.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -1170,6 +1260,12 @@
         "quality": 10.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 0.0,
+          "unit": "人",
+          "tone": "critical"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -1240,6 +1336,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 19.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -1309,6 +1411,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 5.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -1377,6 +1485,12 @@
         "quality": 10.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 1.0,
+          "unit": "人",
+          "tone": "risk"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 2.0,
@@ -1467,6 +1581,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 8.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -1535,6 +1655,12 @@
         "quality": 5.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 0.0,
+          "unit": "人",
+          "tone": "critical"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -1605,6 +1731,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 0.0,
+          "unit": "人",
+          "tone": "critical"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -1673,6 +1805,12 @@
         "quality": 10.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 1.0,
+          "unit": "人",
+          "tone": "risk"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -1783,6 +1921,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 31.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 6.0,
           "unit": "个/人",
@@ -1851,6 +1995,12 @@
         "quality": 5.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 19.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -1921,6 +2071,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 6.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -1990,6 +2146,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 13.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -2058,6 +2220,12 @@
         "quality": 10.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 4.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -2148,6 +2316,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 0.0,
+          "unit": "人",
+          "tone": "critical"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -2217,6 +2391,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 0.0,
+          "unit": "人",
+          "tone": "critical"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -2285,6 +2465,12 @@
         "quality": 5.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 0.0,
+          "unit": "人",
+          "tone": "critical"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -2375,6 +2561,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 0.0,
+          "unit": "人",
+          "tone": "critical"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -2464,6 +2656,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 5.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -2532,6 +2730,12 @@
         "quality": 5.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 1.0,
+          "unit": "人",
+          "tone": "risk"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 1.0,
@@ -2602,6 +2806,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 11.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -2670,6 +2880,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 16.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -2740,6 +2956,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 5.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -2808,6 +3030,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 0.0,
+          "unit": "人",
+          "tone": "critical"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -2878,6 +3106,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 16.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 2.0,
           "unit": "个/人",
@@ -2946,6 +3180,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 8.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -3016,6 +3256,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 5.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -3084,6 +3330,12 @@
         "quality": 5.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 0.0,
+          "unit": "人",
+          "tone": "critical"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -3154,6 +3406,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 13.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -3222,6 +3480,12 @@
         "quality": 20.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 12.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -3292,6 +3556,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 3.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -3360,6 +3630,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 24.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -3430,6 +3706,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 9.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -3498,6 +3780,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 10.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -3568,6 +3856,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 5.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -3636,6 +3930,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 4.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -3706,6 +4006,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 8.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -3774,6 +4080,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 3.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 0.0,
@@ -3844,6 +4156,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 30.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 1.0,
           "unit": "个/人",
@@ -3913,6 +4231,12 @@
       },
       "dependencyMetrics": [
         {
+          "label": "有效参与人数",
+          "value": 11.0,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
@@ -3981,6 +4305,12 @@
         "quality": 15.0
       },
       "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 16.0,
+          "unit": "人",
+          "tone": "track"
+        },
         {
           "label": "月人均需求吞吐量",
           "value": 1.0,

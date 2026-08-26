@@ -509,6 +509,9 @@ class SnapshotSyncTests(unittest.TestCase):
         )
         metrics = {row["label"]: row for row in product["dependencyMetrics"]}
 
+        self.assertEqual(metrics["有效参与人数"]["value"], 36.0)
+        self.assertEqual(metrics["有效参与人数"]["unit"], "人")
+        self.assertEqual(metrics["有效参与人数"]["tone"], "track")
         self.assertEqual(product["subLine"], None)
         self.assertEqual(metrics["月人均需求吞吐量"]["value"], 0.0)
         self.assertEqual(metrics["月人均需求吞吐量"]["tone"], "critical")

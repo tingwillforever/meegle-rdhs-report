@@ -139,6 +139,43 @@ test("a newer validated version becomes current without deleting history", async
   assert.equal(repository.records.filter((record) => record.isCurrent).length, 1);
 });
 
+test("a partial refresh cannot replace a stable snapshot", async () => {
+  const repository = new MemorySnapshotRepository();
+  const service = new SnapshotService(repository, (() => {
+    let value = 0;
+    return () => `snapshot-${++value}`;
+  })());
+  const baseline = snapshot();
+  baseline.products = Array.from({ length: 25 }, (_, index) => ({
+    ...baseline.products[0],
+    product: `产品${index}`,
+  }));
+  baseline.businessLines = [{
+    ...baseline.businessLines[0],
+    productTotal: 25,
+    keyGovernanceCount: 25,
+  }];
+  baseline.audit.acceptedRowCount = 25;
+  baseline.audit.researchProductCount = 25;
+  baseline.audit.measuredProductCount = 25;
+  baseline.audit.unmeasuredProductCount = 0;
+  await service.ingest(baseline);
+
+  const partial = structuredClone(baseline);
+  partial.source.sha256 = "b".repeat(64);
+  partial.products = partial.products.slice(0, 8);
+  partial.businessLines[0].productTotal = 8;
+  partial.businessLines[0].keyGovernanceCount = 8;
+  partial.audit.acceptedRowCount = 8;
+  partial.audit.researchProductCount = 8;
+  partial.audit.measuredProductCount = 8;
+  await assert.rejects(
+    () => service.ingest(partial),
+    /snapshot coverage regressed/,
+  );
+  assert.equal((await repository.getCurrent("monthly", "2026-08")).snapshot.products.length, 25);
+});
+
 test("an invalid replacement cannot change the current snapshot", async () => {
   const repository = new MemorySnapshotRepository();
   const service = new SnapshotService(repository, () => "snapshot-1");

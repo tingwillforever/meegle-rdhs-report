@@ -21,6 +21,12 @@ test("default local development uses the Node runtime and loads .dev.vars", asyn
   assert.match(packageJson.scripts.dev, /node_modules\/vinext\/dist\/cli\.js dev/);
 });
 
+test("local SSR keeps the MySQL driver in the native Node runtime", async () => {
+  const viteConfig = await readFile(new URL("../vite.config.ts", import.meta.url), "utf8");
+
+  assert.match(viteConfig, /external:\s*\["mysql2"\]/);
+});
+
 test("current-month refresh runs the sync script from the Web process", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "rdhs-web-refresh-"));
   const python = path.join(directory, "python-success");

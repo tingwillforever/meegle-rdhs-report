@@ -143,6 +143,7 @@ def _release_closure_rate(row: Mapping[str, object]) -> Optional[float]:
 
 
 def _dependency_metrics(row: Mapping[str, object]) -> list[dict[str, object]]:
+    participants = _number_or_none(row.get("有效参与人数"))
     demand_throughput = _number_or_none(row.get("人均需求吞吐量"))
     defect_closure = _number_or_none(row.get("人均缺陷关闭量"))
     delivery_cycle = _number_or_none(row.get("需求交付周期"))
@@ -154,6 +155,12 @@ def _dependency_metrics(row: Mapping[str, object]) -> list[dict[str, object]]:
 
     defect_tone = "risk" if (demand_throughput is not None and demand_throughput < 0.2 and (defect_closure or 0) > 0) else "neutral"
     return [
+        {
+            "label": "有效参与人数",
+            "value": participants,
+            "unit": "人",
+            "tone": _tone_by_lower_bound(participants, 1, 2),
+        },
         {
             "label": "月人均需求吞吐量",
             "value": demand_throughput,

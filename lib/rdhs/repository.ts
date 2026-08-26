@@ -35,6 +35,18 @@ export function supportsFailureRecording(
   return "recordFailure" in repository && typeof repository.recordFailure === "function";
 }
 
+function hasCoverageRegression(current: StoredSnapshot, incoming: RdhsSnapshot) {
+  const currentProductTotal = current.snapshot.products.length;
+  const incomingProductTotal = incoming.products.length;
+  if (currentProductTotal < 20) return false;
+
+  const productDrop = incomingProductTotal < currentProductTotal * 0.8;
+  const currentMeasured = current.snapshot.audit.measuredProductCount;
+  const incomingMeasured = incoming.audit.measuredProductCount;
+  const measuredDrop = currentMeasured >= 20 && incomingMeasured < currentMeasured * 0.8;
+  return productDrop || measuredDrop;
+}
+
 export class MemorySnapshotRepository implements SnapshotRepository {
   readonly records: StoredSnapshot[] = [];
 
@@ -108,6 +120,12 @@ export class SnapshotService {
 
   async ingest(input: unknown): Promise<SaveSnapshotResult> {
     const snapshot = validateSnapshot(input);
+    const current = await this.repository.getCurrent(snapshot.cadence, snapshot.periodKey);
+    if (current && hasCoverageRegression(current, snapshot)) {
+      throw new Error(
+        `snapshot coverage regressed for ${snapshot.periodKey}; refusing to replace the current snapshot`,
+      );
+    }
     const id = this.idFactory();
     if (!id) throw new Error("snapshot id factory returned an empty value");
     return this.repository.save({

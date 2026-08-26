@@ -144,7 +144,12 @@ function linePath(product: Pick<ProductMetric, "businessLine"> & Partial<Pick<Pr
 function formatDependencyValue(metric: ProductDependencyMetric) {
   if (metric.value === null) return "—";
   if (metric.unit === "%") return (metric.value * 100).toFixed(1);
+  if (metric.unit === "人" && Number.isInteger(metric.value)) return String(metric.value);
   return metric.value.toFixed(1);
+}
+
+function participantMetric(product: ProductMetric) {
+  return product.dependencyMetrics.find((metric) => metric.label === "有效参与人数") ?? null;
 }
 
 function paginationItems(currentPage: number, pageCount: number): Array<number | "gap"> {
@@ -203,7 +208,9 @@ function DependencyMetrics({ metrics }: { metrics: ProductDependencyMetric[] }) 
   if (metrics.length === 0) {
     return <p className="dependencyEmpty">暂无可展示的过程依赖指标，待下次快照补齐。</p>;
   }
-  const regularMetrics = metrics.filter((metric) => !FEATURED_DEPENDENCY_METRICS.has(metric.label));
+  const regularMetrics = metrics.filter(
+    (metric) => metric.label !== "有效参与人数" && !FEATURED_DEPENDENCY_METRICS.has(metric.label),
+  );
   const featuredMetrics = metrics.filter((metric) => FEATURED_DEPENDENCY_METRICS.has(metric.label));
   return (
     <>
@@ -598,9 +605,6 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                 onChange={(event) => {
                   const nextLine = event.target.value;
                   setSelectedTrendLine(nextLine);
-                  setSelectedLine(nextLine === "CBG整体" ? "全部业务线" : nextLine);
-                  setSelectedProductKey(null);
-                  setProductPage(1);
                 }}
               >
                 <option value="CBG整体">CBG整体</option>
@@ -760,6 +764,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                 {paginatedProducts.map((product) => {
                   const key = productKey(product);
                   const isSelected = key === selectedProductKey;
+                  const participants = participantMetric(product);
                   return (
                     <div key={key}>
                       <button
@@ -771,8 +776,14 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
                           <span className="productName">{product.product}</span>
                           <span className="productLine">{linePath(product)}</span>
                         </span>
-                        <span className={`score ${product.rdhs === null ? "unmeasured" : bandClass(product.governanceBand)}`}>
-                          {formatScore(product.rdhs)}
+                        <span className="productStats">
+                          <span className={`score ${product.rdhs === null ? "unmeasured" : bandClass(product.governanceBand)}`}>
+                            {formatScore(product.rdhs)}
+                          </span>
+                          <span className={`participantCount ${participants?.tone ?? "neutral"}`}>
+                            有效参与人数 {participants ? formatDependencyValue(participants) : "—"}
+                            {participants?.value !== null && participants?.unit ? <small>{participants.unit}</small> : null}
+                          </span>
                         </span>
                         <span className="productBottom">
                           <span className="process">{product.lowestComponent}</span>

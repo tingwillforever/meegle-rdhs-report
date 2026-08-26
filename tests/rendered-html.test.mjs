@@ -46,6 +46,7 @@ test("server-renders the RDHS operations overview", async () => {
   assert.match(html, /规范占比趋势/);
   assert.match(html, /常规跟踪/);
   assert.match(html, /产品治理工作区/);
+  assert.match(html, /有效参与人数/);
   assert.match(html, /产品列表分页/);
   assert.match(html, /每页/);
   assert.match(html, /悬停趋势点查看每月指标值/);
