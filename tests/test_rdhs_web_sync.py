@@ -496,6 +496,16 @@ class SnapshotSyncTests(unittest.TestCase):
         self.assertEqual(snapshot["audit"]["excludedTestBusinessLineCount"], 2)
         self.assertEqual(snapshot["audit"]["excludedProductAttributeCount"], 9)
 
+    def test_build_snapshot_rejects_an_incomplete_current_chart(self) -> None:
+        report = _load_json(REPORT_DIR / "report_data.json")
+        manifest = _load_json(REPORT_DIR / "audit_manifest.json")
+        report["audit"]["measured_research_product_total"] = 9
+        report["audit"]["unmeasured_or_pending_total"] = 52
+        manifest["data_validation"]["current"]["accepted_row_count"] = 14
+
+        with self.assertRaisesRegex(ValueError, "current chart coverage is incomplete"):
+            build_snapshot(report, manifest, cadence="monthly")
+
     def test_build_snapshot_extracts_product_dependency_metrics(self) -> None:
         snapshot = build_snapshot(
             _load_json(REPORT_DIR / "report_data.json"),

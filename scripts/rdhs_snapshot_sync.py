@@ -79,6 +79,7 @@ COMPONENT_FIELDS = {
     "quality": "质量敏锐度(20')",
 }
 SUB_LINE_FIELDS = ("二级业务线", "二级业务线名称", "业务线二级", "产品二级业务线")
+MIN_MEASURED_PRODUCT_COVERAGE = 0.8
 
 
 def _as_mapping(value: object, label: str) -> dict[str, object]:
@@ -273,6 +274,17 @@ def build_snapshot(
     report_audit = _as_mapping(report_data.get("audit"), "report_data.audit")
     validation = _as_mapping(audit_manifest.get("data_validation"), "data_validation")
     current_validation = _as_mapping(validation.get("current"), "data_validation.current")
+    product_total = int(report_audit["clean_research_product_total"])
+    measured_total = int(report_audit["measured_research_product_total"])
+    unmeasured_total = int(report_audit["unmeasured_or_pending_total"])
+    if (
+        product_total >= 20
+        and measured_total < product_total * MIN_MEASURED_PRODUCT_COVERAGE
+    ):
+        raise ValueError(
+            "current chart coverage is incomplete: "
+            f"only {measured_total} of {product_total} research products are measured"
+        )
 
     overview_rows = _as_list(report_data.get("overview_rows"), "overview_rows")
     line_rows: list[dict[str, object]] = []
@@ -371,9 +383,6 @@ def build_snapshot(
         seen_keys.add(key)
 
     products.sort(key=lambda row: (str(row["businessLine"]), str(row["product"])))
-    product_total = int(report_audit["clean_research_product_total"])
-    measured_total = int(report_audit["measured_research_product_total"])
-    unmeasured_total = int(report_audit["unmeasured_or_pending_total"])
     if len(products) != product_total:
         raise ValueError(f"product contract has {len(products)} rows, expected {product_total}")
     if measured_total + unmeasured_total != product_total:

@@ -101,3 +101,93 @@ test("MySQL repository writes a new snapshot atomically", async () => {
   assert.ok(calls.includes("release"));
   assert.ok(!calls.includes("rollback"));
 });
+
+test("MySQL repository refuses a coverage regression before changing the current snapshot", async () => {
+  const calls = [];
+  const complete = structuredClone(snapshot);
+  const partial = structuredClone(snapshot);
+  partial.source.sha256 = "b".repeat(64);
+  partial.products = partial.products.slice(0, 9);
+  partial.businessLines = [{
+    ...partial.businessLines[0],
+    productTotal: 9,
+    keyGovernanceCount: 9,
+    riskImprovementCount: 0,
+    continuousOptimizationCount: 0,
+    regularTrackingCount: 0,
+  }];
+  partial.audit.researchProductCount = 9;
+  partial.audit.measuredProductCount = 9;
+  partial.audit.unmeasuredProductCount = 0;
+
+  const connection = {
+    async beginTransaction() {
+      calls.push("begin");
+    },
+    async execute(sql, parameters) {
+      calls.push({ sql, parameters });
+      if (/is_current = 1/.test(sql)) {
+        return [[{
+          id: "complete-snapshot",
+          cadence: "monthly",
+          period_key: "2026-08",
+          version: 1,
+          is_current: 1,
+          snapshot_json: JSON.stringify(complete),
+        }], []];
+      }
+      return [[], []];
+    },
+    async commit() {
+      calls.push("commit");
+    },
+    async rollback() {
+      calls.push("rollback");
+    },
+    release() {
+      calls.push("release");
+    },
+  };
+  const repository = new MySQLSnapshotRepository({
+    async getConnection() { return connection; },
+  });
+
+  await assert.rejects(
+    () => repository.save({
+      id: "partial-snapshot",
+      cadence: "monthly",
+      periodKey: "2026-08",
+      snapshot: partial,
+      summary: {
+        productTotal: 9,
+        measuredProductCount: 9,
+        unmeasuredProductCount: 0,
+        below70Count: 9,
+        complianceCount: 0,
+        pendingGovernanceCount: 9,
+        averageRdhs: 42,
+        measurementCoverage: 1,
+        complianceRate: 0,
+        pendingGovernanceRate: 1,
+        bandCounts: {
+          keyGovernance: 9,
+          riskImprovement: 0,
+          continuousOptimization: 0,
+          regularTracking: 0,
+        },
+        componentAverages: {
+          linkClosure: 8,
+          deliveryClosure: 8,
+          timeliness: 8,
+          granularity: 8,
+          quality: 10,
+        },
+      },
+    }),
+    /snapshot coverage regressed/,
+  );
+
+  assert.ok(calls.includes("rollback"));
+  assert.ok(!calls.includes("commit"));
+  assert.ok(!calls.some((call) => typeof call === "object" && /UPDATE rdhs_snapshots SET is_current = 0/.test(call.sql)));
+});

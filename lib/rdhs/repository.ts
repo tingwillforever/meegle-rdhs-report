@@ -35,7 +35,7 @@ export function supportsFailureRecording(
   return "recordFailure" in repository && typeof repository.recordFailure === "function";
 }
 
-function hasCoverageRegression(current: StoredSnapshot, incoming: RdhsSnapshot) {
+export function hasCoverageRegression(current: StoredSnapshot, incoming: RdhsSnapshot) {
   const currentProductTotal = current.snapshot.products.length;
   const incomingProductTotal = incoming.products.length;
   if (currentProductTotal < 20) return false;

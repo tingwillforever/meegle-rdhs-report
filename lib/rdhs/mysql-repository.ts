@@ -6,6 +6,7 @@ import type {
   SnapshotRepository,
   StoredSnapshot,
 } from "./repository.ts";
+import { hasCoverageRegression } from "./repository.ts";
 import type { Cadence } from "./types.ts";
 import { validateSnapshot } from "./validate.ts";
 
@@ -172,6 +173,20 @@ export class MySQLSnapshotRepository implements SnapshotRepository {
     const connection = await requireConnection(this.pool);
     await connection.beginTransaction();
     try {
+      const currentResult = await connection.execute(
+        `SELECT id, cadence, period_key, version, is_current, snapshot_json
+         FROM rdhs_snapshots
+         WHERE cadence = ? AND period_key = ? AND is_current = 1
+         LIMIT 1 FOR UPDATE`,
+        [record.cadence, record.periodKey],
+      );
+      const currentRow = rows(currentResult)[0] as SnapshotRow | undefined;
+      if (currentRow && hasCoverageRegression(rowToStored(currentRow), record.snapshot)) {
+        throw new Error(
+          `snapshot coverage regressed for ${record.periodKey}; refusing to replace the current snapshot`,
+        );
+      }
+
       const duplicateResult = await connection.execute(
         `SELECT id, version FROM rdhs_snapshots
          WHERE cadence = ? AND period_key = ? AND source_sha256 = ?
