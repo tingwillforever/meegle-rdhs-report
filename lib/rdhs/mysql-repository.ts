@@ -186,37 +186,10 @@ export class MySQLSnapshotRepository implements SnapshotRepository {
           `snapshot coverage regressed for ${record.periodKey}; refusing to replace the current snapshot`,
         );
       }
-
-      const duplicateResult = await connection.execute(
-        `SELECT id, version FROM rdhs_snapshots
-         WHERE cadence = ? AND period_key = ? AND source_sha256 = ?
-         LIMIT 1 FOR UPDATE`,
-        [record.cadence, record.periodKey, record.snapshot.source.sha256],
-      );
-      const duplicate = rows(duplicateResult)[0] as { id: string; version: number } | undefined;
-
-      let version: number;
-      if (duplicate) {
-        version = Number(duplicate.version);
-      } else {
-        const versionResult = await connection.execute(
-          `SELECT COALESCE(MAX(version), 0) AS max_version
-           FROM rdhs_snapshots WHERE cadence = ? AND period_key = ? FOR UPDATE`,
-          [record.cadence, record.periodKey],
-        );
-        version = Number(rows(versionResult)[0]?.max_version ?? 0) + 1;
-      }
-
-      await connection.execute(
-        `UPDATE rdhs_snapshots SET is_current = 0
-         WHERE cadence = ? AND period_key = ? AND is_current = 1`,
-        [record.cadence, record.periodKey],
-      );
-
-      if (duplicate) {
+      if (currentRow) {
         await connection.execute(
           `UPDATE rdhs_snapshots SET
-             is_current = 1, source_chart_id = ?, source_chart_name = ?, as_of = ?,
+             source_sha256 = ?, source_chart_id = ?, source_chart_name = ?, as_of = ?,
              fetched_at = ?, product_total = ?, measured_product_count = ?,
              unmeasured_product_count = ?, below_70_count = ?, average_rdhs = ?,
              measurement_coverage = ?, key_governance_count = ?,
@@ -225,10 +198,10 @@ export class MySQLSnapshotRepository implements SnapshotRepository {
              delivery_closure_average = ?, timeliness_average = ?, granularity_average = ?,
              quality_average = ?, conclusion = ?, focus = ?, audit_json = ?, snapshot_json = ?
            WHERE id = ?`,
-          [...snapshotValues(record).slice(1), duplicate.id],
+          [...snapshotValues(record), currentRow.id],
         );
         await connection.commit();
-        return { snapshotId: duplicate.id, version, created: false };
+        return { snapshotId: currentRow.id, version: Number(currentRow.version), created: false };
       }
 
       await connection.execute(
@@ -242,10 +215,10 @@ export class MySQLSnapshotRepository implements SnapshotRepository {
            timeliness_average, granularity_average, quality_average, conclusion,
            focus, audit_json, snapshot_json
          ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [record.id, record.cadence, record.periodKey, version, ...snapshotValues(record)],
+        [record.id, record.cadence, record.periodKey, 1, ...snapshotValues(record)],
       );
       await connection.commit();
-      return { snapshotId: record.id, version, created: true };
+      return { snapshotId: record.id, version: 1, created: true };
     } catch (error) {
       await connection.rollback();
       throw error;

@@ -102,6 +102,60 @@ test("MySQL repository writes a new snapshot atomically", async () => {
   assert.ok(!calls.includes("rollback"));
 });
 
+test("MySQL repository replaces a monthly snapshot instead of creating a new version", async () => {
+  const calls = [];
+  const replacement = structuredClone(snapshot);
+  replacement.source.sha256 = "b".repeat(64);
+  const connection = {
+    async beginTransaction() { calls.push("begin"); },
+    async execute(sql, parameters) {
+      calls.push({ sql, parameters });
+      if (/is_current = 1/.test(sql)) {
+        return [[{
+          id: "snapshot-1",
+          cadence: "monthly",
+          period_key: "2026-08",
+          version: 1,
+          is_current: 1,
+          snapshot_json: JSON.stringify(snapshot),
+        }], []];
+      }
+      return [{ affectedRows: 1 }, []];
+    },
+    async commit() { calls.push("commit"); },
+    async rollback() { calls.push("rollback"); },
+    release() { calls.push("release"); },
+  };
+  const repository = new MySQLSnapshotRepository({
+    async getConnection() { return connection; },
+  });
+
+  const result = await repository.save({
+    id: "snapshot-2",
+    cadence: "monthly",
+    periodKey: "2026-08",
+    snapshot: replacement,
+    summary: {
+      productTotal: 61,
+      measuredProductCount: 55,
+      unmeasuredProductCount: 6,
+      below70Count: 44,
+      complianceCount: 17,
+      pendingGovernanceCount: 44,
+      averageRdhs: 52.4,
+      measurementCoverage: 55 / 61,
+      complianceRate: 17 / 61,
+      pendingGovernanceRate: 44 / 61,
+      bandCounts: { keyGovernance: 29, riskImprovement: 10, continuousOptimization: 5, regularTracking: 17 },
+      componentAverages: { linkClosure: 10, deliveryClosure: 10, timeliness: 10, granularity: 10, quality: 10 },
+    },
+  });
+
+  assert.deepEqual(result, { snapshotId: "snapshot-1", version: 1, created: false });
+  assert.ok(calls.some((call) => typeof call === "object" && /UPDATE rdhs_snapshots SET/.test(call.sql)));
+  assert.ok(!calls.some((call) => typeof call === "object" && /INSERT INTO rdhs_snapshots/.test(call.sql)));
+});
+
 test("MySQL repository refuses a coverage regression before changing the current snapshot", async () => {
   const calls = [];
   const complete = structuredClone(snapshot);

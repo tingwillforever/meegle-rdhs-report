@@ -20,6 +20,7 @@ test("MySQL migration owns snapshots, baselines, and synchronization leases", as
   }
   assert.match(sql, /ENGINE=InnoDB/);
   assert.match(sql, /DEFAULT CHARSET=utf8mb4/);
+  assert.match(sql, /UNIQUE KEY uq_rdhs_snapshots_period \(cadence, period_key\)/);
 });
 
 test("mysql2 is a production dependency", async () => {

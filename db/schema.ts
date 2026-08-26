@@ -43,10 +43,9 @@ export const rdhsSnapshots = sqliteTable(
     createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`),
   },
   (table) => [
-    uniqueIndex("uq_rdhs_snapshots_period_source").on(
+    uniqueIndex("uq_rdhs_snapshots_period").on(
       table.cadence,
       table.periodKey,
-      table.sourceSha256,
     ),
     index("idx_rdhs_snapshots_current_period").on(
       table.cadence,

@@ -35,27 +35,21 @@ export class D1SnapshotRepository implements SnapshotRepository {
     record: Omit<StoredSnapshot, "version" | "isCurrent">,
   ): Promise<SaveSnapshotResult> {
     const d1 = getD1();
-    const duplicate = await d1
+    const existing = await d1
       .prepare(
         `SELECT id, version FROM rdhs_snapshots
-         WHERE cadence = ? AND period_key = ? AND source_sha256 = ?
+         WHERE cadence = ? AND period_key = ?
          LIMIT 1`,
       )
-      .bind(record.cadence, record.periodKey, record.snapshot.source.sha256)
+      .bind(record.cadence, record.periodKey)
       .first<{ id: string; version: number }>();
-    if (duplicate) {
+    if (existing) {
       const summary = record.summary;
       await d1
         .prepare(
-          `UPDATE rdhs_snapshots SET is_current = 0
-           WHERE cadence = ? AND period_key = ? AND is_current = 1`,
-        )
-        .bind(record.cadence, record.periodKey)
-        .run();
-      await d1
-        .prepare(
           `UPDATE rdhs_snapshots SET
-             is_current = 1, as_of = ?, fetched_at = ?, product_total = ?,
+             is_current = 1, source_sha256 = ?, source_chart_id = ?, source_chart_name = ?,
+             as_of = ?, fetched_at = ?, product_total = ?,
              measured_product_count = ?, unmeasured_product_count = ?,
              below_70_count = ?, average_rdhs = ?, measurement_coverage = ?,
              key_governance_count = ?, risk_improvement_count = ?,
@@ -66,6 +60,9 @@ export class D1SnapshotRepository implements SnapshotRepository {
            WHERE id = ?`,
         )
         .bind(
+          record.snapshot.source.sha256,
+          record.snapshot.source.chartId,
+          record.snapshot.source.chartName,
           record.snapshot.asOf,
           record.snapshot.fetchedAt,
           summary.productTotal,
@@ -87,28 +84,13 @@ export class D1SnapshotRepository implements SnapshotRepository {
           record.snapshot.overview.focus,
           JSON.stringify(record.snapshot.audit),
           JSON.stringify(record.snapshot),
-          duplicate.id,
+          existing.id,
         )
         .run();
-      return { snapshotId: duplicate.id, version: duplicate.version, created: false };
+      return { snapshotId: existing.id, version: existing.version, created: false };
     }
-
-    const versionRow = await d1
-      .prepare(
-        `SELECT COALESCE(MAX(version), 0) AS max_version
-         FROM rdhs_snapshots WHERE cadence = ? AND period_key = ?`,
-      )
-      .bind(record.cadence, record.periodKey)
-      .first<{ max_version: number }>();
-    const version = Number(versionRow?.max_version ?? 0) + 1;
     const summary = record.summary;
     const statements = [
-      d1
-        .prepare(
-          `UPDATE rdhs_snapshots SET is_current = 0
-           WHERE cadence = ? AND period_key = ? AND is_current = 1`,
-        )
-        .bind(record.cadence, record.periodKey),
       d1
         .prepare(
           `INSERT INTO rdhs_snapshots (
@@ -127,7 +109,7 @@ export class D1SnapshotRepository implements SnapshotRepository {
           record.id,
           record.cadence,
           record.periodKey,
-          version,
+          1,
           record.snapshot.source.sha256,
           record.snapshot.source.chartId,
           record.snapshot.source.chartName,
@@ -156,7 +138,7 @@ export class D1SnapshotRepository implements SnapshotRepository {
     ];
 
     await d1.batch(statements);
-    return { snapshotId: record.id, version, created: true };
+    return { snapshotId: record.id, version: 1, created: true };
   }
 
   async getCurrent(cadence: Cadence, periodKey?: string): Promise<StoredSnapshot | null> {

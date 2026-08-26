@@ -108,7 +108,7 @@ test("same source hash refreshes enriched snapshot contract fields without a new
   assert.equal(current.snapshot.products[0].dependencyMetrics[0].label, "需求发布闭环率");
 });
 
-test("refreshing an existing source hash makes that snapshot current for the period", async () => {
+test("refreshing one month keeps only one replaceable snapshot", async () => {
   const repository = new MemorySnapshotRepository();
   const ids = ["snapshot-1", "snapshot-2", "snapshot-3"];
   const service = new SnapshotService(repository, () => ids.shift());
@@ -120,22 +120,23 @@ test("refreshing an existing source hash makes that snapshot current for the per
   const current = await repository.getCurrent("monthly", "2026-08");
   assert.equal(current.snapshot.source.sha256, "a".repeat(64));
   assert.equal(current.version, 1);
-  assert.equal(repository.records.length, 2);
+  assert.equal(repository.records.length, 1);
   assert.equal(repository.records.filter((record) => record.isCurrent).length, 1);
 });
 
-test("a newer validated version becomes current without deleting history", async () => {
+test("a new valid refresh replaces the monthly snapshot without retaining history", async () => {
   const repository = new MemorySnapshotRepository();
   const ids = ["snapshot-1", "snapshot-2"];
   const service = new SnapshotService(repository, () => ids.shift());
 
   await service.ingest(snapshot());
-  await service.ingest(snapshot({ sha: "b", rdhs: 58 }));
+  const refresh = await service.ingest(snapshot({ sha: "b", rdhs: 58 }));
 
   const current = await repository.getCurrent("monthly", "2026-08");
+  assert.deepEqual(refresh, { snapshotId: "snapshot-1", version: 1, created: false });
   assert.equal(current.snapshot.source.sha256, "b".repeat(64));
-  assert.equal(current.version, 2);
-  assert.equal(repository.records.length, 2);
+  assert.equal(current.version, 1);
+  assert.equal(repository.records.length, 1);
   assert.equal(repository.records.filter((record) => record.isCurrent).length, 1);
 });
 

@@ -31,8 +31,7 @@ CREATE TABLE IF NOT EXISTS rdhs_snapshots (
   created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6) ON UPDATE CURRENT_TIMESTAMP(6),
   PRIMARY KEY (id),
-  UNIQUE KEY uq_rdhs_snapshots_period_source (cadence, period_key, source_sha256),
-  UNIQUE KEY uq_rdhs_snapshots_period_version (cadence, period_key, version),
+  UNIQUE KEY uq_rdhs_snapshots_period (cadence, period_key),
   KEY idx_rdhs_snapshots_current_period (cadence, is_current, period_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

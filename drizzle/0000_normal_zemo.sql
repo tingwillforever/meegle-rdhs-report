@@ -87,6 +87,6 @@ CREATE TABLE `rdhs_snapshots` (
 	`created_at` text DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `uq_rdhs_snapshots_period_source` ON `rdhs_snapshots` (`cadence`,`period_key`,`source_sha256`);--> statement-breakpoint
+CREATE UNIQUE INDEX `uq_rdhs_snapshots_period` ON `rdhs_snapshots` (`cadence`,`period_key`);--> statement-breakpoint
 CREATE INDEX `idx_rdhs_snapshots_current_period` ON `rdhs_snapshots` (`cadence`,`is_current`,`period_key`);--> statement-breakpoint
 PRAGMA optimize;

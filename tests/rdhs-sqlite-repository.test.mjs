@@ -73,7 +73,7 @@ function snapshot({ periodKey = "2026-08", sha = "a", rdhs = 42 } = {}) {
   };
 }
 
-test("SQLite repository persists snapshots and keeps the latest version current", async () => {
+test("SQLite repository keeps one replaceable snapshot for each month", async () => {
   const root = await mkdtemp(join(tmpdir(), "rdhs-sqlite-"));
   const databasePath = join(root, "rdhs.sqlite");
   try {
@@ -92,7 +92,13 @@ test("SQLite repository persists snapshots and keeps the latest version current"
     const secondRepository = new SQLiteSnapshotRepository(databasePath);
     const current = await secondRepository.getCurrent("monthly", "2026-08");
     assert.equal(current?.snapshot.source.sha256, "b".repeat(64));
-    assert.equal(current?.version, 2);
+    assert.equal(current?.version, 1);
+    assert.equal(
+      new DatabaseSync(databasePath)
+        .prepare("SELECT COUNT(*) AS count FROM rdhs_snapshots")
+        .get().count,
+      1,
+    );
     assert.deepEqual(
       (await secondRepository.listPeriods("monthly")).map((record) => record.periodKey),
       ["2026-08"],

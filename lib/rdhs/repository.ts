@@ -53,22 +53,26 @@ export class MemorySnapshotRepository implements SnapshotRepository {
   async save(
     record: Omit<StoredSnapshot, "version" | "isCurrent">,
   ): Promise<SaveSnapshotResult> {
-    const duplicate = this.records.find(
+    const existing = this.records.find(
       (existing) =>
         existing.cadence === record.cadence &&
-        existing.periodKey === record.periodKey &&
-        existing.snapshot.source.sha256 === record.snapshot.source.sha256,
+        existing.periodKey === record.periodKey,
     );
-    if (duplicate) {
-      for (const existing of this.records) {
-        if (existing.cadence === record.cadence && existing.periodKey === record.periodKey) {
-          existing.isCurrent = false;
+    if (existing) {
+      for (let index = this.records.length - 1; index >= 0; index -= 1) {
+        const candidate = this.records[index];
+        if (
+          candidate !== existing &&
+          candidate.cadence === record.cadence &&
+          candidate.periodKey === record.periodKey
+        ) {
+          this.records.splice(index, 1);
         }
       }
-      duplicate.snapshot = record.snapshot;
-      duplicate.summary = record.summary;
-      duplicate.isCurrent = true;
-      return { snapshotId: duplicate.id, version: duplicate.version, created: false };
+      existing.snapshot = record.snapshot;
+      existing.summary = record.summary;
+      existing.isCurrent = true;
+      return { snapshotId: existing.id, version: existing.version, created: false };
     }
 
     const samePeriod = this.records.filter(

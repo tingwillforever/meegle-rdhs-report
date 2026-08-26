@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS rdhs_snapshots (
   audit_json TEXT NOT NULL,
   snapshot_json TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE (cadence, period_key, source_sha256)
+  UNIQUE (cadence, period_key)
 );
 CREATE INDEX IF NOT EXISTS idx_rdhs_snapshots_current_period
   ON rdhs_snapshots (cadence, is_current, period_key);
@@ -141,41 +141,25 @@ export class SQLiteSnapshotRepository implements SnapshotRepository {
   async save(
     record: Omit<StoredSnapshot, "version" | "isCurrent">,
   ): Promise<SaveSnapshotResult> {
-    const snapshot = record.snapshot;
     this.database.exec("BEGIN IMMEDIATE");
     try {
-      const duplicate = this.database
+      const existing = this.database
         .prepare(
           `SELECT id, version FROM rdhs_snapshots
-           WHERE cadence = ? AND period_key = ? AND source_sha256 = ? LIMIT 1`,
+           WHERE cadence = ? AND period_key = ? LIMIT 1`,
         )
-        .get(record.cadence, record.periodKey, snapshot.source.sha256) as
+        .get(record.cadence, record.periodKey) as
         | { id: string; version: number }
         | undefined;
 
-      this.database
-        .prepare(
-          `UPDATE rdhs_snapshots SET is_current = 0
-           WHERE cadence = ? AND period_key = ? AND is_current = 1`,
-        )
-        .run(record.cadence, record.periodKey);
-
-      if (duplicate) {
-        this.updateSnapshot(duplicate.id, record);
+      if (existing) {
+        this.updateSnapshot(existing.id, record);
         this.database.exec("COMMIT");
-        return { snapshotId: duplicate.id, version: duplicate.version, created: false };
+        return { snapshotId: existing.id, version: existing.version, created: false };
       }
-
-      const versionRow = this.database
-        .prepare(
-          `SELECT COALESCE(MAX(version), 0) AS max_version
-           FROM rdhs_snapshots WHERE cadence = ? AND period_key = ?`,
-        )
-        .get(record.cadence, record.periodKey) as { max_version: number };
-      const version = Number(versionRow.max_version) + 1;
-      this.insertSnapshot(record, version);
+      this.insertSnapshot(record, 1);
       this.database.exec("COMMIT");
-      return { snapshotId: record.id, version, created: true };
+      return { snapshotId: record.id, version: 1, created: true };
     } catch (error) {
       this.database.exec("ROLLBACK");
       throw error;
@@ -306,7 +290,8 @@ export class SQLiteSnapshotRepository implements SnapshotRepository {
     this.database
       .prepare(
         `UPDATE rdhs_snapshots SET
-           is_current = 1, as_of = ?, fetched_at = ?, product_total = ?,
+           is_current = 1, source_sha256 = ?, source_chart_id = ?, source_chart_name = ?,
+           as_of = ?, fetched_at = ?, product_total = ?,
            measured_product_count = ?, unmeasured_product_count = ?,
            below_70_count = ?, average_rdhs = ?, measurement_coverage = ?,
            key_governance_count = ?, risk_improvement_count = ?,
@@ -317,6 +302,9 @@ export class SQLiteSnapshotRepository implements SnapshotRepository {
          WHERE id = ?`,
       )
       .run(
+        snapshot.source.sha256,
+        snapshot.source.chartId,
+        snapshot.source.chartName,
         snapshot.asOf,
         snapshot.fetchedAt,
         summary.productTotal,
