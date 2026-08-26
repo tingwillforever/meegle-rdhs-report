@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { resolve } from "node:path";
 
 const MAX_OUTPUT_LENGTH = 8_000;
+const INCOMPLETE_PRODUCT_MASTER_PREFIX = "产品主数据不完整：";
 let refreshInProgress = false;
 
 export class CurrentRefreshInProgressError extends Error {
@@ -32,6 +33,13 @@ function refreshTimeoutSeconds(): number {
 function boundedOutput(value: string): string {
   const text = value.trim();
   return text.length > MAX_OUTPUT_LENGTH ? `${text.slice(-MAX_OUTPUT_LENGTH)}…` : text;
+}
+
+function refreshFailureDetail(stderr: string, stdout: string): string {
+  const output = stderr || stdout;
+  const messageStart = output.lastIndexOf(INCOMPLETE_PRODUCT_MASTER_PREFIX);
+  if (messageStart >= 0) return output.slice(messageStart).trim();
+  return boundedOutput(output);
 }
 
 export async function refreshCurrentMonth(): Promise<{ message: string }> {
@@ -76,7 +84,7 @@ export async function refreshCurrentMonth(): Promise<{ message: string }> {
     if (timedOut) throw new Error(`当月数据刷新超时（${timeoutSeconds} 秒）`);
     if (result.error) throw result.error;
     if (result.code !== 0) {
-      throw new Error(`当月数据刷新失败: ${boundedOutput(stderr || stdout) || "同步脚本异常退出"}`);
+      throw new Error(`当月数据刷新失败: ${refreshFailureDetail(stderr, stdout) || "同步脚本异常退出"}`);
     }
     return { message: "已更新当月缓存" };
   } finally {

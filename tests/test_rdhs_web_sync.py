@@ -503,7 +503,10 @@ class SnapshotSyncTests(unittest.TestCase):
         report["audit"]["unmeasured_or_pending_total"] = 52
         manifest["data_validation"]["current"]["accepted_row_count"] = 14
 
-        with self.assertRaisesRegex(ValueError, "current chart coverage is incomplete"):
+        with self.assertRaisesRegex(
+            ValueError,
+            "产品主数据不完整：.*请检查飞书项目中 Chart 的快捷筛选条件",
+        ):
             build_snapshot(report, manifest, cadence="monthly")
 
     def test_build_snapshot_extracts_product_dependency_metrics(self) -> None:

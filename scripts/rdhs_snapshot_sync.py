@@ -282,8 +282,9 @@ def build_snapshot(
         and measured_total < product_total * MIN_MEASURED_PRODUCT_COVERAGE
     ):
         raise ValueError(
-            "current chart coverage is incomplete: "
-            f"only {measured_total} of {product_total} research products are measured"
+            "产品主数据不完整："
+            f"当前 Chart 仅返回 {measured_total}/{product_total} 个已度量产品，已中断更新；"
+            "请检查飞书项目中 Chart 的快捷筛选条件后重试。"
         )
 
     overview_rows = _as_list(report_data.get("overview_rows"), "overview_rows")

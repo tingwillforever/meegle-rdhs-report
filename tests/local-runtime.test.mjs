@@ -79,3 +79,28 @@ test("current-month refresh rejects a second request while the first is running"
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test("current-month refresh tells the user to check Chart quick filters for incomplete product data", async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), "rdhs-web-refresh-"));
+  const python = path.join(directory, "python-incomplete-product-data");
+  await writeFile(
+    python,
+    "#!/bin/sh\necho 'Traceback: source validation failed' >&2\necho '产品主数据不完整：当前 Chart 仅返回 9/56 个已度量产品，已中断更新；请检查飞书项目中 Chart 的快捷筛选条件后重试。' >&2\nexit 2\n",
+    "utf8",
+  );
+  await chmod(python, 0o755);
+  const previous = process.env.RDHS_PYTHON_BIN;
+  process.env.RDHS_PYTHON_BIN = python;
+
+  try {
+    const { refreshCurrentMonth } = await import("../lib/rdhs/current-month-refresh.ts");
+    await assert.rejects(
+      () => refreshCurrentMonth(),
+      /当月数据刷新失败: 产品主数据不完整：当前 Chart 仅返回 9\/56 个已度量产品，已中断更新；请检查飞书项目中 Chart 的快捷筛选条件后重试。/,
+    );
+  } finally {
+    if (previous === undefined) delete process.env.RDHS_PYTHON_BIN;
+    else process.env.RDHS_PYTHON_BIN = previous;
+    await rm(directory, { recursive: true, force: true });
+  }
+});
