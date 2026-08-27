@@ -283,10 +283,11 @@ def build_periodic_report_data(
         )
         for row in enriched_rows
     )
-    full_product_headers = ("业务线", "产品", *current.quota_titles)
+    full_product_headers = ("业务线", "二级业务线", "产品", *current.quota_titles)
     full_product_rows = tuple(
         (
             product.business_line,
+            product.master.sub_line or "—",
             product.product,
             *(product.metric.metric(field) for field in current.quota_titles),
         )

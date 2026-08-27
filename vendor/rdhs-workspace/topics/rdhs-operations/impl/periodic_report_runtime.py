@@ -55,6 +55,7 @@ _IMPROVEMENT_HEADERS = [
 ]
 _FULL_IMPROVEMENT_HEADERS = [
     "业务线",
+    "二级业务线",
     "产品",
     "产品状态",
     "超级团队数量",
@@ -959,6 +960,7 @@ def run_periodic_report(
     full_improvement_rows = tuple(
         (
             row.business_line,
+            row.sub_line or "—",
             row.product,
             row.product_status,
             row.super_team_count,

@@ -155,30 +155,34 @@ def _run_vendored_contract_fixture(output_root: Path) -> tuple[dict[str, object]
     backlog_row["value"]["16"] = 0.8
     masters = {
         "data": [
-            _product_master(1, "main", "低分产品"),
-            _product_master(7, "main", "积压产品"),
+            _product_master(1, "virtual-human", "低分产品"),
+            _product_master(7, "virtual-human", "积压产品"),
             _product_master(
                 2,
-                "main",
+                "virtual-human",
                 "常规产品",
                 attribute_label="标准产品",
                 attribute_value="standard",
             ),
-            _product_master(3, "main", "未度量产品"),
+            _product_master(3, "virtual-human", "未度量产品"),
             _product_master(
                 4,
-                "main",
+                "virtual-human",
                 "交付定制产品",
                 attribute_label="交付定制",
                 attribute_value="hmeckpgbh",
             ),
-            _product_master(5, "main", "已结束产品", status="Finished"),
+            _product_master(5, "virtual-human", "已结束产品", status="Finished"),
             _product_master(6, "test", "测试产品"),
         ]
     }
     business_lines = {
         "data": [
-            {"id": "main", "name": "主营业务线"},
+            {
+                "id": "main",
+                "name": "主营业务线",
+                "children": [{"id": "virtual-human", "name": "虚拟人"}],
+            },
             {"id": "test", "name": "测试业务线"},
         ]
     }
@@ -201,7 +205,7 @@ def _run_vendored_contract_fixture(output_root: Path) -> tuple[dict[str, object]
 class VendoredReportContractTests(unittest.TestCase):
     def test_research_product_master_is_the_report_coverage_base(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            report, _manifest = _run_vendored_contract_fixture(Path(directory))
+            report, manifest = _run_vendored_contract_fixture(Path(directory))
 
         headers = report["full_product_headers"]
         measured = [dict(zip(headers, row, strict=True)) for row in report["full_product_rows"]]
@@ -219,8 +223,15 @@ class VendoredReportContractTests(unittest.TestCase):
                 ("主营业务线", "常规产品"),
             },
         )
+        self.assertTrue(all(row["二级业务线"] == "虚拟人" for row in measured))
         unmeasured = next(row for row in improvements if row["产品"] == "未度量产品")
         self.assertEqual(unmeasured["RDHS"], "—")
+        self.assertEqual(unmeasured["二级业务线"], "虚拟人")
+
+        snapshot = build_snapshot(report, manifest, cadence="monthly")
+        self.assertTrue(
+            all(row["subLine"] == "虚拟人" for row in snapshot["products"])
+        )
 
     def test_non_research_products_are_excluded_with_reconciling_audit(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

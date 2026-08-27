@@ -40,6 +40,7 @@ _EXCLUDED_PRODUCT_ATTRIBUTES = ("hmeckpgbh", "交付定制")
 class ProductMasterRecord:
     id: int
     business_line: str
+    sub_line: str | None
     product: str
     raw_status: str
     product_attribute_label: str
@@ -95,6 +96,7 @@ def load_team_mappings(path: Path) -> tuple[TeamMapping, ...]:
 @dataclass(frozen=True)
 class FullImprovementRow:
     business_line: str
+    sub_line: str | None
     product: str
     product_status: str
     super_team_count: int | str
@@ -136,24 +138,29 @@ def _items(payload: dict[str, object]) -> list[dict[str, object]]:
     raise ValueError("Meegle response does not contain an item list")
 
 
-def parse_business_line_names(payload: dict[str, object]) -> dict[str, str]:
-    """将业务线 ID 映射为一级业务线名称。"""
-    names: dict[str, str] = {}
+def parse_business_line_names(payload: dict[str, object]) -> dict[str, tuple[str, str | None]]:
+    """将业务线 ID 映射为一级及二级业务线名称。"""
+    names: dict[str, tuple[str, str | None]] = {}
 
-    def add_item(item: dict[str, object], first_level_name: str) -> None:
+    def add_item(
+        item: dict[str, object],
+        first_level_name: str,
+        second_level_name: str | None,
+    ) -> None:
         identifier = _text(item.get("id"))
         if identifier and first_level_name:
-            names[identifier] = first_level_name
+            names[identifier] = (first_level_name, second_level_name)
         children = item.get("children")
         if isinstance(children, list):
             for child in children:
                 if isinstance(child, dict):
-                    add_item(child, first_level_name)
+                    child_name = _text(child.get("name"))
+                    add_item(child, first_level_name, child_name or second_level_name)
 
     for item in _items(payload):
         name = _business_line(item.get("name"))
         if name:
-            add_item(item, name)
+            add_item(item, name, None)
     return names
 
 
@@ -171,7 +178,7 @@ def _field_value(item: dict[str, object], alias: str) -> object | None:
 
 def parse_product_master_records(
     payload: dict[str, object],
-    business_line_names: dict[str, str],
+    business_line_names: dict[str, tuple[str, str | None]],
 ) -> tuple[ProductMasterRecord, ...]:
     """解析产品型号/子平台工作项，并保留原始状态值。"""
     records: list[ProductMasterRecord] = []
@@ -180,7 +187,7 @@ def parse_product_master_records(
         if not isinstance(identifier, int):
             continue
         business_identifier = _text(_field_value(item, "business"))
-        business_line = business_line_names.get(business_identifier, "")
+        business_line, sub_line = business_line_names.get(business_identifier, ("", None))
         product = _text(item.get("name"))
         status = item.get("work_item_status")
         raw_status = _text(status.get("state_key") if isinstance(status, dict) else "")
@@ -195,6 +202,7 @@ def parse_product_master_records(
                 ProductMasterRecord(
                     id=identifier,
                     business_line=business_line,
+                    sub_line=sub_line,
                     product=product,
                     raw_status=raw_status,
                     product_attribute_label=product_attribute_label,
@@ -444,6 +452,7 @@ def build_full_improvement_rows(
         rows.append(
             FullImprovementRow(
                 business_line=master.business_line,
+                sub_line=master.sub_line,
                 product=master.product,
                 product_status="研发中",
                 super_team_count=len(teams) if teams else "—",
