@@ -33,6 +33,7 @@ import { TrendChart } from "./trend-chart";
 type ReportDashboardProps = {
   initialSnapshots: RdhsSnapshot[];
   dataMode: "live" | "preview";
+  initialPeriodKey?: string;
 };
 
 type DeltaView = {
@@ -68,6 +69,12 @@ function appApiUrl(path: string) {
     ? window.location.pathname
     : `${window.location.pathname}/`;
   return `${basePath}${path}`;
+}
+
+function replacePeriodInUrl(periodKey: string) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("period", periodKey);
+  window.history.replaceState(null, "", url);
 }
 
 function sortSnapshots(snapshots: RdhsSnapshot[]) {
@@ -259,6 +266,139 @@ function MetricCard({
   );
 }
 
+function ExpandedSummary({
+  snapshot,
+  summary,
+  mode,
+  complianceDelta,
+  pendingDelta,
+  refreshMessage,
+  refreshState,
+}: {
+  snapshot: RdhsSnapshot;
+  summary: SnapshotSummary;
+  mode: GovernanceBand;
+  complianceDelta: DeltaView;
+  pendingDelta: DeltaView;
+  refreshMessage: string;
+  refreshState: "idle" | "loading" | "success" | "error";
+}) {
+  const focusLines = snapshot.businessLines
+    .map((line) => {
+      const lineSummary = summaryForProducts(
+        snapshot,
+        snapshot.products.filter((product) => product.businessLine === line.businessLine),
+      );
+      return { line, lineSummary };
+    })
+    .filter(({ line }) => line.keyGovernanceCount > 0)
+    .sort((left, right) => {
+      const keyGovernanceDifference = right.line.keyGovernanceCount - left.line.keyGovernanceCount;
+      if (keyGovernanceDifference !== 0) return keyGovernanceDifference;
+
+      const leftRate = left.line.keyGovernanceCount / left.line.productTotal;
+      const rightRate = right.line.keyGovernanceCount / right.line.productTotal;
+      if (leftRate !== rightRate) return rightRate - leftRate;
+
+      const leftScore = left.lineSummary.averageRdhs ?? -1;
+      const rightScore = right.lineSummary.averageRdhs ?? -1;
+      return leftScore - rightScore;
+    })
+    .slice(0, 3);
+
+  return (
+    <section className="panel summaryPrototype" aria-label="本月总体判断和核心指标">
+      <div className="summaryPrototypeOverview">
+        <div className="judgement">
+          <div className="judgementTop">
+            <span className="label">总体判断</span>
+            <span className={`badge ${bandClass(mode)}`}>{mode}阶段</span>
+          </div>
+          <p>
+            本期 CBG 共覆盖 <b className="mono">{summary.productTotal}</b> 个研发中产品，整体仍处于{mode}阶段。
+            {snapshot.overview.focus}
+          </p>
+          {refreshMessage ? <span className={`refreshMessage ${refreshState}`}>{refreshMessage}</span> : null}
+        </div>
+        <MetricCard label="研发中产品" value={String(summary.productTotal)} suffix=" 个" note={scopeExclusionNote(snapshot)} />
+        <MetricCard label="平均 RDHS" value={summary.averageRdhs?.toFixed(1) ?? "—"} suffix=" 分" note={`仅统计 ${summary.measuredProductCount} 个已度量产品`} />
+        <MetricCard label="度量覆盖率" value={(summary.measurementCoverage * 100).toFixed(1)} suffix="%" note={`未度量 / 待关联 ${summary.unmeasuredProductCount} 个`} />
+        <MetricCard label="产品规范率" value={(summary.complianceRate * 100).toFixed(1)} suffix="%" note={`${summary.complianceCount} 个产品符合规范`} delta={complianceDelta} />
+        <MetricCard label="待治理占比" value={(summary.pendingGovernanceRate * 100).toFixed(1)} suffix="%" note={`${summary.pendingGovernanceCount} 个产品需治理`} delta={pendingDelta} />
+      </div>
+
+      <div className="summaryPrototypeDetail">
+        <div className="summaryFocus">
+          <div className="summaryPrototypeHead">
+            <div>
+              <h2 className="panelTitle">重点关注业务线</h2>
+              <div className="panelSubtitle">按重点治理产品数与风险占比排序</div>
+            </div>
+            <span className="panelMeta">按治理优先级排序</span>
+          </div>
+          <div className="summaryFocusList">
+            {focusLines.map(({ line, lineSummary }, index) => {
+              const priority = index < 2 ? "P0" : "P1";
+              const lowestComponent = COMPONENT_LABELS
+                .map(([key, label, maximum]) => ({ key, label, maximum, value: lineSummary.componentAverages[key] }))
+                .filter((component) => component.value !== null)
+                .sort((left, right) => (left.value! / left.maximum) - (right.value! / right.maximum))
+                .at(0);
+
+              return (
+                <div className="summaryFocusRow" key={line.businessLine}>
+                  <span className={`summaryFocusPriority ${priority.toLowerCase()}`}>{priority}</span>
+                  <div className="summaryFocusName">
+                    <b>{line.businessLine}</b>
+                    <span>重点治理 {line.keyGovernanceCount} / {line.productTotal} · 未度量 {lineSummary.unmeasuredProductCount || "—"}</span>
+                  </div>
+                  <div className="summaryFocusScore">
+                    <b>{formatScore(lineSummary.averageRdhs)} / 100</b>
+                    <span>{lowestComponent ? `${lowestComponent.label} ${formatComponentScore(lowestComponent.value)} / ${lowestComponent.maximum}` : "暂无可用分项"}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="summaryComponentScores">
+          <div className="summaryPrototypeHead">
+            <div>
+              <h2 className="panelTitle">RDHS 分项得分</h2>
+              <div className="panelSubtitle">CBG 已度量产品平均得分</div>
+            </div>
+            <span className="panelMeta">当前分 / 满分</span>
+          </div>
+          <div className="summaryComponentList">
+            {COMPONENT_LABELS.map(([key, label, maximum]) => {
+              const value = summary.componentAverages[key];
+              return (
+                <div className="summaryComponentRow" key={key}>
+                  <span>{label}</span>
+                  <div className="summaryComponentTrack" aria-hidden="true">
+                    <i style={{ width: `${value === null ? 0 : Math.min(100, (value / maximum) * 100)}%` }} />
+                  </div>
+                  <strong>
+                    {value === null ? "—" : <><b>{formatComponentScore(value)}</b><small> / {maximum}</small></>}
+                  </strong>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      <div className="summaryPrototypeActions" aria-label="下月治理重点">
+        <strong>下月治理重点</strong>
+        <span><b>纳入飞书项目管理</b>未度量产品使用飞书项目进行需求、任务、缺陷和发布等产研过程管理。</span>
+        <span><b>建立产品级过程关联</b>关注正确维护产品主数据，确保产研过程围绕产品进行。</span>
+        <span><b>验证 P0 治理改善</b>聚焦短板问题，推动内部改进。</span>
+      </div>
+    </section>
+  );
+}
+
 function Distribution({ summary }: { summary: SnapshotSummary }) {
   const rows: Array<[GovernanceBand, string, number]> = [
     ["重点治理", "<45 / 未度量", summary.bandCounts.keyGovernance],
@@ -368,10 +508,15 @@ function ProductDetail({
   );
 }
 
-export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardProps) {
+export function ReportDashboard({
+  initialSnapshots,
+  dataMode,
+  initialPeriodKey,
+}: ReportDashboardProps) {
   const [snapshots, setSnapshots] = useState(sortSnapshots(initialSnapshots));
   const monthNow = currentMonthKey();
   const initialPeriod =
+    snapshots.find((snapshot) => snapshot.periodKey === initialPeriodKey)?.periodKey ??
     snapshots.find((snapshot) => snapshot.periodKey === monthNow)?.periodKey ??
     snapshots.at(-1)?.periodKey ??
     "";
@@ -449,6 +594,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
 
   function changePeriod(nextPeriod: string) {
     setPeriodKey(nextPeriod);
+    replacePeriodInUrl(nextPeriod);
     setRefreshState("idle");
     setRefreshMessage("");
     resetDrilldown();
@@ -496,6 +642,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
         report.record.snapshot,
       ]));
       setPeriodKey(refreshPeriodKey);
+      replacePeriodInUrl(refreshPeriodKey);
       resetDrilldown();
       setRuntimeDataMode("live");
       setRefreshState("success");
@@ -580,24 +727,15 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
           </div>
         </section>
 
-        <section className="panel summary" aria-label="本月总体判断和核心指标">
-          <div className="judgement">
-            <div className="judgementTop">
-              <span className="label">总体判断</span>
-              <span className={`badge ${bandClass(mode)}`}>{mode}阶段</span>
-            </div>
-            <p>
-              本期 CBG 共覆盖 <b className="mono">{summary.productTotal}</b> 个研发中产品，整体仍处于{mode}阶段。
-              {snapshot.overview.focus}
-            </p>
-            {refreshMessage ? <span className={`refreshMessage ${refreshState}`}>{refreshMessage}</span> : null}
-          </div>
-          <MetricCard label="研发中产品" value={String(summary.productTotal)} suffix=" 个" note={scopeExclusionNote(snapshot)} />
-          <MetricCard label="平均 RDHS" value={summary.averageRdhs?.toFixed(1) ?? "—"} suffix=" 分" note={`仅统计 ${summary.measuredProductCount} 个已度量产品`} />
-          <MetricCard label="度量覆盖率" value={(summary.measurementCoverage * 100).toFixed(1)} suffix="%" note={`未度量 / 待关联 ${summary.unmeasuredProductCount} 个`} />
-          <MetricCard label="产品规范率" value={(summary.complianceRate * 100).toFixed(1)} suffix="%" note={`${summary.complianceCount} 个产品符合规范`} delta={complianceDelta} />
-          <MetricCard label="待治理占比" value={(summary.pendingGovernanceRate * 100).toFixed(1)} suffix="%" note={`${summary.pendingGovernanceCount} 个产品需治理`} delta={pendingDelta} />
-        </section>
+        <ExpandedSummary
+          snapshot={snapshot}
+          summary={summary}
+          mode={mode}
+          complianceDelta={complianceDelta}
+          pendingDelta={pendingDelta}
+          refreshMessage={refreshMessage}
+          refreshState={refreshState}
+        />
 
         <div className="insights">
           <ScoreRail value={summary.averageRdhs} />

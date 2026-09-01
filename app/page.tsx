@@ -7,7 +7,13 @@ import { validateSnapshot } from "@/lib/rdhs/validate";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+type HomeProps = {
+  searchParams?: Array<[string, string]> | Promise<Array<[string, string]>>;
+};
+
+export default async function Home({ searchParams }: HomeProps) {
+  const params = new URLSearchParams(await searchParams ?? []);
+  const requestedPeriod = params.get("period") ?? undefined;
   let snapshots: RdhsSnapshot[] = [];
   let dataMode: "live" | "preview" = "preview";
 
@@ -37,5 +43,11 @@ export default async function Home() {
     snapshots = [validateSnapshot(demoJuly), validateSnapshot(demoAugust)];
   }
 
-  return <ReportDashboard initialSnapshots={snapshots} dataMode={dataMode} />;
+  return (
+    <ReportDashboard
+      initialSnapshots={snapshots}
+      dataMode={dataMode}
+      initialPeriodKey={requestedPeriod}
+    />
+  );
 }

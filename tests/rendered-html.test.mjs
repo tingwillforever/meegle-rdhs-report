@@ -57,6 +57,24 @@ test("server-renders the RDHS operations overview", async () => {
   assert.match(html, /og\.png/);
 });
 
+test("period query selects the requested historical snapshot", async () => {
+  const response = await render("/?period=2026-07");
+  const html = await response.text();
+
+  assert.match(html, /<option value="2026-07" selected="">2026-07<\/option>/);
+  assert.match(html, /历史快照已生成/);
+});
+
+test("expanded summary stays inside the RDHS report shell", async () => {
+  const response = await render("/?period=2026-08");
+  const html = await response.text();
+
+  assert.match(html, /CBG RDHS运营报告/);
+  assert.match(html, /重点关注业务线/);
+  assert.match(html, /RDHS 分项得分/);
+  assert.match(html, /当前分 \/ 满分/);
+});
+
 test("finished page does not expose starter preview metadata", async () => {
   const response = await render();
   const html = await response.text();
@@ -65,4 +83,5 @@ test("finished page does not expose starter preview metadata", async () => {
   assert.doesNotMatch(html, /Your site is taking shape/);
   assert.doesNotMatch(html, /react-loading-skeleton/);
   assert.doesNotMatch(html, /Building your site/);
+  assert.doesNotMatch(html, /总体判断扩展预览/);
 });
