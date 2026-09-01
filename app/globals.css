@@ -119,6 +119,13 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .iconButton:active { transform: translateY(1px); }
 .iconButton.quiet { border-color: transparent; background: transparent; }
 .iconButton.quiet:hover { border-color: var(--border); background: var(--soft); }
+.iconButton.refreshButton {
+  width: auto;
+  grid-auto-flow: column;
+  gap: 6px;
+  padding: 0 10px;
+}
+.refreshButtonLabel { font-size: 12px; font-weight: 650; white-space: nowrap; }
 .pageInner {
   width: min(1600px, calc(100% - 56px));
   margin: 0 auto;
@@ -159,6 +166,12 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   background: var(--track);
   box-shadow: 0 0 0 4px oklch(0.52 0.09 150 / 0.13);
 }
+.status.historical b {
+  background: var(--muted);
+  box-shadow: 0 0 0 4px oklch(0.53 0.018 255 / 0.11);
+}
+.statusState { color: var(--ink); font-weight: 680; }
+.status.current .statusState { color: oklch(0.38 0.075 150); }
 .panel {
   min-width: 0;
   border: 1px solid var(--border);
@@ -757,6 +770,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   border-bottom: 1px solid var(--border);
 }
 .detailSection:last-child { border-bottom: 0; }
+.componentHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.componentHeading > span {
+  color: var(--faint);
+  font-size: 10px;
+}
 .detailSection h3 { margin: 0 0 8px; font-size: 12px; font-weight: 680; }
 .detailSection p {
   margin: 0;
@@ -837,27 +860,50 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   color: var(--muted) !important;
   font-size: 11px !important;
 }
-.componentList { display: grid; gap: 8px; }
-.componentRow {
+.componentBreakdown { padding-top: 13px; padding-bottom: 13px; }
+.componentList {
   display: grid;
-  grid-template-columns: 92px minmax(80px, 1fr) 34px;
-  align-items: center;
-  gap: 9px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+.componentRow { min-width: 0; }
+.componentLabel {
+  display: block;
+  min-height: 26px;
   color: var(--muted);
-  font-size: 11px;
+  font-size: 10px;
+  line-height: 1.25;
+}
+.componentRow strong {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 540;
+  line-height: 1;
+  white-space: nowrap;
+}
+.componentRow strong b { font-weight: 540; }
+.componentRow strong small {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 450;
 }
 .componentTrack {
-  height: 6px;
+  display: block;
+  height: 2px;
+  margin-top: 7px;
   overflow: hidden;
   border-radius: 2px;
   background: var(--soft);
 }
-.componentTrack i { display: block; height: 100%; border-radius: inherit; background: var(--fg); }
-.componentRow strong {
-  color: var(--ink);
-  font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
-  font-size: 11px;
-  text-align: right;
+.componentTrack i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--muted);
+  opacity: 0.58;
 }
 .actionBox {
   padding: 10px 11px;
@@ -1052,6 +1098,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
     padding-left: 8px;
   }
   .iconButton { width: 34px; height: 34px; }
+  .iconButton.refreshButton { width: 34px; padding: 0; gap: 0; }
+  .refreshButtonLabel { display: none; }
   .pageInner { width: calc(100% - 24px); padding-top: 18px; padding-bottom: 34px; }
   .reportHead {
     display: block;

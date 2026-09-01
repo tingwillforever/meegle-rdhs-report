@@ -174,6 +174,19 @@ test("monthly trend sorts periods ascending and keeps product-level rates", () =
   assert.equal(trend[0].complianceRate, 1 / 3);
 });
 
+test("monthly trend excludes months after the selected reporting period", () => {
+  const july = validateSnapshot(snapshot({ periodKey: "2026-07", asOf: "2026-07-31" }));
+  const august = validateSnapshot(snapshot());
+  const september = validateSnapshot(snapshot({ periodKey: "2026-09", asOf: "2026-09-30" }));
+
+  const trend = buildMonthlyTrend([september, august, july], { throughPeriod: "2026-08" });
+
+  assert.deepEqual(
+    trend.map((point) => point.periodKey),
+    ["2026-07", "2026-08"],
+  );
+});
+
 test("monthly trend can be scoped to one business line without product drilldown series", () => {
   const july = validateSnapshot(snapshot({
     periodKey: "2026-07",

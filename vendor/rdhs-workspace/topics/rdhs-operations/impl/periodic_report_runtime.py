@@ -836,6 +836,8 @@ def run_periodic_report(
     previous_payload: dict[str, object] | None = None,
     product_master_payload: dict[str, object] | None = None,
     business_lines_payload: dict[str, object] | None = None,
+    use_previous_chart_as_current: bool = False,
+    require_stored_baseline: bool = False,
     team_mapping_path: Path = _DEFAULT_TEAM_MAPPING_PATH,
     publish: bool,
     command_runner: CommandRunner = _subprocess_runner,
@@ -891,18 +893,21 @@ def run_periodic_report(
             publication_url=None,
         )
 
+    current_source_chart_id = (
+        previous_chart_id if use_previous_chart_as_current else current_chart_id
+    )
     if current_payload is not None:
         raw_current = current_payload
     else:
         raw_current = fetch_chart_payload(
             project_key=project_key,
-            chart_id=current_chart_id,
+            chart_id=current_source_chart_id,
             command_runner=command_runner,
         )
     current_fetched_at = _snapshot_time()
     current_snapshot = _persist_and_parse_chart_snapshot(
         raw_payload=raw_current,
-        chart_id=current_chart_id,
+        chart_id=current_source_chart_id,
         fetched_at=current_fetched_at,
         raw_path=run_dir / "current_chart_raw.json",
         run_dir=run_dir,
@@ -918,6 +923,10 @@ def run_periodic_report(
         raw_previous = _load_json(baseline_path)
         baseline_source = "stored_month_start_baseline"
         previous_fetched_at = _stored_baseline_timestamp(baseline_path)
+    elif require_stored_baseline:
+        raise RuntimeError(
+            f"stored baseline is required for {period}; refusing to use the live previous chart"
+        )
     else:
         raw_previous = fetch_chart_payload(
             project_key=project_key,

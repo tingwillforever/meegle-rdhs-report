@@ -39,7 +39,9 @@ test("server-renders the RDHS operations overview", async () => {
   assert.match(html, /度量覆盖率/);
   assert.match(html, /产品规范率/);
   assert.match(html, /待治理占比/);
-  assert.match(html, /更新数据/);
+  assert.match(html, /刷新当月/);
+  assert.match(html, /历史快照已生成/);
+  assert.match(html, /生成于/);
   assert.match(html, /RDHS 阈值标尺/);
   assert.match(html, /业务线总览/);
   assert.match(html, /规范占比/);

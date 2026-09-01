@@ -91,6 +91,10 @@ function formatScore(value: number | null) {
   return value === null ? "未度量" : value.toFixed(1);
 }
 
+function formatComponentScore(value: number | null) {
+  return value === null ? "—" : value.toFixed(1);
+}
+
 function formatPercent(value: number) {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -179,10 +183,12 @@ function summaryForProducts(snapshot: RdhsSnapshot, products: ProductMetric[]) {
   return summarizeSnapshot({ ...snapshot, products });
 }
 
-function trendForLine(snapshots: RdhsSnapshot[], line: string): TrendPoint[] {
+function trendForLine(snapshots: RdhsSnapshot[], line: string, throughPeriod: string): TrendPoint[] {
   return buildMonthlyTrend(
     snapshots,
-    line === "CBG整体" ? {} : { businessLine: line },
+    line === "CBG整体"
+      ? { throughPeriod }
+      : { businessLine: line, throughPeriod },
   );
 }
 
@@ -328,16 +334,23 @@ function ProductDetail({
         <h3>最低过程项</h3>
         <p>{product.lowestComponent}</p>
       </div>
-      <div className="detailSection">
-        <h3>分项得分</h3>
+      <div className="detailSection componentBreakdown">
+        <div className="componentHeading">
+          <h3>分项得分</h3>
+          <span>当前分 / 满分</span>
+        </div>
         <div className="componentList">
           {COMPONENT_LABELS.map(([key, label, maximum]) => {
             const value = product.components[key];
             return (
               <div className="componentRow" key={key}>
-                <span>{label}</span>
-                <span className="componentTrack"><i style={{ width: `${value === null ? 0 : Math.min(100, (value / maximum) * 100)}%` }} /></span>
-                <strong>{value === null ? "—" : value.toFixed(1)}</strong>
+                <span className="componentLabel">{label}</span>
+                <strong>
+                  {value === null ? "—" : <><b>{formatComponentScore(value)}</b><small> / {maximum}</small></>}
+                </strong>
+                <span className="componentTrack" aria-hidden="true">
+                  <i style={{ width: `${value === null ? 0 : Math.min(100, (value / maximum) * 100)}%` }} />
+                </span>
               </div>
             );
           })}
@@ -408,15 +421,21 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
   const visibleStart = filteredProducts.length === 0 ? 0 : pageStartIndex + 1;
   const visibleEnd = Math.min(pageStartIndex + PRODUCT_PAGE_SIZE, filteredProducts.length);
   const pageItems = paginationItems(currentProductPage, pageCount);
-  const trendPoints = snapshot ? trendForLine(available, selectedTrendLine) : [];
+  const trendPoints = snapshot
+    ? trendForLine(available, selectedTrendLine, snapshot.periodKey)
+    : [];
   const mode = summary ? modeForSummary(summary) : "重点治理";
   const isCurrentMonth = snapshot?.periodKey === monthNow;
-  const dataStateText =
-    runtimeDataMode === "preview"
-      ? "内置预览快照"
-      : isCurrentMonth
-        ? "当月缓存"
-        : "历史快照";
+  const snapshotStateText = isCurrentMonth
+    ? runtimeDataMode === "preview"
+      ? "当月预览数据"
+      : "当月缓存已生成 · 可刷新"
+    : runtimeDataMode === "preview"
+      ? "历史快照已生成 · 内置预览"
+      : "历史快照已生成 · 已固化";
+  const refreshTitle = isCurrentMonth
+    ? `刷新 ${monthNow} 当月缓存`
+    : `刷新 ${monthNow} 当月缓存并切换至当月`;
 
   function resetDrilldown() {
     setSelectedLine("全部业务线");
@@ -454,11 +473,7 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
 
   async function refreshCurrentMonth() {
     if (!snapshot) return;
-    if (!isCurrentMonth) {
-      setRefreshState("error");
-      setRefreshMessage("历史月份使用快照，不支持实时刷新");
-      return;
-    }
+    const refreshPeriodKey = monthNow;
 
     setRefreshState("loading");
     setRefreshMessage("");
@@ -468,19 +483,20 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
       const response = await fetch(appApiUrl("api/report/refresh"), {
         method: "POST",
         headers: { "Content-Type": "application/json; charset=utf-8" },
-        body: JSON.stringify({ periodKey: snapshot.periodKey }),
+        body: JSON.stringify({ periodKey: refreshPeriodKey }),
       });
       const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
       if (!response.ok) throw new Error(payload.error ?? "当月数据刷新失败");
 
-      const reportResponse = await fetch(appApiUrl(`api/report?period=${snapshot.periodKey}`), { cache: "no-store" });
-      if (reportResponse.ok) {
-        const report = await reportResponse.json() as { record: { snapshot: RdhsSnapshot } };
-        setSnapshots((current) => sortSnapshots([
-          ...current.filter((item) => item.periodKey !== report.record.snapshot.periodKey),
-          report.record.snapshot,
-        ]));
-      }
+      const reportResponse = await fetch(appApiUrl(`api/report?period=${refreshPeriodKey}`), { cache: "no-store" });
+      if (!reportResponse.ok) throw new Error("当月缓存已更新，但无法读取最新快照");
+      const report = await reportResponse.json() as { record: { snapshot: RdhsSnapshot } };
+      setSnapshots((current) => sortSnapshots([
+        ...current.filter((item) => item.periodKey !== report.record.snapshot.periodKey),
+        report.record.snapshot,
+      ]));
+      setPeriodKey(refreshPeriodKey);
+      resetDrilldown();
       setRuntimeDataMode("live");
       setRefreshState("success");
       setRefreshMessage(payload.message ?? "已更新当月缓存");
@@ -538,14 +554,15 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
             </select>
           </label>
           <button
-            className="iconButton"
+            className="iconButton refreshButton"
             type="button"
-            title="更新数据"
-            aria-label="更新数据"
+            title={refreshTitle}
+            aria-label={refreshTitle}
             onClick={refreshCurrentMonth}
             disabled={refreshState === "loading"}
           >
             <RefreshCw className={refreshState === "loading" ? "spin" : ""} size={17} strokeWidth={1.8} />
+            <span className="refreshButtonLabel">刷新当月</span>
           </button>
         </div>
       </header>
@@ -556,9 +573,10 @@ export function ReportDashboard({ initialSnapshots, dataMode }: ReportDashboardP
             <div className="eyebrow">{snapshot.periodKey} / CBG</div>
             <h1>CBG RDHS运营报告</h1>
           </div>
-          <div className="status">
+          <div className={`status ${isCurrentMonth ? "current" : "historical"}`}>
             <b aria-hidden="true" />
-            数据校验通过 · <span className="mono">{formatFetchedAt(snapshot.fetchedAt)}</span> 同步 · {dataStateText}
+            <span className="statusState">{snapshotStateText}</span>
+            <span> · 生成于 <span className="mono">{formatFetchedAt(snapshot.fetchedAt)}</span></span>
           </div>
         </section>
 

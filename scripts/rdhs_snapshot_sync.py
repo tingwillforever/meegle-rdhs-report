@@ -709,12 +709,14 @@ def _run_report_command(
     *,
     output_root: Path,
     snapshot_date: str,
+    extra_args: tuple[str, ...] = (),
 ) -> Path:
     timeout_seconds = _report_command_timeout_seconds()
     try:
         completed = subprocess.run(
             [
                 *command,
+                *extra_args,
                 "--no-publish",
                 "--output-root",
                 str(output_root),
@@ -902,6 +904,11 @@ def generate_report(
             _report_command(command_variable),
             output_root=output_root,
             snapshot_date=snapshot_date,
+            extra_args=(
+                ("--use-previous-chart-as-current", "--require-stored-baseline")
+                if not current_month_cache
+                else ()
+            ),
         )
         if use_remote_baseline:
             persist_remote_baseline(

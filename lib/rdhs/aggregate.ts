@@ -85,10 +85,14 @@ export function summarizeSnapshot(snapshot: RdhsSnapshot): SnapshotSummary {
 
 export function buildMonthlyTrend(
   snapshots: RdhsSnapshot[],
-  options: { businessLine?: string } = {},
+  options: { businessLine?: string; throughPeriod?: string } = {},
 ): TrendPoint[] {
   return snapshots
-    .filter((snapshot) => snapshot.cadence === "monthly")
+    .filter(
+      (snapshot) =>
+        snapshot.cadence === "monthly" &&
+        (options.throughPeriod === undefined || snapshot.periodKey <= options.throughPeriod),
+    )
     .sort((left, right) => left.periodKey.localeCompare(right.periodKey))
     .map((snapshot) => ({
       periodKey: snapshot.periodKey,

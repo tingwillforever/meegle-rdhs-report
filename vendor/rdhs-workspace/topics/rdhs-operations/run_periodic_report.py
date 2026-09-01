@@ -56,6 +56,16 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--as-of", type=_parse_date, default=date.today())
     parser.add_argument("--current-raw", type=Path)
     parser.add_argument("--previous-raw", type=Path)
+    parser.add_argument(
+        "--use-previous-chart-as-current",
+        action="store_true",
+        help="将配置的上月 Chart 作为本次报告的当前数据源",
+    )
+    parser.add_argument(
+        "--require-stored-baseline",
+        action="store_true",
+        help="缺少已固化的上月比较基线时中止，禁止回退到实时 Chart",
+    )
     parser.add_argument("--output-root", type=Path)
     parser.add_argument("--no-publish", action="store_true")
     return parser
@@ -79,6 +89,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         previous_chart_id=str(config["previous_chart_id"]),
         current_payload=_load_json_file(args.current_raw),
         previous_payload=_load_json_file(args.previous_raw),
+        use_previous_chart_as_current=args.use_previous_chart_as_current,
+        require_stored_baseline=args.require_stored_baseline,
         publish=not args.no_publish,
     )
     print(

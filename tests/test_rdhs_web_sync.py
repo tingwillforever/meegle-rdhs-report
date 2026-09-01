@@ -250,6 +250,57 @@ class VendoredReportContractTests(unittest.TestCase):
         self.assertEqual(audit["priority_counts"], {"P0": 1, "P1": 0, "P2": 2})
         self.assertEqual(manifest["report"], audit)
 
+    def test_vendored_report_can_use_previous_chart_as_the_current_source(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            output_root = Path(directory)
+            result = run_periodic_report(
+                mode="weekly",
+                as_of=date(2026, 8, 31),
+                output_root=output_root,
+                project_key="test-project",
+                current_chart_id="current-chart",
+                previous_chart_id="previous-chart",
+                current_payload=_chart_payload([("主营业务线", "产品A", 60)]),
+                previous_payload=_chart_payload([("主营业务线", "产品A", 55)]),
+                product_master_payload={
+                    "data": [_product_master(1, "virtual-human", "产品A")]
+                },
+                business_lines_payload={
+                    "data": [
+                        {
+                            "id": "main",
+                            "name": "主营业务线",
+                            "children": [
+                                {"id": "virtual-human", "name": "虚拟人"}
+                            ],
+                        }
+                    ]
+                },
+                use_previous_chart_as_current=True,
+                publish=False,
+            )
+            recovery_manifest = _load_json(result.audit_manifest_path)
+
+        self.assertEqual(
+            recovery_manifest["data_validation"]["current"]["chart_id"],
+            "previous-chart",
+        )
+
+    def test_vendored_report_refuses_live_baseline_when_a_stored_one_is_required(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            with self.assertRaisesRegex(RuntimeError, "stored baseline is required"):
+                run_periodic_report(
+                    mode="weekly",
+                    as_of=date(2026, 8, 31),
+                    output_root=Path(directory),
+                    project_key="test-project",
+                    current_chart_id="current-chart",
+                    previous_chart_id="previous-chart",
+                    current_payload=_chart_payload([("主营业务线", "产品A", 60)]),
+                    require_stored_baseline=True,
+                    publish=False,
+                )
+
     def test_overview_includes_regular_tracking_and_reconciled_bg_total(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             report, _manifest = _run_vendored_contract_fixture(Path(directory))
@@ -674,7 +725,11 @@ class SnapshotSyncTests(unittest.TestCase):
         self.assertIn("--no-publish", command)
         self.assertIn("--output-root", command)
         self.assertIn("--as-of", command)
-        self.assertIn("2026-07-31", command)
+        self.assertIn("--use-previous-chart-as-current", command)
+        self.assertIn("--require-stored-baseline", command)
+        today = sync_module.datetime.now(sync_module.SHANGHAI_TIME_ZONE).date()
+        expected_report_date = (today.replace(day=1) - timedelta(days=1)).isoformat()
+        self.assertIn(expected_report_date, command)
 
     def test_current_month_cache_uses_its_own_configured_command(self) -> None:
         captured: dict[str, object] = {}
@@ -709,6 +764,8 @@ class SnapshotSyncTests(unittest.TestCase):
         command = captured["command"]
         self.assertEqual(command[:4], ["python3", "report.py", "--mode", "weekly"])
         self.assertIn("2026-08-19", command)
+        self.assertNotIn("--use-previous-chart-as-current", command)
+        self.assertNotIn("--require-stored-baseline", command)
 
     def test_report_output_lock_serializes_separate_sync_processes(self) -> None:
         script = """
@@ -829,6 +886,10 @@ with _report_output_lock(Path(sys.argv[1])):
         self.assertEqual(captured[1][:4], ["python3", "report.py", "--mode", "weekly"])
         self.assertIn("2026-09-01", captured[0])
         self.assertIn("2026-08-31", captured[1])
+        self.assertNotIn("--use-previous-chart-as-current", captured[0])
+        self.assertNotIn("--require-stored-baseline", captured[0])
+        self.assertIn("--use-previous-chart-as-current", captured[1])
+        self.assertIn("--require-stored-baseline", captured[1])
 
     def test_cron_wrapper_uses_injected_environment_without_an_env_file(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
