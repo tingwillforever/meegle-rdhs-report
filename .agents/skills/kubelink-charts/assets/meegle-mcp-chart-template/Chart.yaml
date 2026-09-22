@@ -1,0 +1,6 @@
+apiVersion: v2
+name: app
+description: Kubelinks-ready application chart based on the meegle-mcp release contract
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
