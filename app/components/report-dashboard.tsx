@@ -409,10 +409,17 @@ export function ReportDashboard({
     previousSnapshot && selectedLine !== "全部业务线"
       ? previousSnapshot.products.filter((p) => p.businessLine === selectedLine)
       : [];
-  const sublineDistribution =
+  const rawSublineDistribution =
     snapshot && selectedLine !== "全部业务线" && isLineValid
       ? calculateSublineDistribution(activeLineProducts)
       : [];
+  // 仅当业务线有真正分支的二级子线时展示（排除仅有 1 条且与一级业务线完全同名、或全为未分二级线的冗余情况）
+  const hasRealSublines =
+    rawSublineDistribution.length > 1 ||
+    (rawSublineDistribution.length === 1 &&
+      rawSublineDistribution[0].name !== selectedLine &&
+      rawSublineDistribution[0].name !== "未分二级业务线");
+  const sublineDistribution = hasRealSublines ? rawSublineDistribution : [];
   const governanceCandidates =
     snapshot && selectedLine !== "全部业务线" && isLineValid
       ? getLineGovernanceCandidates(activeLineProducts, 3)

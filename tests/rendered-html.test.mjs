@@ -87,7 +87,7 @@ test("finished page does not expose starter preview metadata", async () => {
 });
 
 test("workbench view renders business line dashboard with sublines, rank, and governance candidates", async () => {
-  const response = await render("/?period=2026-08&view=workbench&line=" + encodeURIComponent("开放平台业务群"));
+  const response = await render("/?period=2026-09&view=workbench&line=" + encodeURIComponent("开放平台业务群"));
   assert.equal(response.status, 200);
   const html = await response.text();
 
@@ -98,6 +98,15 @@ test("workbench view renders business line dashboard with sublines, rank, and go
   assert.match(html, /二级业务线分布/);
   assert.match(html, /重点治理推荐/);
   assert.match(html, /分享工作台/);
+});
+
+test("business line without real sublines hides the sublines distribution section", async () => {
+  const response = await render("/?period=2026-10&view=workbench&line=" + encodeURIComponent("读写科技"));
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.match(html, /读写科技.*均分考核/);
+  assert.doesNotMatch(html, /二级业务线分布/);
 });
 
 test("invalid line in URL shows warning banner and does not crash", async () => {
