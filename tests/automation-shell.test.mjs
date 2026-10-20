@@ -1,12 +1,6 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
-import { access, chmod, cp, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { promisify } from "node:util";
-
-const execFileAsync = promisify(execFile);
 
 test("scheduled jobs load their private sync environment before invoking Python", async () => {
   const wrapper = await readFile(new URL("../scripts/run-sync-job.sh", import.meta.url), "utf8");

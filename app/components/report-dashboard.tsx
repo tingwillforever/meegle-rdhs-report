@@ -1,20 +1,29 @@
 "use client";
 
 import {
+  AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   BarChart3,
   BookOpenCheck,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
   Database,
-  RefreshCw,
+  Layers,
   Search,
+  Share2,
   X,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { buildMonthlyTrend, summarizeSnapshot } from "@/lib/rdhs/aggregate";
+import {
+  calculateBusinessLineRankings,
+  calculateSublineDistribution,
+  findPreviousSnapshot,
+  getLineGovernanceCandidates,
+  summarizeSnapshot,
+} from "@/lib/rdhs/aggregate";
 import {
   filterProducts,
   sortBusinessLines,
@@ -27,10 +36,7 @@ import type {
   ProductMetric,
   RdhsSnapshot,
   SnapshotSummary,
-  TrendPoint,
 } from "@/lib/rdhs/types";
-import { ScoreRail } from "./score-rail";
-import { TrendChart } from "./trend-chart";
 import { BgWarReport } from "./bg-war-report";
 
 type ReportDashboardProps = {
@@ -39,11 +45,6 @@ type ReportDashboardProps = {
   initialPeriodKey?: string;
   initialView?: "bg" | "workbench";
   initialLine?: string;
-};
-
-type DeltaView = {
-  text: string;
-  tone: "good" | "bad" | "neutral";
 };
 
 const BANDS: GovernanceBand[] = ["重点治理", "风险改进", "持续优化", "常规跟踪"];
@@ -68,20 +69,30 @@ function currentMonthKey() {
   return `${year}-${month}`;
 }
 
-function appApiUrl(path: string) {
-  if (typeof window === "undefined") return path;
-  const basePath = window.location.pathname.endsWith("/")
-    ? window.location.pathname
-    : `${window.location.pathname}/`;
-  return `${basePath}${path}`;
-}
-
-function replacePeriodInUrl(periodKey: string, viewMode?: "bg" | "workbench") {
+function syncUrl(
+  params: {
+    period?: string;
+    view?: "bg" | "workbench";
+    line?: string;
+  },
+  push = false,
+) {
   if (typeof window === "undefined") return;
   const url = new URL(window.location.href);
-  url.searchParams.set("period", periodKey);
-  if (viewMode) url.searchParams.set("view", viewMode);
-  window.history.replaceState(null, "", url);
+  if (params.period) url.searchParams.set("period", params.period);
+  if (params.view) url.searchParams.set("view", params.view);
+  if (params.line !== undefined) {
+    if (params.line === "全部业务线" || !params.line) {
+      url.searchParams.delete("line");
+    } else {
+      url.searchParams.set("line", params.line);
+    }
+  }
+  if (push) {
+    window.history.pushState(null, "", url);
+  } else {
+    window.history.replaceState(null, "", url);
+  }
 }
 
 function sortSnapshots(snapshots: RdhsSnapshot[]) {
@@ -90,39 +101,12 @@ function sortSnapshots(snapshots: RdhsSnapshot[]) {
     .sort((left, right) => left.periodKey.localeCompare(right.periodKey));
 }
 
-function formatFetchedAt(value: string) {
-  return new Intl.DateTimeFormat("zh-CN", {
-    timeZone: "Asia/Shanghai",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(value));
-}
-
 function formatScore(value: number | null) {
   return value === null ? "未度量" : value.toFixed(1);
 }
 
 function formatComponentScore(value: number | null) {
   return value === null ? "—" : value.toFixed(1);
-}
-
-function formatPercent(value: number) {
-  return `${(value * 100).toFixed(1)}%`;
-}
-
-function formatDelta(label: string, current: number, previous: number | null, favorableDirection: "up" | "down"): DeltaView {
-  if (previous === null) return { text: `${label}暂无上月对比`, tone: "neutral" };
-  const delta = (current - previous) * 100;
-  if (Math.abs(delta) < 0.05) return { text: `${label}环比持平`, tone: "neutral" };
-  const isGood = favorableDirection === "up" ? delta > 0 : delta < 0;
-  const sign = delta > 0 ? "+" : "-";
-  return {
-    text: `${label}环比 ${sign}${Math.abs(delta).toFixed(1)}pp`,
-    tone: isGood ? "good" : "bad",
-  };
 }
 
 function bandClass(band: GovernanceBand) {
@@ -137,18 +121,6 @@ function modeForSummary(summary: SnapshotSummary): GovernanceBand {
   if (summary.bandCounts.riskImprovement > 0) return "风险改进";
   if (summary.bandCounts.continuousOptimization > 0) return "持续优化";
   return "常规跟踪";
-}
-
-function scopeExclusionNote(snapshot: RdhsSnapshot) {
-  const parts = [
-    snapshot.audit.excludedTestBusinessLineCount > 0
-      ? `测试业务线 ${snapshot.audit.excludedTestBusinessLineCount} 个`
-      : "",
-    snapshot.audit.excludedProductAttributeCount > 0
-      ? `交付定制 ${snapshot.audit.excludedProductAttributeCount} 个`
-      : "",
-  ].filter(Boolean);
-  return parts.length > 0 ? `已排除${parts.join("、")}` : "未排除额外主数据";
 }
 
 function productKey(product: Pick<ProductMetric, "businessLine" | "product">) {
@@ -197,15 +169,6 @@ function summaryForProducts(snapshot: RdhsSnapshot, products: ProductMetric[]) {
   return summarizeSnapshot({ ...snapshot, products });
 }
 
-function trendForLine(snapshots: RdhsSnapshot[], line: string, throughPeriod: string): TrendPoint[] {
-  return buildMonthlyTrend(
-    snapshots,
-    line === "CBG整体"
-      ? { throughPeriod }
-      : { businessLine: line, throughPeriod },
-  );
-}
-
 function DependencyCard({
   metric,
   prominent = false,
@@ -214,7 +177,7 @@ function DependencyCard({
   prominent?: boolean;
 }) {
   return (
-    <div className={`dependencyCard ${prominent ? "prominent" : ""} ${metric.tone}`}>
+    <div className={`dependencyCard ${prominent ? "prominent" : ""} ${metric.value === null ? "neutral" : metric.tone}`}>
       <dt>{metric.label}</dt>
       <dd>
         {formatDependencyValue(metric)}
@@ -247,199 +210,6 @@ function DependencyMetrics({ metrics }: { metrics: ProductDependencyMetric[] }) 
   );
 }
 
-function MetricCard({
-  label,
-  value,
-  suffix,
-  note,
-  delta,
-}: {
-  label: string;
-  value: string;
-  suffix?: string;
-  note: string;
-  delta?: DeltaView;
-}) {
-  return (
-    <div className="metric">
-      <span className="metricLabel">{label}</span>
-      <strong className="metricValue">
-        {value}
-        {suffix ? <small>{suffix}</small> : null}
-      </strong>
-      <span className="metricNote">{note}</span>
-      {delta ? <span className={`metricDelta ${delta.tone}`}>{delta.text}</span> : null}
-    </div>
-  );
-}
-
-function ExpandedSummary({
-  snapshot,
-  summary,
-  mode,
-  complianceDelta,
-  pendingDelta,
-  refreshMessage,
-  refreshState,
-}: {
-  snapshot: RdhsSnapshot;
-  summary: SnapshotSummary;
-  mode: GovernanceBand;
-  complianceDelta: DeltaView;
-  pendingDelta: DeltaView;
-  refreshMessage: string;
-  refreshState: "idle" | "loading" | "success" | "error";
-}) {
-  const focusLines = snapshot.businessLines
-    .map((line) => {
-      const lineSummary = summaryForProducts(
-        snapshot,
-        snapshot.products.filter((product) => product.businessLine === line.businessLine),
-      );
-      return { line, lineSummary };
-    })
-    .filter(({ line }) => line.keyGovernanceCount > 0)
-    .sort((left, right) => {
-      const keyGovernanceDifference = right.line.keyGovernanceCount - left.line.keyGovernanceCount;
-      if (keyGovernanceDifference !== 0) return keyGovernanceDifference;
-
-      const leftRate = left.line.keyGovernanceCount / left.line.productTotal;
-      const rightRate = right.line.keyGovernanceCount / right.line.productTotal;
-      if (leftRate !== rightRate) return rightRate - leftRate;
-
-      const leftScore = left.lineSummary.averageRdhs ?? -1;
-      const rightScore = right.lineSummary.averageRdhs ?? -1;
-      return leftScore - rightScore;
-    })
-    .slice(0, 3);
-
-  return (
-    <section className="panel summaryPrototype" aria-label="本月总体判断和核心指标">
-      <div className="summaryPrototypeOverview">
-        <div className="judgement">
-          <div className="judgementTop">
-            <span className="label">总体判断</span>
-            <span className={`badge ${bandClass(mode)}`}>{mode}阶段</span>
-          </div>
-          <p>
-            本期 CBG 共覆盖 <b className="mono">{summary.productTotal}</b> 个研发中产品，整体仍处于{mode}阶段。
-            {snapshot.overview.focus}
-          </p>
-          {refreshMessage ? <span className={`refreshMessage ${refreshState}`}>{refreshMessage}</span> : null}
-        </div>
-        <MetricCard label="研发中产品" value={String(summary.productTotal)} suffix=" 个" note={scopeExclusionNote(snapshot)} />
-        <MetricCard label="平均 RDHS" value={summary.averageRdhs?.toFixed(1) ?? "—"} suffix=" 分" note={`仅统计 ${summary.measuredProductCount} 个已度量产品`} />
-        <MetricCard label="度量覆盖率" value={(summary.measurementCoverage * 100).toFixed(1)} suffix="%" note={`未度量 / 待关联 ${summary.unmeasuredProductCount} 个`} />
-        <MetricCard label="产品规范率" value={(summary.complianceRate * 100).toFixed(1)} suffix="%" note={`${summary.complianceCount} 个产品符合规范`} delta={complianceDelta} />
-        <MetricCard label="待治理占比" value={(summary.pendingGovernanceRate * 100).toFixed(1)} suffix="%" note={`${summary.pendingGovernanceCount} 个产品需治理`} delta={pendingDelta} />
-      </div>
-
-      <div className="summaryPrototypeDetail">
-        <div className="summaryFocus">
-          <div className="summaryPrototypeHead">
-            <div>
-              <h2 className="panelTitle">重点关注业务线</h2>
-              <div className="panelSubtitle">按重点治理产品数与风险占比排序</div>
-            </div>
-            <span className="panelMeta">按治理优先级排序</span>
-          </div>
-          <div className="summaryFocusList">
-            {focusLines.map(({ line, lineSummary }, index) => {
-              const priority = index < 2 ? "P0" : "P1";
-              const lowestComponent = COMPONENT_LABELS
-                .map(([key, label, maximum]) => ({ key, label, maximum, value: lineSummary.componentAverages[key] }))
-                .filter((component) => component.value !== null)
-                .sort((left, right) => (left.value! / left.maximum) - (right.value! / right.maximum))
-                .at(0);
-
-              return (
-                <div className="summaryFocusRow" key={line.businessLine}>
-                  <span className={`summaryFocusPriority ${priority.toLowerCase()}`}>{priority}</span>
-                  <div className="summaryFocusName">
-                    <b>{line.businessLine}</b>
-                    <span>重点治理 {line.keyGovernanceCount} / {line.productTotal} · 未度量 {lineSummary.unmeasuredProductCount || "—"}</span>
-                  </div>
-                  <div className="summaryFocusScore">
-                    <b>{formatScore(lineSummary.averageRdhs)} / 100</b>
-                    <span>{lowestComponent ? `${lowestComponent.label} ${formatComponentScore(lowestComponent.value)} / ${lowestComponent.maximum}` : "暂无可用分项"}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="summaryComponentScores">
-          <div className="summaryPrototypeHead">
-            <div>
-              <h2 className="panelTitle">RDHS 分项得分</h2>
-              <div className="panelSubtitle">CBG 已度量产品平均得分</div>
-            </div>
-            <span className="panelMeta">当前分 / 满分</span>
-          </div>
-          <div className="summaryComponentList">
-            {COMPONENT_LABELS.map(([key, label, maximum]) => {
-              const value = summary.componentAverages[key];
-              return (
-                <div className="summaryComponentRow" key={key}>
-                  <span>{label}</span>
-                  <div className="summaryComponentTrack" aria-hidden="true">
-                    <i style={{ width: `${value === null ? 0 : Math.min(100, (value / maximum) * 100)}%` }} />
-                  </div>
-                  <strong>
-                    {value === null ? "—" : <><b>{formatComponentScore(value)}</b><small> / {maximum}</small></>}
-                  </strong>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      <div className="summaryPrototypeActions" aria-label="下月治理重点">
-        <strong>下月治理重点</strong>
-        <span><b>纳入飞书项目管理</b>未度量产品使用飞书项目进行需求、任务、缺陷和发布等产研过程管理。</span>
-        <span><b>建立产品级过程关联</b>关注正确维护产品主数据，确保产研过程围绕产品进行。</span>
-        <span><b>验证 P0 治理改善</b>聚焦短板问题，推动内部改进。</span>
-      </div>
-    </section>
-  );
-}
-
-function Distribution({ summary }: { summary: SnapshotSummary }) {
-  const rows: Array<[GovernanceBand, string, number]> = [
-    ["重点治理", "<45 / 未度量", summary.bandCounts.keyGovernance],
-    ["风险改进", "45-<60", summary.bandCounts.riskImprovement],
-    ["持续优化", "60-<70", summary.bandCounts.continuousOptimization],
-    ["常规跟踪", ">=70", summary.bandCounts.regularTracking],
-  ];
-  return (
-    <section className="panel distributionPanel" aria-label="治理分档分布">
-      <div className="panelHead">
-        <div>
-          <h2 className="panelTitle">治理分档分布</h2>
-          <div className="panelSubtitle">未度量 / 待关联产品纳入重点治理</div>
-        </div>
-        <span className="mono panelMeta">{summary.productTotal} 个产品</span>
-      </div>
-      <div className="distributionBody">
-        {rows.map(([band, range, count]) => (
-          <div className="distributionRow" key={band}>
-            <span>{band} <small>{range}</small></span>
-            <div className="bar" aria-hidden="true">
-              <i
-                className={bandClass(band)}
-                style={{ width: `${summary.productTotal === 0 ? 0 : (count / summary.productTotal) * 100}%` }}
-              />
-            </div>
-            <b>{count}</b>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 function ProductDetail({
   product,
   periodKey,
@@ -468,7 +238,7 @@ function ProductDetail({
       <div className="detailScore">
         <div>
           <div className="detailScoreNum">{product.rdhs === null ? "—" : product.rdhs.toFixed(1)}</div>
-          <div className="detailScoreLabel">{product.rdhs === null ? "RDHS 未度量" : "RDHS 分数"}</div>
+          <div className="detailScoreLabel">{product.rdhs === null ? "RDHS 未度量 (考核计0)" : "RDHS 分数"}</div>
         </div>
         <span className={`badge ${bandClass(product.governanceBand)}`}>{product.governanceBand}</span>
         {product.priority ? <span className="priority">{product.priority}</span> : null}
@@ -504,12 +274,12 @@ function ProductDetail({
         </div>
       </div>
       <div className="detailSection">
-        <h3>主要问题</h3>
-        <p>{product.problem}</p>
+        <h3>快照问题提示（待核实）</h3>
+        <p>{product.rdhs === null ? "本期无有效评分，需核实产品状态、图表范围与数据关联，不能直接认定过程未开展。" : product.problem}</p>
       </div>
       <div className="detailSection">
-        <h3>建议治理动作</h3>
-        <div className="actionBox"><p>{product.action}</p></div>
+        <h3>快照治理建议（需业务确认）</h3>
+        <div className="actionBox"><p>{product.rdhs === null ? "核实未度量原因并补齐真实记录；不得为提分虚假结项。" : product.action}</p></div>
       </div>
     </div>
   );
@@ -522,7 +292,7 @@ export function ReportDashboard({
   initialView = "bg",
   initialLine,
 }: ReportDashboardProps) {
-  const [snapshots, setSnapshots] = useState(sortSnapshots(initialSnapshots));
+  const snapshots = useMemo(() => sortSnapshots(initialSnapshots), [initialSnapshots]);
   const [viewMode, setViewMode] = useState<"bg" | "workbench">(initialView);
   const monthNow = currentMonthKey();
   const initialPeriod =
@@ -532,47 +302,63 @@ export function ReportDashboard({
     "";
   const [periodKey, setPeriodKey] = useState(initialPeriod);
   const [selectedLine, setSelectedLine] = useState(initialLine ?? "全部业务线");
-  const [selectedTrendLine, setSelectedTrendLine] = useState(initialLine ?? "CBG整体");
+  const [selectedSubLine, setSelectedSubLine] = useState<string | null>(null);
   const [selectedBand, setSelectedBand] = useState<GovernanceBand | "全部分档">("全部分档");
   const [query, setQuery] = useState("");
   const [unmeasuredOnly, setUnmeasuredOnly] = useState(false);
   const [selectedProductKey, setSelectedProductKey] = useState<string | null>(null);
   const [productPage, setProductPage] = useState(1);
-  const [refreshState, setRefreshState] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [refreshMessage, setRefreshMessage] = useState("");
-  const [runtimeDataMode, setRuntimeDataMode] = useState(dataMode);
+  const [runtimeDataMode] = useState(dataMode);
+  const [copiedUrl, setCopiedUrl] = useState(false);
+  const [missingPeriodNotice, setMissingPeriodNotice] = useState<string | null>(
+    initialPeriodKey && !initialSnapshots.some((s) => s.periodKey === initialPeriodKey)
+      ? initialPeriodKey
+      : null,
+  );
 
-  const available = sortSnapshots(snapshots);
+  const available = snapshots;
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const searchParams = new URLSearchParams(window.location.search);
-    const urlView = searchParams.get("view");
-    if (urlView === "workbench" || urlView === "bg") {
-      setViewMode(urlView);
-    }
-    const urlPeriod = searchParams.get("period");
-    if (urlPeriod && available.some((s) => s.periodKey === urlPeriod)) {
-      setPeriodKey(urlPeriod);
-    }
-    const urlLine = searchParams.get("line");
-    if (urlLine) {
-      setSelectedLine(urlLine);
-      setSelectedTrendLine(urlLine);
-    }
-  }, []);
+    const applyUrlState = () => {
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlView = searchParams.get("view");
+      const urlPeriod = searchParams.get("period");
+      const urlLine = searchParams.get("line")?.trim();
+      const requestedSnapshot = available.find((s) => s.periodKey === urlPeriod);
+      const fallbackPeriod = available.find((s) => s.periodKey === currentMonthKey())?.periodKey ?? available.at(-1)?.periodKey ?? "";
+      setViewMode(urlView === "workbench" || (urlLine && urlView !== "bg") ? "workbench" : "bg");
+      setPeriodKey(requestedSnapshot?.periodKey ?? fallbackPeriod);
+      setMissingPeriodNotice(urlPeriod && !requestedSnapshot ? urlPeriod : null);
+      setSelectedLine(urlLine || "全部业务线");
+      setSelectedSubLine(null);
+      setSelectedBand("全部分档");
+      setQuery("");
+      setUnmeasuredOnly(false);
+      setSelectedProductKey(null);
+      setProductPage(1);
+    };
+
+    applyUrlState();
+    window.addEventListener("popstate", applyUrlState);
+    return () => window.removeEventListener("popstate", applyUrlState);
+  }, [available]);
+
   const snapshot =
     available.find((candidate) => candidate.periodKey === periodKey) ?? available.at(-1) ?? null;
   const summary = snapshot ? summarizeSnapshot(snapshot) : null;
   const previousSnapshot = snapshot
-    ? [...available].reverse().find((candidate) => candidate.periodKey < snapshot.periodKey) ?? null
+    ? findPreviousSnapshot(available, snapshot.periodKey)
     : null;
-  const previousSummary = previousSnapshot ? summarizeSnapshot(previousSnapshot) : null;
   const businessLines = snapshot ? sortBusinessLines(snapshot.businessLines) : [];
-  const filteredProducts = snapshot
+  const isLineValid =
+    selectedLine === "全部业务线" ||
+    (snapshot?.businessLines.some((b) => b.businessLine === selectedLine) ?? false);
+
+  const baseFilteredProducts = snapshot
     ? sortProducts(
       filterProducts(snapshot.products, {
-        businessLine: selectedLine,
+        businessLine: isLineValid ? selectedLine : "全部业务线",
         band: selectedBand,
         query,
         unmeasuredOnly,
@@ -580,6 +366,13 @@ export function ReportDashboard({
       "rdhs-asc",
     )
     : [];
+
+  const filteredProducts = selectedSubLine
+    ? baseFilteredProducts.filter((p) => {
+        const pSub = p.subLine && p.subLine.trim().length > 0 ? p.subLine.trim() : "未分二级业务线";
+        return pSub === selectedSubLine;
+      })
+    : baseFilteredProducts;
   const selectedProduct = snapshot?.products.find(
     (product) => productKey(product) === selectedProductKey,
   ) ?? null;
@@ -594,9 +387,6 @@ export function ReportDashboard({
   const visibleStart = filteredProducts.length === 0 ? 0 : pageStartIndex + 1;
   const visibleEnd = Math.min(pageStartIndex + PRODUCT_PAGE_SIZE, filteredProducts.length);
   const pageItems = paginationItems(currentProductPage, pageCount);
-  const trendPoints = snapshot
-    ? trendForLine(available, selectedTrendLine, snapshot.periodKey)
-    : [];
 
   const activeLineProducts = snapshot
     ? snapshot.products.filter((p) => selectedLine === "全部业务线" || p.businessLine === selectedLine)
@@ -618,7 +408,24 @@ export function ReportDashboard({
       .at(0)
     : null;
 
-  const mode = summary ? modeForSummary(summary) : "重点治理";
+  const lineRankings = snapshot
+    ? calculateBusinessLineRankings(snapshot, previousSnapshot)
+    : [];
+  const currentLineRanking =
+    lineRankings.find((r) => r.businessLine === selectedLine) ?? null;
+  const prevLineProducts =
+    previousSnapshot && selectedLine !== "全部业务线"
+      ? previousSnapshot.products.filter((p) => p.businessLine === selectedLine)
+      : [];
+  const sublineDistribution =
+    snapshot && selectedLine !== "全部业务线" && isLineValid
+      ? calculateSublineDistribution(activeLineProducts)
+      : [];
+  const governanceCandidates =
+    snapshot && selectedLine !== "全部业务线" && isLineValid
+      ? getLineGovernanceCandidates(activeLineProducts, 3)
+      : [];
+
   const isCurrentMonth = snapshot?.periodKey === monthNow;
   const snapshotStateText = isCurrentMonth
     ? runtimeDataMode === "preview"
@@ -627,23 +434,21 @@ export function ReportDashboard({
     : runtimeDataMode === "preview"
       ? "历史快照已生成 · 内置预览"
       : "历史快照已生成 · 已固化";
-  const refreshTitle = isCurrentMonth
-    ? `刷新 ${monthNow} 当月缓存`
-    : `刷新 ${monthNow} 当月缓存并切换至当月`;
 
   function resetDrilldown() {
     setSelectedLine("全部业务线");
-    setSelectedTrendLine("CBG整体");
+    setSelectedSubLine(null);
     setSelectedBand("全部分档");
     setQuery("");
     setUnmeasuredOnly(false);
     setSelectedProductKey(null);
     setProductPage(1);
+    syncUrl({ period: periodKey, view: viewMode, line: "全部业务线" }, false);
   }
 
   function changeViewMode(nextView: "bg" | "workbench") {
     setViewMode(nextView);
-    replacePeriodInUrl(periodKey, nextView);
+    syncUrl({ period: periodKey, view: nextView, line: selectedLine }, true);
     if (nextView === "bg") {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
@@ -651,18 +456,14 @@ export function ReportDashboard({
 
   function returnToBg() {
     setViewMode("bg");
-    replacePeriodInUrl(periodKey, "bg");
+    syncUrl({ period: periodKey, view: "bg", line: selectedLine }, true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   function handleDrilldown(line?: string) {
-    if (line && line !== "全部业务线") {
-      setSelectedLine(line);
-      setSelectedTrendLine(line);
-    } else {
-      setSelectedLine("全部业务线");
-      setSelectedTrendLine("CBG整体");
-    }
+    const targetLine = line && line !== "全部业务线" ? line : "全部业务线";
+    setSelectedLine(targetLine);
+    setSelectedSubLine(null);
     setSelectedBand("全部分档");
     setQuery("");
     setUnmeasuredOnly(false);
@@ -670,7 +471,7 @@ export function ReportDashboard({
     setProductPage(1);
 
     setViewMode("workbench");
-    replacePeriodInUrl(periodKey, "workbench");
+    syncUrl({ period: periodKey, view: "workbench", line: targetLine }, true);
 
     setTimeout(() => {
       const el = document.getElementById("product-workbench");
@@ -684,63 +485,85 @@ export function ReportDashboard({
 
   function changePeriod(nextPeriod: string) {
     setPeriodKey(nextPeriod);
-    replacePeriodInUrl(nextPeriod, viewMode);
-    setRefreshState("idle");
-    setRefreshMessage("");
-    resetDrilldown();
+    setMissingPeriodNotice(null);
+    setSelectedBand("全部分档");
+    setQuery("");
+    setUnmeasuredOnly(false);
+    setSelectedSubLine(null);
+    setSelectedProductKey(null);
+    setProductPage(1);
+
+    const nextSnapshot = available.find((s) => s.periodKey === nextPeriod);
+    const lineStillExists = nextSnapshot?.businessLines.some((b) => b.businessLine === selectedLine);
+    const nextLine = lineStillExists ? selectedLine : "全部业务线";
+    if (!lineStillExists && selectedLine !== "全部业务线") {
+      setSelectedLine("全部业务线");
+    }
+    syncUrl({ period: nextPeriod, view: viewMode, line: nextLine }, true);
   }
 
   function chooseBusinessLine(line: string) {
     setSelectedLine(line);
-    setSelectedTrendLine(line);
+    setSelectedBand("全部分档");
+    setQuery("");
+    setUnmeasuredOnly(false);
+    setSelectedSubLine(null);
     setSelectedProductKey(null);
     setProductPage(1);
+    syncUrl({ period: periodKey, view: viewMode, line }, true);
     document.getElementById("product-workbench")?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  function clearFilters() {
-    resetDrilldown();
+  function handleShareUrl() {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    url.searchParams.set("period", periodKey);
+    url.searchParams.set("view", "workbench");
+    if (selectedLine !== "全部业务线") {
+      url.searchParams.set("line", selectedLine);
+    } else {
+      url.searchParams.delete("line");
+    }
+    navigator.clipboard.writeText(url.toString()).then(() => {
+      setCopiedUrl(true);
+      setTimeout(() => setCopiedUrl(false), 2000);
+    }).catch(() => {});
+  }
+
+  function locateProduct(prod: ProductMetric) {
+    // Reset list filters so pagination and the target product use the same scope.
+    setSelectedSubLine(null);
+    setQuery("");
+    setSelectedBand("全部分档");
+    setUnmeasuredOnly(false);
+
+    const key = productKey(prod);
+    setSelectedProductKey(key);
+
+    if (snapshot) {
+      const targetList = sortProducts(
+        filterProducts(snapshot.products, {
+          businessLine: selectedLine,
+          band: "全部分档",
+          query: "",
+          unmeasuredOnly: false,
+        }),
+        "rdhs-asc",
+      );
+      const targetIdx = targetList.findIndex((p) => productKey(p) === key);
+      if (targetIdx >= 0) {
+        setProductPage(Math.floor(targetIdx / PRODUCT_PAGE_SIZE) + 1);
+      }
+    }
+
+    setTimeout(() => {
+      document.getElementById("product-workbench")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 60);
   }
 
   function changeProductPage(nextPage: number) {
     setProductPage(Math.min(Math.max(nextPage, 1), pageCount));
     setSelectedProductKey(null);
-  }
-
-  async function refreshCurrentMonth() {
-    if (!snapshot) return;
-    const refreshPeriodKey = monthNow;
-
-    setRefreshState("loading");
-    setRefreshMessage("");
-    try {
-      // Resolve through the current app path so the dashboard also works
-      // behind the production Ingress prefix (/meegle-rdhs-report/).
-      const response = await fetch(appApiUrl("api/report/refresh"), {
-        method: "POST",
-        headers: { "Content-Type": "application/json; charset=utf-8" },
-        body: JSON.stringify({ periodKey: refreshPeriodKey }),
-      });
-      const payload = await response.json().catch(() => ({})) as { error?: string; message?: string };
-      if (!response.ok) throw new Error(payload.error ?? "当月数据刷新失败");
-
-      const reportResponse = await fetch(appApiUrl(`api/report?period=${refreshPeriodKey}`), { cache: "no-store" });
-      if (!reportResponse.ok) throw new Error("当月缓存已更新，但无法读取最新快照");
-      const report = await reportResponse.json() as { record: { snapshot: RdhsSnapshot } };
-      setSnapshots((current) => sortSnapshots([
-        ...current.filter((item) => item.periodKey !== report.record.snapshot.periodKey),
-        report.record.snapshot,
-      ]));
-      setPeriodKey(refreshPeriodKey);
-      replacePeriodInUrl(refreshPeriodKey);
-      resetDrilldown();
-      setRuntimeDataMode("live");
-      setRefreshState("success");
-      setRefreshMessage(payload.message ?? "已更新当月缓存");
-    } catch (error) {
-      setRefreshState("error");
-      setRefreshMessage(error instanceof Error ? error.message : "当月数据刷新失败");
-    }
   }
 
   if (!snapshot || !summary) {
@@ -752,20 +575,6 @@ export function ReportDashboard({
       </div>
     );
   }
-
-  const complianceDelta = formatDelta(
-    "规范",
-    summary.complianceRate,
-    previousSummary?.complianceRate ?? null,
-    "up",
-  );
-  const pendingDelta = formatDelta(
-    "待治理",
-    summary.pendingGovernanceRate,
-    previousSummary?.pendingGovernanceRate ?? null,
-    "down",
-  );
-  const trendLabel = selectedTrendLine === "CBG整体" ? "CBG" : selectedTrendLine;
 
   return (
     <div className="dashboardShell">
@@ -850,7 +659,7 @@ export function ReportDashboard({
                       <span>·</span>
                       <span>在研 <b>{filteredProducts.length} 款</b></span>
                       <span>·</span>
-                      <span>重点治理 <b className="textRed">{activeLineSummary.pendingGovernanceCount} 款</b></span>
+                      <span>P0重点治理 <b className="textRed">{activeLineSummary.bandCounts.keyGovernance} 款</b></span>
                       {activeLineLowestComponent ? (
                         <>
                           <span>·</span>
@@ -867,16 +676,20 @@ export function ReportDashboard({
               </div>
 
               <div className="navRight">
+                <button
+                  type="button"
+                  className={`shareUrlBtn ${copiedUrl ? "shareUrlSuccess" : ""}`}
+                  onClick={handleShareUrl}
+                  title="复制当前业务线工作台链接"
+                >
+                  {copiedUrl ? <CheckCircle2 size={13} /> : <Share2 size={13} />}
+                  <span>{copiedUrl ? "链接已复制" : "分享工作台"}</span>
+                </button>
                 {selectedLine !== "全部业务线" ? (
                   <button
                     type="button"
                     className="clearLineBtn"
-                    onClick={() => {
-                      setSelectedLine("全部业务线");
-                      setSelectedTrendLine("CBG整体");
-                      setSelectedProductKey(null);
-                      setProductPage(1);
-                    }}
+                    onClick={resetDrilldown}
                   >
                     <X size={13} />
                     <span>重置业务线筛选</span>
@@ -884,6 +697,226 @@ export function ReportDashboard({
                 ) : null}
               </div>
             </div>
+
+            {missingPeriodNotice ? (
+              <div className="bannerNotice warning" role="alert">
+                <span>指定月份「{missingPeriodNotice}」暂无有效快照，已为您呈现 {snapshot.periodKey} 月报数据。</span>
+              </div>
+            ) : null}
+
+            {!isLineValid && selectedLine !== "全部业务线" ? (
+              <div className="bannerNotice warning" role="alert">
+                <span>未在 {snapshot.periodKey} 快照中找到业务线「{selectedLine}」，该业务线不存在或当月无纳管产品。已为您切换为全业务线视图。</span>
+                <button
+                  type="button"
+                  className="clearLineBtn"
+                  onClick={resetDrilldown}
+                >
+                  <X size={12} />
+                  <span>重置为全部业务线</span>
+                </button>
+              </div>
+            ) : null}
+
+            {selectedLine !== "全部业务线" && isLineValid && activeLineSummary ? (
+              <section className="lineCtoDashboard" aria-label="业务线 CTO 概览面板">
+                <div className="lineCtoOverview">
+                  <div className="lineCtoHeroCard">
+                    <div className="lineCtoHeroTop">
+                      <span className="lineCtoHeroTitle">{selectedLine} · 均分考核</span>
+                      {currentLineRanking ? (
+                        <span className="bentoRankBadge rankBronze" title={currentLineRanking.isTie ? "并列排名" : undefined}>
+                          BG 排名 #{currentLineRanking.rank}{currentLineRanking.isTie ? "*" : ""}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <div className="lineCtoHeroScore">
+                      <span className="lineCtoHeroScoreNum">
+                        {activeLineSummary.averageRdhs !== null ? activeLineSummary.averageRdhs.toFixed(1) : "—"}
+                      </span>
+                      <span className="lineCtoHeroScoreUnit">分</span>
+                      {currentLineRanking?.delta !== null && currentLineRanking?.delta !== undefined ? (
+                        <span className={`deltaBadge ${currentLineRanking.delta >= 0 ? "deltaUp" : "deltaDown"}`}>
+                          {currentLineRanking.delta >= 0 ? `+${currentLineRanking.delta.toFixed(1)}` : currentLineRanking.delta.toFixed(1)}
+                        </span>
+                      ) : (
+                        <span className="textMuted" style={{ fontSize: 11 }}>上月暂无对比</span>
+                      )}
+                    </div>
+
+                    <div className="lineCtoHeroNote">
+                      <div>未度量考核计0；在研 {activeLineSummary.productTotal} 款（上月 {previousSnapshot ? `${prevLineProducts.length} 款` : "未获取"}）</div>
+                      <div>上月均分：{currentLineRanking?.prevAvgScore == null ? "未获取" : `${currentLineRanking.prevAvgScore.toFixed(1)} 分`} · 比较相邻自然月快照</div>
+                      {currentLineRanking?.compositionChange?.hasChanged ? (
+                        <div className="compNotice">
+                          口径变化: 新增 {currentLineRanking.compositionChange.addedCount} 款，移出 {currentLineRanking.compositionChange.removedCount} 款
+                        </div>
+                      ) : null}
+                      {isCurrentMonth ? (
+                        <div className="mtdNotice">
+                          当月进行中 (MTD)，与上月全月对比不构成直接归因
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="lineCtoGrid">
+                    <div className="lineCtoCard">
+                      <span className="lineCtoCardLabel">达标及格率 (≥70)</span>
+                      <div className="lineCtoCardNum">
+                        {currentLineRanking ? `${currentLineRanking.passRate}%` : `${(activeLineSummary.complianceRate * 100).toFixed(1)}%`}
+                      </div>
+                      <span className="lineCtoCardDesc">
+                        及格 {activeLineSummary.complianceCount} / {activeLineSummary.productTotal} 款
+                      </span>
+                    </div>
+
+                    <div className="lineCtoCard">
+                      <span className="lineCtoCardLabel">度量覆盖率</span>
+                      <div className="lineCtoCardNum">
+                        {(activeLineSummary.measurementCoverage * 100).toFixed(1)}%
+                      </div>
+                      <span className="lineCtoCardDesc">
+                        已度量 {activeLineSummary.measuredProductCount} 款 · 未度量 {activeLineSummary.unmeasuredProductCount} 款
+                      </span>
+                    </div>
+
+                    <div className="lineCtoCard">
+                      <span className="lineCtoCardLabel">重点治理敞口 (P0/&lt;45)</span>
+                      <div className="lineCtoCardNum textRed">
+                        {activeLineSummary.bandCounts.keyGovernance} <small>款</small>
+                      </div>
+                      <span className="lineCtoCardDesc">
+                        含未度量计0；待治理(&lt;70)共 {activeLineSummary.pendingGovernanceCount} 款
+                      </span>
+                    </div>
+
+                    <div className="lineCtoCard">
+                      <span className="lineCtoCardLabel">最低过程短板</span>
+                      <div className="lineCtoCardNum" style={{ fontSize: 14 }}>
+                        {activeLineLowestComponent ? activeLineLowestComponent.label : "暂无"}
+                      </div>
+                      <span className="lineCtoCardDesc">
+                        {activeLineLowestComponent ? `${formatComponentScore(activeLineLowestComponent.value)} / ${activeLineLowestComponent.maximum}` : "—"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {sublineDistribution.length > 0 ? (
+                  <div className="sublinesSection">
+                    <div className="sublinesSectionHeader">
+                      <div className="sublinesTitle">
+                        <Layers size={14} />
+                        <span>二级业务线分布 ({sublineDistribution.length} 条)</span>
+                        {selectedSubLine ? (
+                          <button
+                            type="button"
+                            className="clearLineBtn"
+                            style={{ fontSize: 11, padding: "1px 6px" }}
+                            onClick={() => {
+                              setSelectedSubLine(null);
+                              setSelectedProductKey(null);
+                              setProductPage(1);
+                            }}
+                          >
+                            已下钻: {selectedSubLine} (点击重置)
+                          </button>
+                        ) : null}
+                      </div>
+                      <span className="sublinesHint">点击卡片可下钻过滤下方产品列表</span>
+                    </div>
+
+                    <div className="sublinesGrid">
+                      {sublineDistribution.map((sub) => {
+                        const isActive = selectedSubLine === sub.name;
+                        return (
+                          <button
+                            type="button"
+                            key={sub.name}
+                            className={`sublineCard ${isActive ? "active" : ""}`}
+                            onClick={() => {
+                              setSelectedSubLine(isActive ? null : sub.name);
+                              setSelectedProductKey(null);
+                              setProductPage(1);
+                            }}
+                          >
+                            <div className="sublineCardHead">
+                              <span className="sublineName" title={sub.name}>{sub.name}</span>
+                              <span className="sublineCount">{sub.count} 款</span>
+                            </div>
+                            <div className="sublineScoreRow">
+                              <span className="sublineScore">
+                                {sub.averageRdhs !== null ? `${sub.averageRdhs.toFixed(1)}分` : "—"}
+                              </span>
+                              {sub.unmeasuredCount > 0 ? (
+                                <span className="sublineUnmeasuredTag">未度量 {sub.unmeasuredCount}</span>
+                              ) : null}
+                            </div>
+                            <div className="sublineMetaRow">
+                              <span>及格率 {sub.passRate}%</span>
+                              <span>P0治理 {sub.keyGovCount}款</span>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+
+                {governanceCandidates.length > 0 ? (
+                  <div className="govRecommendationsSection">
+                    <div className="govRecHeader">
+                      <div className="govRecTitle">
+                        <AlertTriangle size={14} />
+                        <span>重点治理推荐 (Top {governanceCandidates.length})</span>
+                      </div>
+                      <span className="sublinesHint">按未度量与低分优先核查；建议不代表已确认业务根因</span>
+                    </div>
+
+                    <div className="govRecGrid">
+                      {governanceCandidates.map((prod) => {
+                        const priority =
+                          prod.rdhs === null || prod.rdhs < 45
+                            ? "p0"
+                            : prod.rdhs < 60
+                              ? "p1"
+                              : "p2";
+                        const priorityLabel = priority.toUpperCase();
+                        const scoreText = prod.rdhs === null ? "未度量，考核计0" : `${prod.rdhs.toFixed(1)} 分`;
+                        return (
+                          <div key={productKey(prod)} className={`govRecCard ${priority}`}>
+                            <div className="govRecCardTop">
+                              <div>
+                                <div className="govRecProductTitle">{prod.product}</div>
+                                <div className="govRecSubline">{prod.subLine || "未分二级业务线"}</div>
+                              </div>
+                              <span className={`govRecScoreBadge badge ${bandClass(prod.governanceBand)}`}>
+                                {priorityLabel} · {scoreText}
+                              </span>
+                            </div>
+                            <div className="govRecBody">
+                              <div><b>指标事实:</b> {prod.rdhs === null ? "本期无有效评分，考核计0；原因待核实。" : `RDHS ${prod.rdhs.toFixed(1)} 分，最低过程项：${prod.lowestComponent || "未获取"}。`}</div>
+                              <div><b>核查动作:</b> {prod.rdhs === null ? "核实产品状态、图表范围与数据关联，不直接认定未开展研发。" : "结合原单和分项指标核实实际阶段；仅对真实完成且满足验收条件的需求补齐记录，不为提分结项。"}</div>
+                              <div><b>责任角色:</b> 本期快照未提供，待业务线确认。</div>
+                            </div>
+                            <button
+                              type="button"
+                              className="govRecBtn"
+                              onClick={() => locateProduct(prod)}
+                            >
+                              <span>定位至产品明细</span>
+                              <ArrowRight size={12} />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null}
+              </section>
+            ) : null}
             <div className="workspace">
             <div className="productBrowser">
               <div className="filters">
@@ -906,11 +939,7 @@ export function ReportDashboard({
                   aria-label="按业务线筛选"
                   value={selectedLine}
                   onChange={(event) => {
-                    const line = event.target.value;
-                    setSelectedLine(line);
-                    setSelectedTrendLine(line === "全部业务线" ? "CBG整体" : line);
-                    setSelectedProductKey(null);
-                    setProductPage(1);
+                    chooseBusinessLine(event.target.value);
                   }}
                 >
                   <option value="全部业务线">全部业务线</option>
@@ -920,6 +949,26 @@ export function ReportDashboard({
                     </option>
                   ))}
                 </select>
+                {selectedLine !== "全部业务线" && isLineValid && sublineDistribution.length > 0 ? (
+                  <select
+                    className="filterSelect"
+                    aria-label="按二级业务线筛选"
+                    value={selectedSubLine ?? "全部二级线"}
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      setSelectedSubLine(val === "全部二级线" ? null : val);
+                      setSelectedProductKey(null);
+                      setProductPage(1);
+                    }}
+                  >
+                    <option value="全部二级线">全部二级业务线</option>
+                    {sublineDistribution.map((sub) => (
+                      <option key={sub.name} value={sub.name}>
+                        {sub.name} ({sub.count}款)
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
                 <select
                   className="filterSelect"
                   aria-label="按治理分档筛选"

@@ -100,11 +100,52 @@ export type SnapshotSummary = {
   complianceCount: number;
   pendingGovernanceCount: number;
   averageRdhs: number | null;
+  rawAverageRdhs: number | null;
   measurementCoverage: number;
   complianceRate: number;
   pendingGovernanceRate: number;
   bandCounts: BandCounts;
   componentAverages: ComponentScores;
+};
+
+export type CompositionChange = {
+  hasChanged: boolean;
+  addedCount: number;
+  removedCount: number;
+  addedNames: string[];
+  removedNames: string[];
+  currentCount: number;
+  previousCount: number;
+};
+
+export type BusinessLineRankingItem = {
+  businessLine: string;
+  rank: number;
+  total: number;
+  measuredCount: number;
+  unmeasuredCount: number;
+  avgScore: number | null;
+  rawAvgScore: number | null;
+  prevAvgScore: number | null;
+  delta: number | null;
+  passRate: number;
+  passCount: number;
+  isTie: boolean;
+  lead: string;
+  lag: string;
+  focus: string;
+  compositionChange?: CompositionChange | null;
+};
+
+export type SublineStat = {
+  name: string;
+  count: number;
+  unmeasuredCount: number;
+  averageRdhs: number | null;
+  rawAverageRdhs: number | null;
+  passCount: number;
+  passRate: number;
+  keyGovCount: number;
 };
 
 export type TrendPoint = SnapshotSummary & {

@@ -91,12 +91,12 @@ function snapshot(overrides = {}) {
   };
 }
 
-test("unmeasured products stay in key governance without lowering average RDHS", () => {
+test("unmeasured products stay in key governance and contribute 0 to RDHS arithmetic mean", () => {
   const valid = validateSnapshot(snapshot());
   const summary = summarizeSnapshot(valid);
 
   assert.equal(governanceBandForScore(null), "重点治理");
-  assert.equal(summary.averageRdhs, 56);
+  assert.equal(summary.averageRdhs, 37.3);
   assert.equal(summary.measurementCoverage, 2 / 3);
   assert.equal(summary.complianceCount, 1);
   assert.equal(summary.pendingGovernanceCount, 2);
@@ -169,7 +169,7 @@ test("monthly trend sorts periods ascending and keeps product-level rates", () =
     trend.map((point) => point.periodKey),
     ["2026-07", "2026-08"],
   );
-  assert.equal(trend[0].averageRdhs, 56);
+  assert.equal(trend[0].averageRdhs, 37.3);
   assert.equal(trend[0].measuredProductCount, 2);
   assert.equal(trend[0].complianceRate, 1 / 3);
 });

@@ -4,34 +4,20 @@ import {
   AlertTriangle,
   ArrowRight,
   Award,
-  CheckCircle2,
-  ShieldAlert,
   Target,
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
 import type { RdhsSnapshot, SnapshotSummary } from "@/lib/rdhs/types";
-import { summarizeSnapshot } from "@/lib/rdhs/aggregate";
+import {
+  calculateBusinessLineRankings,
+  summarizeSnapshot,
+} from "@/lib/rdhs/aggregate";
 
 type BgWarReportProps = {
   snapshot: RdhsSnapshot;
   previousSnapshot: RdhsSnapshot | null;
   onDrilldown: (businessLine?: string) => void;
-};
-
-type LineStat = {
-  name: string;
-  total: number;
-  measuredCount: number;
-  unmeasuredCount: number;
-  avgScore: number;
-  prevAvgScore: number | null;
-  delta: number | null;
-  passRate: number;
-  passCount: number;
-  lead: string;
-  lag: string;
-  focus: string;
 };
 
 type FocusLineItem = {
@@ -51,65 +37,6 @@ const COMPONENT_LABELS: Array<[string, string, number]> = [
   ["granularity", "颗粒度对齐", 20],
   ["quality", "质量表现", 20],
 ];
-
-function calcBusinessLineRanking(
-  snapshot: RdhsSnapshot,
-  previousSnapshot: RdhsSnapshot | null,
-): LineStat[] {
-  const prevMap = new Map<string, number>();
-  if (previousSnapshot) {
-    for (const b of previousSnapshot.businessLines) {
-      const prods = previousSnapshot.products.filter(
-        (p) => p.businessLine === b.businessLine && p.rdhs !== null && p.rdhs !== undefined,
-      );
-      if (prods.length > 0) {
-        const sum = prods.reduce((acc, p) => acc + (p.rdhs ?? 0), 0);
-        prevMap.set(b.businessLine, Math.round((sum / prods.length) * 10) / 10);
-      }
-    }
-  }
-
-  const results: LineStat[] = [];
-  for (const b of snapshot.businessLines) {
-    const prods = snapshot.products.filter((p) => p.businessLine === b.businessLine);
-    const measured = prods.filter((p) => p.rdhs !== null && p.rdhs !== undefined);
-    const unmeasured = prods.filter((p) => p.rdhs === null || p.rdhs === undefined);
-    const avg =
-      measured.length > 0
-        ? Math.round((measured.reduce((acc, p) => acc + (p.rdhs ?? 0), 0) / measured.length) * 10) / 10
-        : 0;
-    const prevAvg = prevMap.get(b.businessLine) ?? null;
-    const delta = prevAvg !== null ? Math.round((avg - prevAvg) * 10) / 10 : null;
-    const passCount = measured.filter((p) => (p.rdhs ?? 0) >= 70).length;
-    const passRate = prods.length > 0 ? Math.round((passCount / prods.length) * 1000) / 10 : 0;
-
-    const sorted = [...measured].sort((a, b) => (b.rdhs ?? 0) - (a.rdhs ?? 0));
-    const lead = sorted[0] ? `${sorted[0].product} (${sorted[0].rdhs}分)` : "-";
-    const lag =
-      unmeasured.length > 0
-        ? `${unmeasured[0].product} (未度量)`
-        : sorted.length > 0
-          ? `${sorted[sorted.length - 1].product} (${sorted[sorted.length - 1].rdhs}分)`
-          : "-";
-
-    results.push({
-      name: b.businessLine,
-      total: b.productTotal,
-      measuredCount: measured.length,
-      unmeasuredCount: unmeasured.length,
-      avgScore: avg,
-      prevAvgScore: prevAvg,
-      delta,
-      passRate,
-      passCount,
-      lead,
-      lag,
-      focus: b.focus,
-    });
-  }
-
-  return results.sort((a, b) => b.avgScore - a.avgScore);
-}
 
 function getTopFocusLines(snapshot: RdhsSnapshot): FocusLineItem[] {
   return snapshot.businessLines
@@ -156,7 +83,7 @@ export function BgWarReport({
 }: BgWarReportProps) {
   const summary: SnapshotSummary = summarizeSnapshot(snapshot);
   const prevSummary: SnapshotSummary | null = previousSnapshot ? summarizeSnapshot(previousSnapshot) : null;
-  const rankings = calcBusinessLineRanking(snapshot, previousSnapshot);
+  const rankings = calculateBusinessLineRankings(snapshot, previousSnapshot);
   const focusLines = getTopFocusLines(snapshot);
 
   // Overall Pass rate (>=70 is passing)
@@ -168,14 +95,14 @@ export function BgWarReport({
       : 0;
 
   const scoreDelta =
-    prevSummary && summary.averageRdhs !== null && prevSummary.averageRdhs !== null
-      ? Math.round((summary.averageRdhs - prevSummary.averageRdhs) * 10) / 10
+    prevSummary && summary.rawAverageRdhs !== null && prevSummary.rawAverageRdhs !== null
+      ? Math.round((summary.rawAverageRdhs - prevSummary.rawAverageRdhs) * 10) / 10
       : null;
 
   const scoreVal = summary.averageRdhs ?? 0;
   // Standardized thresholds: <45 重点治理, 45~<60 风险改进, 60~<70 持续改进区间, >=70 及格达标
   const stageName =
-    scoreVal < 45
+    summary.productTotal === 0 ? "暂无纳管产品" : scoreVal < 45
       ? "重点治理阶段"
       : scoreVal < 60
         ? "风险改进阶段"
@@ -206,6 +133,7 @@ export function BgWarReport({
               </span>
             </div>
 
+            <p className="sourceNote">本期 {snapshot.products.length} 款；{previousSnapshot ? `上月 ${previousSnapshot.products.length} 款，产品名单变化需结合口径核实。` : "未获取上个自然月快照，不提供环比。"} 当月累计（MTD）与上月完整月不可直接认定效能升降。</p>
             <div className="heroScoreBlock">
               <div className="heroScoreNum">
                 {summary.averageRdhs !== null ? summary.averageRdhs.toFixed(1) : "—"}
@@ -268,12 +196,12 @@ export function BgWarReport({
           </div>
 
           <div className="metricCapsule">
-            <div className="capsuleLabel">重点治理敞口 (&lt;45)</div>
+            <div className="capsuleLabel">重点治理敞口 (P0/&lt;45)</div>
             <div className="capsuleNum textRed">
-              {summary.pendingGovernanceCount}<span className="capsuleUnit"> 款</span>
+              {summary.bandCounts.keyGovernance}<span className="capsuleUnit"> 款</span>
             </div>
             <div className="capsuleDesc">
-              占比 {Math.round(summary.pendingGovernanceRate * 1000) / 10}% (含未度量)
+              含未度量计0；待治理(&lt;70)共 {summary.pendingGovernanceCount} 款
             </div>
           </div>
 
@@ -302,46 +230,46 @@ export function BgWarReport({
         <div className="commonProblemsGrid">
           <div className="problemCard cardBorderRed">
             <div className="problemCardHead">
-              <span className="problemBadge badgeRed">共性病因 01</span>
-              <span className="problemImpactTag">拖累全BG均分约 3~4分</span>
+              <span className="problemBadge badgeRed">核查事项 01</span>
+              <span className="problemImpactTag">本期未度量 {summary.unmeasuredProductCount} 款</span>
             </div>
-            <strong className="problemCardTitle">产品主数据“黑户”（未关联直接计 0 分）</strong>
+            <strong className="problemCardTitle">未度量产品核查（考核计 0 分）</strong>
             <p className="problemDesc">
-              部分实际研发中产品未挂接飞书项目度量图表，系统按 0 分纳统（如《智能评标》《Spark Insight》等），严重拉低所属业务线考核均分。
+              本期 {summary.unmeasuredProductCount} 款产品无有效评分，纳入考核分母并计 0。需区分图表范围、关联缺失与实际研发状态，不能仅凭缺分认定过程失管。
             </p>
             <div className="problemActionBox">
               <span className="actionBadge">改进建议与抓手</span>
-              <p>各业务线 PMO 联合负责人立即在飞书项目中补齐产品主数据关联与工作流绑定，消除未度量 0 分敞口。</p>
+              <p>业务线确认产品状态、图表范围与主数据关联；补齐真实过程记录后重新核算，不承诺自动提分。</p>
             </div>
           </div>
 
           <div className="problemCard cardBorderAmber">
             <div className="problemCardHead">
-              <span className="problemBadge badgeAmber">共性病因 02</span>
-              <span className="problemImpactTag">未闭环差额明显</span>
+              <span className="problemBadge badgeAmber">核查事项 02</span>
+              <span className="problemImpactTag">结合产品过程指标核实</span>
             </div>
-            <strong className="problemCardTitle">发布登记断链（漏登发版单与未绑定卡片）</strong>
+            <strong className="problemCardTitle">发布与需求闭环核查</strong>
             <p className="problemDesc">
-              实际发版正常开展，但发版登记闭环率跌破警戒水位，存在已上线卡片未挂接发布单的现象，导致“交付闭环”分项得分失真。
+              发布登记与实际交付是不同口径。出现分项偏低或登记差额时，需核实发布记录、需求关联及实际验收凭证，不能直接认定漏登或未上线。
             </p>
             <div className="problemActionBox">
               <span className="actionBadge">改进建议与抓手</span>
-              <p>每周建立上线卡片核销机制，项目管理代表必须将已上线的发版单与卡片完成闭环绑定，消灭挂账。</p>
+              <p>核对实际上线及验收记录，仅对真实满足完成条件的工作项补齐登记，不为提分虚假结项。</p>
             </div>
           </div>
 
           <div className="problemCard cardBorderBlue">
             <div className="problemCardHead">
-              <span className="problemBadge badgeBlue">共性病因 03</span>
-              <span className="problemImpactTag">滞留超 90~130天</span>
+              <span className="problemBadge badgeBlue">核查事项 03</span>
+              <span className="problemImpactTag">结合在途与周期样本核实</span>
             </div>
-            <strong className="problemCardTitle">长在途卡片积压（时效节奏维度得分趋零）</strong>
+            <strong className="problemCardTitle">时效与在途积压核查</strong>
             <p className="problemDesc">
-              部分重点产品在途卡片超 90~130 天长期滞留未验收流转，积压率偏高，直接拖垮“时效节奏”维度得分（多业务线时效甚至低于 6 分）。
+              时效分项偏低仅提示核查方向；需结合已完成需求的开发/交付周期、在途时长及积压样本，确认等待、依赖或计划变更等原因。
             </p>
             <div className="problemActionBox">
               <span className="actionBadge">改进建议与抓手</span>
-              <p>启动“僵尸卡片清退专项”，对在途超 90 天的需求评估：有业务价值则分期拆小流转，无价值立即终止归档。</p>
+              <p>逐项核实超期原单与继续开发价值，由负责人决定继续、调整计划或终止；不因均值超期批量结项。</p>
             </div>
           </div>
         </div>
@@ -365,6 +293,14 @@ export function BgWarReport({
                 key={item.name}
                 className="focusBentoCard"
                 onClick={() => onDrilldown(item.name)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onDrilldown(item.name);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
               >
                 <div>
                   <div className="cardTop">
@@ -439,8 +375,8 @@ export function BgWarReport({
               </tr>
             </thead>
             <tbody>
-              {rankings.map((line, index) => {
-                const rankNum = index + 1;
+              {rankings.map((line) => {
+                const rankNum = line.rank;
                 const rankBadgeClass =
                   rankNum === 1
                     ? "rankGold"
@@ -449,28 +385,36 @@ export function BgWarReport({
                       : rankNum === 3
                         ? "rankBronze"
                         : "rankDefault";
+                const scoreValue = line.avgScore ?? 0;
                 const scoreColorClass =
-                  line.avgScore >= 70
+                  scoreValue >= 70
                     ? "var(--track)"
-                    : line.avgScore >= 60
+                    : scoreValue >= 60
                       ? "var(--optimize)"
-                      : line.avgScore >= 45
+                      : scoreValue >= 45
                         ? "var(--risk)"
                         : "var(--critical)";
 
                 return (
                   <tr
-                    key={line.name}
+                    key={line.businessLine}
                     className="bentoTableRow"
-                    onClick={() => onDrilldown(line.name)}
+                    onClick={() => onDrilldown(line.businessLine)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onDrilldown(line.businessLine);
+                      }
+                    }}
+                    tabIndex={0}
                   >
                     <td>
-                      <span className={`bentoRankBadge ${rankBadgeClass}`}>
-                        {rankNum}
+                      <span className={`bentoRankBadge ${rankBadgeClass}`} title={line.isTie ? "并列排名" : undefined}>
+                        {rankNum}{line.isTie ? "*" : ""}
                       </span>
                     </td>
                     <td>
-                      <span className="lineNameBold">{line.name}</span>
+                      <span className="lineNameBold">{line.businessLine}</span>
                     </td>
                     <td>{line.total} 款</td>
                     <td>
@@ -480,12 +424,14 @@ export function BgWarReport({
                       </span>
                     </td>
                     <td>
-                      <span className="tableScoreNum">{line.avgScore.toFixed(1)} 分</span>
+                      <span className="tableScoreNum" title={line.rawAvgScore !== null ? `未舍入分: ${line.rawAvgScore.toFixed(3)}` : undefined}>
+                        {line.avgScore !== null ? `${line.avgScore.toFixed(1)} 分` : "—"}
+                      </span>
                       <span className="tableProgressBar">
                         <i
                           className="tableProgressFill"
                           style={{
-                            width: `${Math.min(100, Math.max(0, line.avgScore))}%`,
+                            width: `${Math.min(100, Math.max(0, scoreValue))}%`,
                             background: scoreColorClass,
                           }}
                         />
@@ -494,7 +440,7 @@ export function BgWarReport({
                     <td>
                       {line.delta !== null ? (
                         <span className={`deltaBadge ${line.delta >= 0 ? "deltaUp" : "deltaDown"}`}>
-                          {line.delta >= 0 ? `+${line.delta}` : line.delta}
+                          {line.delta >= 0 ? `+${line.delta.toFixed(1)}` : line.delta.toFixed(1)}
                         </span>
                       ) : (
                         <span className="textMuted">-</span>
@@ -513,7 +459,7 @@ export function BgWarReport({
                         className="drilldownActionBtn"
                         onClick={(e) => {
                           e.stopPropagation();
-                          onDrilldown(line.name);
+                          onDrilldown(line.businessLine);
                         }}
                       >
                         下钻 <ArrowRight size={12} />

@@ -8,7 +8,26 @@
 - 排除范围：`测试业务线`，以及产品属性为 `交付定制` 的产品主数据。
 - 关联键：规范化后的 `一级业务线 + 产品`。
 - 治理分档：`<45 + 未度量/待关联`、`45~<60`、`60~<70`、`>=70`。
-- 平均 RDHS：仅统计已度量产品；覆盖率单独展示。
+- 平均 RDHS：全部符合月度快照口径的产品纳入分母，未度量产品考核计 0；原始评分仍保留 `null`，覆盖率单独展示。空范围显示无数据。
+- 环比：只对比上一个自然月；缺月不跳月。当月累计（MTD）与上月整月不同口径，不能直接归因为效能退步。
+
+## 业务线 CTO 工作台
+
+从 BG 大盘业务线排名点击下钻，或直接打开：
+`https://tingwillforever.github.io/meegle-rdhs-report/?period=2026-09&view=workbench&line=开放平台业务群`。
+
+工作台展示业务线考核均分、上月对比、BG 排名、达标率、覆盖率、二级业务线分布和最多 3 项治理核查事项。
+二级线、搜索、分档等列表筛选不会改变上方整条业务线指标；产品详情沿用现有快照，不推断缺失责任人或平均汇总人数/周期/比例。
+
+回归后可使用真实 Chrome 验收静态站点（需 Python Playwright 和 Chrome）：
+
+```bash
+RDHS_BASE_PATH=/meegle-rdhs-report npm run build:pages
+# 本地静态服务器需映射 /meegle-rdhs-report/ 到 dist/static/。
+RDHS_E2E_URL=http://localhost:8089/meegle-rdhs-report/ python3 scripts/browser-acceptance.py
+```
+
+`RDHS_E2E_EVIDENCE` 可指定截图与日志目录。推送 `github/main` 后由 GitHub Actions 构建并发布；正式验收还需检查 Actions 结果与线上浏览器路径。
 - 发布保护：不完整或不一致的源数据不得替换最近有效快照。
 
 完整语义定义见 [设计说明](docs/superpowers/specs/2026-08-17-rdhs-live-operations-site-design.md)，日常操作见 [运行手册](docs/operations.md)。
