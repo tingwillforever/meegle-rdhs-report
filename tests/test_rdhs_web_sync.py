@@ -902,6 +902,7 @@ with _report_output_lock(Path(sys.argv[1])):
                 "RDHS_SITE_URL": "http://rdhs-report-web:3000",
                 "RDHS_INGEST_TOKEN": "test-ingest-token",
                 "RDHS_PYTHON_BIN": str(helper),
+                "RDHS_NO_DEPLOY": "1",  # This test must never publish real data or contact GitHub.
             }
             completed = subprocess.run(
                 ["bash", "scripts/run-sync-job.sh", "monthly"],

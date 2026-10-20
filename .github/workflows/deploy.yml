@@ -1,63 +1,33 @@
-name: Deploy to GitHub Pages
+name: Validate RDHS pull request
 
 on:
-  push:
+  pull_request:
     branches:
       - main
-      - master
-      - 产研过程治理
-    paths:
-      - 'data/snapshots/**'
-      - 'app/**'
-      - 'lib/**'
-      - 'public/**'
-      - 'scripts/**'
-      - 'package.json'
-      - '.github/workflows/deploy.yml'
-  workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: 'pages'
-  cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
-
+          cache: npm
       - name: Install dependencies
         run: npm ci
-
-      - name: Run unit & render tests
+      - name: Test
         run: npm test
-
-      - name: Build static site for GitHub Pages
+      - name: Typecheck
+        run: npx tsc --noEmit --incremental false
+      - name: Lint
+        run: npm run lint
+      - name: Build Pages artifact
         run: npm run build:pages
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: 'dist/static'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        env:
+          RDHS_BASE_PATH: /meegle-rdhs-report

@@ -31,6 +31,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Validate tests, types and lint
+        run: |
+          npm test
+          npx tsc --noEmit --incremental false
+          npm run lint
+
       - name: Build static site for GitHub Pages
         run: |
           npm run build:pages
