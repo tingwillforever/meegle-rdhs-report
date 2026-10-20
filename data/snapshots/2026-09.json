@@ -3,39 +3,79 @@
   "cadence": "monthly",
   "periodKey": "2026-09",
   "asOf": "2026-09-30",
-  "fetchedAt": "2026-10-08T11:17:00+08:00",
+  "fetchedAt": "2026-09-30T07:42:00+08:00",
   "source": {
     "chartId": "7681204196376314742",
     "chartName": "【上月】产研健康度得分(RDHS) By 产品",
     "sha256": "3c63ebbdaf8e8ffd2f27d85e31364e0cccffea5e96959dd7e2b1689a6be8ae96"
   },
   "audit": {
-    "rawRowCount": 700,
+    "rawRowCount": 680,
     "acceptedRowCount": 68,
-    "zeroScoreRowCount": 629,
+    "zeroScoreRowCount": 612,
     "emptyDimensionRowCount": 3,
-    "researchProductCount": 51,
-    "measuredProductCount": 47,
-    "unmeasuredProductCount": 4,
-    "excludedTestBusinessLineCount": 3,
-    "excludedProductAttributeCount": 19,
+    "researchProductCount": 48,
+    "measuredProductCount": 45,
+    "unmeasuredProductCount": 3,
+    "excludedTestBusinessLineCount": 2,
+    "excludedProductAttributeCount": 23,
     "status": "validated",
     "warning": null
   },
   "overview": {
-    "conclusion": "本期 CBG 共覆盖51个研发中产品，整体仍处于重点治理阶段。",
-    "focus": "34个产品纳入治理：未度量/待关联 4 个，优先补齐产品关联、研发责任角色和过程数据。"
+    "conclusion": "本期 CBG 共覆盖 48 款研发中产品（主数据 48 款，已度量 45 款，未度量 3 款按 0 分计入基数）。整体仍处于重点治理阶段。",
+    "focus": "优先消除 3 款未度量黑户（敞口约 3.6分），修复发版登记断链（87项差额），清退长在途超期卡片提升交付时效。"
   },
   "businessLines": [
     {
       "businessLine": "开放平台业务群",
-      "productTotal": 17,
-      "keyGovernanceCount": 10,
-      "riskImprovementCount": 3,
+      "productTotal": 15,
+      "keyGovernanceCount": 7,
+      "riskImprovementCount": 4,
       "continuousOptimizationCount": 2,
       "regularTrackingCount": 2,
       "mode": "重点治理",
-      "focus": "15个产品纳入治理：未度量/待关联 3 个，优先补齐产品关联、研发责任角色和过程数据。"
+      "focus": "15个产品纳入在管：未度量/待关联 1 个，优先补齐产品关联、研发责任角色和过程数据。"
+    },
+    {
+      "businessLine": "讯飞听见",
+      "productTotal": 9,
+      "keyGovernanceCount": 2,
+      "riskImprovementCount": 0,
+      "continuousOptimizationCount": 3,
+      "regularTrackingCount": 4,
+      "mode": "重点治理",
+      "focus": "9个产品纳入在管：重点治理产品 2 个，优先治理过程能力短板与交付断链。"
+    },
+    {
+      "businessLine": "AI营销业务群",
+      "productTotal": 7,
+      "keyGovernanceCount": 1,
+      "riskImprovementCount": 0,
+      "continuousOptimizationCount": 2,
+      "regularTrackingCount": 4,
+      "mode": "重点治理",
+      "focus": "7个产品纳入在管：未度量/待关联 1 个，优先补齐产品关联、研发责任角色和过程数据。"
+    },
+    {
+      "businessLine": "AI翻译业务群",
+      "productTotal": 5,
+      "keyGovernanceCount": 0,
+      "riskImprovementCount": 1,
+      "continuousOptimizationCount": 3,
+      "regularTrackingCount": 1,
+      "mode": "风险改进",
+      "focus": "5个产品运行基本规范，持续跟踪时效与质量表现。"
+    },
+    {
+      "businessLine": "读写科技",
+      "productTotal": 4,
+      "keyGovernanceCount": 1,
+      "riskImprovementCount": 0,
+      "continuousOptimizationCount": 0,
+      "regularTrackingCount": 3,
+      "mode": "重点治理",
+      "focus": "4个产品纳入在管：重点治理产品 1 个，优先治理过程能力短板与交付断链。"
     },
     {
       "businessLine": "企业数字化业务群",
@@ -45,47 +85,17 @@
       "continuousOptimizationCount": 0,
       "regularTrackingCount": 0,
       "mode": "重点治理",
-      "focus": "3个产品纳入治理：未度量/待关联 1 个，优先补齐产品关联、研发责任角色和过程数据。"
-    },
-    {
-      "businessLine": "讯飞听见",
-      "productTotal": 9,
-      "keyGovernanceCount": 2,
-      "riskImprovementCount": 1,
-      "continuousOptimizationCount": 2,
-      "regularTrackingCount": 4,
-      "mode": "重点治理",
-      "focus": "5个产品纳入治理：优先修复价值链路闭环，过程能力短板同步跟踪。"
+      "focus": "3个产品纳入在管：未度量/待关联 1 个，优先补齐产品关联、研发责任角色和过程数据。"
     },
     {
       "businessLine": "C端硬件创新中心",
-      "productTotal": 3,
-      "keyGovernanceCount": 2,
+      "productTotal": 2,
+      "keyGovernanceCount": 1,
       "riskImprovementCount": 0,
       "continuousOptimizationCount": 0,
       "regularTrackingCount": 1,
       "mode": "重点治理",
-      "focus": "2个产品纳入治理：优先修复价值链路闭环，过程能力短板同步跟踪。"
-    },
-    {
-      "businessLine": "AI翻译业务群",
-      "productTotal": 6,
-      "keyGovernanceCount": 1,
-      "riskImprovementCount": 2,
-      "continuousOptimizationCount": 2,
-      "regularTrackingCount": 1,
-      "mode": "重点治理",
-      "focus": "5个产品纳入治理：优先修复价值链路闭环，过程能力短板同步跟踪。"
-    },
-    {
-      "businessLine": "读写科技",
-      "productTotal": 4,
-      "keyGovernanceCount": 1,
-      "riskImprovementCount": 0,
-      "continuousOptimizationCount": 1,
-      "regularTrackingCount": 2,
-      "mode": "重点治理",
-      "focus": "2个产品纳入治理：优先修复价值链路闭环，过程能力短板同步跟踪。"
+      "focus": "2个产品纳入在管：重点治理产品 1 个，优先治理过程能力短板与交付断链。"
     },
     {
       "businessLine": "AI文娱业务群",
@@ -95,7 +105,7 @@
       "continuousOptimizationCount": 1,
       "regularTrackingCount": 1,
       "mode": "持续优化",
-      "focus": "1个产品纳入治理：优先修复价值链路闭环，过程能力短板同步跟踪。"
+      "focus": "2个产品运行基本规范，持续跟踪时效与质量表现。"
     },
     {
       "businessLine": "消费者公共研发部",
@@ -105,17 +115,7 @@
       "continuousOptimizationCount": 1,
       "regularTrackingCount": 0,
       "mode": "持续优化",
-      "focus": "1个产品纳入治理：优先修复价值链路闭环，过程能力短板同步跟踪。"
-    },
-    {
-      "businessLine": "AI营销业务群",
-      "productTotal": 6,
-      "keyGovernanceCount": 0,
-      "riskImprovementCount": 0,
-      "continuousOptimizationCount": 0,
-      "regularTrackingCount": 6,
-      "mode": "常规跟踪",
-      "focus": "暂无<70产品，保持常规跟踪。"
+      "focus": "1个产品运行基本规范，持续跟踪时效与质量表现。"
     }
   ],
   "products": [
@@ -124,12 +124,12 @@
       "subLine": "数字娱乐",
       "product": "互联网酷音",
       "productStatus": "研发中",
-      "rdhs": 65.0,
+      "rdhs": 68.0,
       "governanceBand": "持续优化",
       "priority": "P2",
       "components": {
         "linkClosure": 23.0,
-        "deliveryClosure": 5.0,
+        "deliveryClosure": 8.0,
         "timeliness": 12.0,
         "granularity": 10.0,
         "quality": 15.0
@@ -137,7 +137,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 34.0,
+          "value": 34,
           "unit": "人",
           "tone": "track"
         },
@@ -167,32 +167,32 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.46153846153846156,
+          "value": 0.5357,
           "unit": "%",
           "tone": "critical"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.1319,
+          "value": 0.15,
           "unit": "%",
           "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.0417,
+          "value": 0.04,
           "unit": "%",
           "tone": "neutral"
         },
         {
           "label": "需求积压占比",
-          "value": 0.213,
+          "value": 0.23,
           "unit": "%",
           "tone": "risk"
         }
       ],
-      "lowestComponent": "交付闭环得分",
-      "problem": "过程能力优化：最低分项为 交付闭环得分。",
-      "action": "围绕交付闭环得分补齐对应过程记录，并在下期快照复核改善情况。"
+      "lowestComponent": "颗粒度对齐度",
+      "problem": "过程能力优化：最低分项为 颗粒度对齐度。",
+      "action": "围绕 颗粒度对齐度 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI文娱业务群",
@@ -212,7 +212,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 75.0,
+          "value": 75,
           "unit": "人",
           "tone": "track"
         },
@@ -220,7 +220,7 @@
           "label": "月人均需求吞吐量",
           "value": 0.37,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
@@ -232,42 +232,42 @@
           "label": "需求开发周期",
           "value": 40.89,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
           "value": 49.13,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求发布闭环率",
-          "value": 1.0,
+          "value": 0.9615,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0254,
+          "value": 0.02,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.0017,
+          "value": 0.0,
           "unit": "%",
           "tone": "neutral"
         },
         {
           "label": "需求积压占比",
-          "value": 0.2475,
+          "value": 0.23,
           "unit": "%",
           "tone": "risk"
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI翻译业务群",
@@ -287,7 +287,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 74.0,
+          "value": 72,
           "unit": "人",
           "tone": "track"
         },
@@ -295,13 +295,13 @@
           "label": "月人均需求吞吐量",
           "value": 0.14,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 4.26,
+          "value": 4.38,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求开发周期",
@@ -317,32 +317,32 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.9,
+          "value": 1.0,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.1129,
+          "value": 0.13,
           "unit": "%",
           "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.0023,
+          "value": 0.0,
           "unit": "%",
           "tone": "neutral"
         },
         {
           "label": "需求积压占比",
-          "value": 0.2787,
+          "value": 0.2,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         }
       ],
       "lowestComponent": "时效节奏合理性",
       "problem": "过程能力优化：最低分项为 时效节奏合理性。",
-      "action": "围绕时效节奏合理性补齐对应过程记录，并在下期快照复核改善情况。"
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI翻译业务群",
@@ -362,19 +362,19 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 10.0,
+          "value": 11,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 0.6,
+          "value": 0.55,
           "unit": "个/人",
           "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 2.29,
+          "value": 2.09,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -398,9 +398,9 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.1666,
+          "value": 0.17,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
@@ -415,29 +415,29 @@
           "tone": "track"
         }
       ],
-      "lowestComponent": "质量敏锐度",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "lowestComponent": "质量表现",
+      "problem": "过程能力优化：最低分项为 质量表现。",
+      "action": "围绕 质量表现 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI翻译业务群",
       "subLine": "同传",
       "product": "讯飞同传",
       "productStatus": "研发中",
-      "rdhs": 68.0,
+      "rdhs": 64.0,
       "governanceBand": "持续优化",
       "priority": "P2",
       "components": {
         "linkClosure": 22.0,
         "deliveryClosure": 0.0,
-        "timeliness": 11.0,
+        "timeliness": 7.0,
         "granularity": 20.0,
         "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 19.0,
+          "value": 19,
           "unit": "人",
           "tone": "track"
         },
@@ -473,7 +473,7 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0394,
+          "value": 0.04,
           "unit": "%",
           "tone": "track"
         },
@@ -485,121 +485,46 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.0,
+          "value": 0.05,
           "unit": "%",
           "tone": "track"
         }
       ],
       "lowestComponent": "交付闭环得分",
       "problem": "过程能力优化：最低分项为 交付闭环得分。",
-      "action": "围绕交付闭环得分补齐对应过程记录，并在下期快照复核改善情况。"
-    },
-    {
-      "businessLine": "AI翻译业务群",
-      "subLine": "同传",
-      "product": "讯飞同传多语种系统",
-      "productStatus": "研发中",
-      "rdhs": 32.0,
-      "governanceBand": "重点治理",
-      "priority": "P0",
-      "components": {
-        "linkClosure": 5.0,
-        "deliveryClosure": 8.0,
-        "timeliness": 4.0,
-        "granularity": 0.0,
-        "quality": 15.0
-      },
-      "dependencyMetrics": [
-        {
-          "label": "有效参与人数",
-          "value": 11.0,
-          "unit": "人",
-          "tone": "track"
-        },
-        {
-          "label": "月人均需求吞吐量",
-          "value": 0.0,
-          "unit": "个/人",
-          "tone": "critical"
-        },
-        {
-          "label": "月人均缺陷关闭量",
-          "value": 3.18,
-          "unit": "个/人",
-          "tone": "risk"
-        },
-        {
-          "label": "需求开发周期",
-          "value": 0.0,
-          "unit": "天",
-          "tone": "track"
-        },
-        {
-          "label": "需求交付周期",
-          "value": 0.0,
-          "unit": "天",
-          "tone": "track"
-        },
-        {
-          "label": "需求发布闭环率",
-          "value": null,
-          "unit": "%",
-          "tone": "critical"
-        },
-        {
-          "label": "严重缺陷占比",
-          "value": 0.0204,
-          "unit": "%",
-          "tone": "track"
-        },
-        {
-          "label": "低级缺陷占比",
-          "value": 0.0,
-          "unit": "%",
-          "tone": "neutral"
-        },
-        {
-          "label": "需求积压占比",
-          "value": 0.0,
-          "unit": "%",
-          "tone": "track"
-        }
-      ],
-      "lowestComponent": "颗粒度对齐度",
-      "problem": "价值链路不完整：人均缺陷关闭 3.2，人均需求吞吐为 0。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态。"
+      "action": "围绕 交付闭环得分 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI翻译业务群",
       "subLine": "翻译软件",
       "product": "讯飞翻译APP",
       "productStatus": "研发中",
-      "rdhs": 50.0,
+      "rdhs": 49.0,
       "governanceBand": "风险改进",
       "priority": "P1",
       "components": {
         "linkClosure": 13.0,
-        "deliveryClosure": 15.0,
-        "timeliness": 7.0,
+        "deliveryClosure": 12.0,
+        "timeliness": 9.0,
         "granularity": 10.0,
         "quality": 5.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 27.0,
+          "value": 28,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 0.3,
+          "value": 0.29,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 0.52,
+          "value": 0.5,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -607,17 +532,17 @@
           "label": "需求开发周期",
           "value": 82.02,
           "unit": "天",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
           "value": 84.95,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求发布闭环率",
-          "value": 1.0,
+          "value": 0.8571,
           "unit": "%",
           "tone": "track"
         },
@@ -635,46 +560,46 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.0909,
+          "value": 0.05,
           "unit": "%",
           "tone": "track"
         }
       ],
-      "lowestComponent": "质量敏锐度",
-      "problem": "过程能力优化：最低分项为 质量敏锐度。",
-      "action": "围绕质量敏锐度补齐对应过程记录，并在下期快照复核改善情况。"
+      "lowestComponent": "质量表现",
+      "problem": "过程能力优化：最低分项为 质量表现。",
+      "action": "围绕 质量表现 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI翻译业务群",
       "subLine": "翻译软件",
       "product": "讯飞翻译SaaS平台",
       "productStatus": "研发中",
-      "rdhs": 51.0,
-      "governanceBand": "风险改进",
-      "priority": "P1",
+      "rdhs": 61.0,
+      "governanceBand": "持续优化",
+      "priority": "P2",
       "components": {
         "linkClosure": 10.0,
         "deliveryClosure": 15.0,
         "timeliness": 11.0,
         "granularity": 10.0,
-        "quality": 5.0
+        "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 7.0,
+          "value": 11,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 0.43,
+          "value": 0.27,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 0.29,
+          "value": 0.18,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -698,7 +623,7 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0,
+          "value": 0.09,
           "unit": "%",
           "tone": "track"
         },
@@ -715,41 +640,41 @@
           "tone": "track"
         }
       ],
-      "lowestComponent": "质量敏锐度",
-      "problem": "过程能力优化：最低分项为 质量敏锐度。",
-      "action": "围绕质量敏锐度补齐对应过程记录，并在下期快照复核改善情况。"
+      "lowestComponent": "链路闭环得分",
+      "problem": "过程能力优化：最低分项为 链路闭环得分。",
+      "action": "围绕 链路闭环得分 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI营销业务群",
       "subLine": "移动广告",
       "product": "AI营销广告业务解决方案",
       "productStatus": "研发中",
-      "rdhs": 74.0,
-      "governanceBand": "常规跟踪",
-      "priority": null,
+      "rdhs": 68.0,
+      "governanceBand": "持续优化",
+      "priority": "P2",
       "components": {
         "linkClosure": 23.0,
         "deliveryClosure": 15.0,
-        "timeliness": 11.0,
+        "timeliness": 5.0,
         "granularity": 10.0,
         "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 18.0,
+          "value": 19,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 1.11,
+          "value": 1.05,
           "unit": "个/人",
           "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 1.94,
+          "value": 1.84,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -773,7 +698,7 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0441,
+          "value": 0.04,
           "unit": "%",
           "tone": "track"
         },
@@ -785,14 +710,14 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.0,
+          "value": 0.11,
           "unit": "%",
           "tone": "track"
         }
       ],
-      "lowestComponent": "颗粒度对齐度",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "lowestComponent": "时效节奏合理性",
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI营销业务群",
@@ -812,13 +737,13 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 18.0,
+          "value": 18,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 1.78,
+          "value": 1.72,
           "unit": "个/人",
           "tone": "track"
         },
@@ -830,25 +755,25 @@
         },
         {
           "label": "需求开发周期",
-          "value": 8.67,
+          "value": 8.36,
           "unit": "天",
           "tone": "track"
         },
         {
           "label": "需求交付周期",
-          "value": 11.9,
+          "value": 11.51,
           "unit": "天",
           "tone": "track"
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.9375,
+          "value": 0.9677,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0106,
+          "value": 0.01,
           "unit": "%",
           "tone": "track"
         },
@@ -860,64 +785,139 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.0168,
+          "value": 0.02,
           "unit": "%",
           "tone": "track"
         }
       ],
       "lowestComponent": "颗粒度对齐度",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 颗粒度对齐度。",
+      "action": "围绕 颗粒度对齐度 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
+    },
+    {
+      "businessLine": "AI营销业务群",
+      "subLine": "数据增值",
+      "product": "aiBoost存量营销平台",
+      "productStatus": "研发中",
+      "rdhs": null,
+      "governanceBand": "重点治理",
+      "priority": "P0",
+      "components": {
+        "linkClosure": null,
+        "deliveryClosure": null,
+        "timeliness": null,
+        "granularity": null,
+        "quality": null
+      },
+      "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": null,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
+          "label": "月人均需求吞吐量",
+          "value": null,
+          "unit": "个/人",
+          "tone": "track"
+        },
+        {
+          "label": "月人均缺陷关闭量",
+          "value": null,
+          "unit": "个/人",
+          "tone": "neutral"
+        },
+        {
+          "label": "需求开发周期",
+          "value": null,
+          "unit": "天",
+          "tone": "track"
+        },
+        {
+          "label": "需求交付周期",
+          "value": null,
+          "unit": "天",
+          "tone": "track"
+        },
+        {
+          "label": "需求发布闭环率",
+          "value": 1.0,
+          "unit": "%",
+          "tone": "track"
+        },
+        {
+          "label": "严重缺陷占比",
+          "value": null,
+          "unit": "%",
+          "tone": "track"
+        },
+        {
+          "label": "低级缺陷占比",
+          "value": null,
+          "unit": "%",
+          "tone": "neutral"
+        },
+        {
+          "label": "需求积压占比",
+          "value": null,
+          "unit": "%",
+          "tone": "track"
+        }
+      ],
+      "lowestComponent": "过程数据缺失",
+      "problem": "产品主数据为研发中，但未关联到有效 RDHS 图表度量（黑户计 0 分）。",
+      "action": "确认产品主数据与度量源关联，补齐研发责任角色与工作流，消除 0 分敞口。"
     },
     {
       "businessLine": "AI营销业务群",
       "subLine": "移动广告",
       "product": "海外媒体代理解决方案",
       "productStatus": "研发中",
-      "rdhs": 73.0,
+      "rdhs": 71.0,
       "governanceBand": "常规跟踪",
       "priority": null,
       "components": {
         "linkClosure": 23.0,
         "deliveryClosure": 15.0,
-        "timeliness": 20.0,
+        "timeliness": 18.0,
         "granularity": 10.0,
         "quality": 5.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 21.0,
+          "value": 19,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 2.76,
+          "value": 3.11,
           "unit": "个/人",
           "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 2.09,
+          "value": 2.31,
           "unit": "个/人",
           "tone": "neutral"
         },
         {
           "label": "需求开发周期",
-          "value": 6.22,
+          "value": 6.14,
           "unit": "天",
           "tone": "track"
         },
         {
           "label": "需求交付周期",
-          "value": 12.19,
+          "value": 12.63,
           "unit": "天",
           "tone": "track"
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.9777777777777777,
+          "value": 1.0,
           "unit": "%",
           "tone": "track"
         },
@@ -935,46 +935,46 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.0068,
+          "value": 0.01,
           "unit": "%",
           "tone": "track"
         }
       ],
-      "lowestComponent": "质量敏锐度",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "lowestComponent": "质量表现",
+      "problem": "过程能力优化：最低分项为 质量表现。",
+      "action": "围绕 质量表现 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI营销业务群",
       "subLine": "移动广告",
       "product": "海外红人智能营销平台",
       "productStatus": "研发中",
-      "rdhs": 74.0,
-      "governanceBand": "常规跟踪",
-      "priority": null,
+      "rdhs": 67.0,
+      "governanceBand": "持续优化",
+      "priority": "P2",
       "components": {
-        "linkClosure": 23.0,
+        "linkClosure": 20.0,
         "deliveryClosure": 15.0,
-        "timeliness": 11.0,
+        "timeliness": 7.0,
         "granularity": 10.0,
         "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 10.0,
+          "value": 11,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 1.0,
+          "value": 0.91,
           "unit": "个/人",
           "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 1.6,
+          "value": 1.45,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -1010,26 +1010,26 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.0,
+          "value": 0.05,
           "unit": "%",
           "tone": "track"
         }
       ],
-      "lowestComponent": "颗粒度对齐度",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "lowestComponent": "时效节奏合理性",
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI营销业务群",
       "subLine": "移动广告",
       "product": "营销SaaS平台",
       "productStatus": "研发中",
-      "rdhs": 88.0,
+      "rdhs": 91.0,
       "governanceBand": "常规跟踪",
       "priority": null,
       "components": {
         "linkClosure": 25.0,
-        "deliveryClosure": 12.0,
+        "deliveryClosure": 15.0,
         "timeliness": 11.0,
         "granularity": 20.0,
         "quality": 20.0
@@ -1037,7 +1037,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 15.0,
+          "value": 15,
           "unit": "人",
           "tone": "track"
         },
@@ -1067,19 +1067,19 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.8888888888888888,
+          "value": 0.9444,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0263,
+          "value": 0.03,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.0087,
+          "value": 0.01,
           "unit": "%",
           "tone": "neutral"
         },
@@ -1091,40 +1091,40 @@
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "AI营销业务群",
       "subLine": "移动广告",
       "product": "超级制图 APP",
       "productStatus": "研发中",
-      "rdhs": 85.0,
+      "rdhs": 83.0,
       "governanceBand": "常规跟踪",
       "priority": null,
       "components": {
         "linkClosure": 22.0,
-        "deliveryClosure": 12.0,
+        "deliveryClosure": 15.0,
         "timeliness": 11.0,
         "granularity": 20.0,
-        "quality": 20.0
+        "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 17.0,
+          "value": 16,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 0.53,
+          "value": 0.56,
           "unit": "个/人",
           "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 4.0,
+          "value": 4.25,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -1142,19 +1142,19 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.7777777777777778,
+          "value": 1.0,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0055,
+          "value": 0.0,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.0275,
+          "value": 0.01,
           "unit": "%",
           "tone": "neutral"
         },
@@ -1166,28 +1166,28 @@
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "C端硬件创新中心",
       "subLine": "录音笔",
-      "product": "讯飞录音环录",
+      "product": "讯飞录音环",
       "productStatus": "研发中",
-      "rdhs": 23.0,
+      "rdhs": 27.0,
       "governanceBand": "重点治理",
       "priority": "P0",
       "components": {
         "linkClosure": 5.0,
         "deliveryClosure": 8.0,
-        "timeliness": 0.0,
+        "timeliness": 4.0,
         "granularity": 0.0,
         "quality": 10.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 12.0,
+          "value": 14,
           "unit": "人",
           "tone": "track"
         },
@@ -1195,13 +1195,13 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 7.5,
+          "value": 6.43,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求开发周期",
@@ -1217,15 +1217,15 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.4505,
+          "value": 0.45,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
@@ -1240,14 +1240,14 @@
           "tone": "track"
         }
       ],
-      "lowestComponent": "时效节奏合理性 / 颗粒度对齐度",
-      "problem": "价值链路不完整：人均缺陷关闭 7.5，人均需求吞吐为 0。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态。"
+      "lowestComponent": "颗粒度对齐度",
+      "problem": "过程能力优化：最低分项为 颗粒度对齐度。",
+      "action": "围绕 颗粒度对齐度 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "C端硬件创新中心",
       "subLine": "录音笔",
-      "product": "讯飞录音笔App",
+      "product": "讯飞录音笔软件平台",
       "productStatus": "研发中",
       "rdhs": 71.0,
       "governanceBand": "常规跟踪",
@@ -1262,19 +1262,19 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 40.0,
+          "value": 39,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 0.35,
+          "value": 0.36,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 6.3,
+          "value": 6.46,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -1282,13 +1282,13 @@
           "label": "需求开发周期",
           "value": 47.32,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
           "value": 47.32,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求发布闭环率",
@@ -1298,101 +1298,26 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.174,
-          "unit": "%",
-          "tone": "critical"
-        },
-        {
-          "label": "低级缺陷占比",
-          "value": 0.0148,
-          "unit": "%",
-          "tone": "neutral"
-        },
-        {
-          "label": "需求积压占比",
-          "value": 0.1923,
-          "unit": "%",
-          "tone": "risk"
-        }
-      ],
-      "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
-    },
-    {
-      "businessLine": "C端硬件创新中心",
-      "subLine": "录音笔",
-      "product": "讯飞录音笔Web端",
-      "productStatus": "研发中",
-      "rdhs": 44.0,
-      "governanceBand": "重点治理",
-      "priority": "P0",
-      "components": {
-        "linkClosure": 6.0,
-        "deliveryClosure": 15.0,
-        "timeliness": 3.0,
-        "granularity": 15.0,
-        "quality": 5.0
-      },
-      "dependencyMetrics": [
-        {
-          "label": "有效参与人数",
-          "value": 12.0,
-          "unit": "人",
-          "tone": "track"
-        },
-        {
-          "label": "月人均需求吞吐量",
-          "value": 0.08,
-          "unit": "个/人",
-          "tone": "critical"
-        },
-        {
-          "label": "月人均缺陷关闭量",
           "value": 0.17,
-          "unit": "个/人",
-          "tone": "risk"
-        },
-        {
-          "label": "需求开发周期",
-          "value": 51.91,
-          "unit": "天",
-          "tone": "risk"
-        },
-        {
-          "label": "需求交付周期",
-          "value": 51.91,
-          "unit": "天",
-          "tone": "risk"
-        },
-        {
-          "label": "需求发布闭环率",
-          "value": 1.0,
           "unit": "%",
-          "tone": "track"
-        },
-        {
-          "label": "严重缺陷占比",
-          "value": 0.0,
-          "unit": "%",
-          "tone": "track"
+          "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.0,
+          "value": 0.01,
           "unit": "%",
           "tone": "neutral"
         },
         {
           "label": "需求积压占比",
-          "value": 0.3333,
+          "value": 0.18,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "过程能力优化：最低分项为 时效节奏合理性；叠加积压风险（需求总量 9，积压占比 33.3%）。",
-      "action": "围绕时效节奏合理性补齐对应过程记录，并在下期快照复核改善情况；逐条确认积压需求的处理结论、负责人和预计完成时间。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "企业数字化业务群",
@@ -1412,7 +1337,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 11.0,
+          "value": 11,
           "unit": "人",
           "tone": "track"
         },
@@ -1420,7 +1345,7 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
@@ -1442,15 +1367,15 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.1714,
+          "value": 0.17,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
@@ -1460,14 +1385,14 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.6667,
+          "value": 0.14,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         }
       ],
-      "lowestComponent": "链路闭环得分 / 时效节奏合理性 / 颗粒度对齐度",
-      "problem": "价值链路不完整：人均需求吞吐和人均缺陷关闭均为 0；叠加积压风险（需求总量 3，积压占比 66.7%）。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态；逐条确认积压需求的处理结论、负责人和预计完成时间。"
+      "lowestComponent": "链路闭环得分",
+      "problem": "过程能力优化：最低分项为 链路闭环得分。",
+      "action": "围绕 链路闭环得分 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "企业数字化业务群",
@@ -1484,10 +1409,65 @@
         "granularity": null,
         "quality": null
       },
-      "dependencyMetrics": [],
-      "lowestComponent": "未形成有效 RDHS 度量",
-      "problem": "产品主数据为研发中，但未关联到本期有效 RDHS 度量。",
-      "action": "确认产品主数据与度量源关联，补齐研发责任角色、需求、缺陷和验收记录；下期复核 RDHS。"
+      "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": null,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
+          "label": "月人均需求吞吐量",
+          "value": null,
+          "unit": "个/人",
+          "tone": "track"
+        },
+        {
+          "label": "月人均缺陷关闭量",
+          "value": null,
+          "unit": "个/人",
+          "tone": "neutral"
+        },
+        {
+          "label": "需求开发周期",
+          "value": null,
+          "unit": "天",
+          "tone": "track"
+        },
+        {
+          "label": "需求交付周期",
+          "value": null,
+          "unit": "天",
+          "tone": "track"
+        },
+        {
+          "label": "需求发布闭环率",
+          "value": 1.0,
+          "unit": "%",
+          "tone": "track"
+        },
+        {
+          "label": "严重缺陷占比",
+          "value": null,
+          "unit": "%",
+          "tone": "track"
+        },
+        {
+          "label": "低级缺陷占比",
+          "value": null,
+          "unit": "%",
+          "tone": "neutral"
+        },
+        {
+          "label": "需求积压占比",
+          "value": null,
+          "unit": "%",
+          "tone": "track"
+        }
+      ],
+      "lowestComponent": "过程数据缺失",
+      "problem": "产品主数据为研发中，但未关联到有效 RDHS 图表度量（黑户计 0 分）。",
+      "action": "确认产品主数据与度量源关联，补齐研发责任角色与工作流，消除 0 分敞口。"
     },
     {
       "businessLine": "企业数字化业务群",
@@ -1507,7 +1487,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 33.0,
+          "value": 34,
           "unit": "人",
           "tone": "track"
         },
@@ -1515,13 +1495,13 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 0.88,
+          "value": 0.85,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求开发周期",
@@ -1537,15 +1517,15 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.6695,
+          "value": 0.69,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
@@ -1555,14 +1535,14 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.6124,
+          "value": 0.58,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         }
       ],
-      "lowestComponent": "时效节奏合理性 / 颗粒度对齐度",
-      "problem": "价值链路不完整：人均缺陷关闭 0.9，人均需求吞吐为 0；叠加积压风险（需求总量 129，积压占比 61.2%）。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态；逐条确认积压需求的处理结论、负责人和预计完成时间。"
+      "lowestComponent": "时效节奏合理性",
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -1582,7 +1562,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 5.0,
+          "value": 5,
           "unit": "人",
           "tone": "track"
         },
@@ -1590,7 +1570,7 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
@@ -1612,9 +1592,9 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
@@ -1632,12 +1612,12 @@
           "label": "需求积压占比",
           "value": 0.5,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         }
       ],
-      "lowestComponent": "链路闭环得分 / 时效节奏合理性 / 颗粒度对齐度",
-      "problem": "价值链路不完整：人均需求吞吐和人均缺陷关闭均为 0；叠加积压风险（需求总量 2，积压占比 50.0%）。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态；逐条确认积压需求的处理结论、负责人和预计完成时间。"
+      "lowestComponent": "链路闭环得分",
+      "problem": "过程能力优化：最低分项为 链路闭环得分。",
+      "action": "围绕 链路闭环得分 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -1654,30 +1634,85 @@
         "granularity": null,
         "quality": null
       },
-      "dependencyMetrics": [],
-      "lowestComponent": "未形成有效 RDHS 度量",
-      "problem": "产品主数据为研发中，但未关联到本期有效 RDHS 度量。",
-      "action": "确认产品主数据与度量源关联，补齐研发责任角色、需求、缺陷和验收记录；下期复核 RDHS。"
+      "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": null,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
+          "label": "月人均需求吞吐量",
+          "value": null,
+          "unit": "个/人",
+          "tone": "track"
+        },
+        {
+          "label": "月人均缺陷关闭量",
+          "value": null,
+          "unit": "个/人",
+          "tone": "neutral"
+        },
+        {
+          "label": "需求开发周期",
+          "value": null,
+          "unit": "天",
+          "tone": "track"
+        },
+        {
+          "label": "需求交付周期",
+          "value": null,
+          "unit": "天",
+          "tone": "track"
+        },
+        {
+          "label": "需求发布闭环率",
+          "value": 1.0,
+          "unit": "%",
+          "tone": "track"
+        },
+        {
+          "label": "严重缺陷占比",
+          "value": null,
+          "unit": "%",
+          "tone": "track"
+        },
+        {
+          "label": "低级缺陷占比",
+          "value": null,
+          "unit": "%",
+          "tone": "neutral"
+        },
+        {
+          "label": "需求积压占比",
+          "value": null,
+          "unit": "%",
+          "tone": "track"
+        }
+      ],
+      "lowestComponent": "过程数据缺失",
+      "problem": "产品主数据为研发中，但未关联到有效 RDHS 图表度量（黑户计 0 分）。",
+      "action": "确认产品主数据与度量源关联，补齐研发责任角色与工作流，消除 0 分敞口。"
     },
     {
       "businessLine": "开放平台业务群",
       "subLine": "虚拟人平台",
       "product": "交互SaaS平台",
       "productStatus": "研发中",
-      "rdhs": 35.0,
+      "rdhs": 33.0,
       "governanceBand": "重点治理",
       "priority": "P0",
       "components": {
         "linkClosure": 4.0,
         "deliveryClosure": 15.0,
-        "timeliness": 11.0,
+        "timeliness": 9.0,
         "granularity": 0.0,
         "quality": 5.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 7.0,
+          "value": 7,
           "unit": "人",
           "tone": "track"
         },
@@ -1685,7 +1720,7 @@
           "label": "月人均需求吞吐量",
           "value": 0.14,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
@@ -1725,14 +1760,14 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.0,
+          "value": 0.04,
           "unit": "%",
           "tone": "track"
         }
       ],
       "lowestComponent": "颗粒度对齐度",
       "problem": "过程能力优化：最低分项为 颗粒度对齐度。",
-      "action": "围绕颗粒度对齐度补齐对应过程记录，并在下期快照复核改善情况。"
+      "action": "围绕 颗粒度对齐度 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -1752,19 +1787,19 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 49.0,
+          "value": 50,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 1.69,
+          "value": 1.66,
           "unit": "个/人",
           "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 1.29,
+          "value": 1.26,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -1782,15 +1817,15 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.8481012658227848,
+          "value": 0.8734,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0822,
+          "value": 0.08,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "低级缺陷占比",
@@ -1806,8 +1841,8 @@
         }
       ],
       "lowestComponent": "颗粒度对齐度",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 颗粒度对齐度。",
+      "action": "围绕 颗粒度对齐度 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -1827,7 +1862,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 45.0,
+          "value": 45,
           "unit": "人",
           "tone": "track"
         },
@@ -1847,23 +1882,23 @@
           "label": "需求开发周期",
           "value": 58.91,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
           "value": 64.11,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.9743589743589743,
+          "value": 0.9744,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0383,
+          "value": 0.03,
           "unit": "%",
           "tone": "track"
         },
@@ -1875,14 +1910,14 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.4912,
+          "value": 0.49,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -1902,7 +1937,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 7.0,
+          "value": 7,
           "unit": "人",
           "tone": "track"
         },
@@ -1910,7 +1945,7 @@
           "label": "月人均需求吞吐量",
           "value": 0.43,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
@@ -1922,7 +1957,7 @@
           "label": "需求开发周期",
           "value": 36.37,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
@@ -1957,7 +1992,7 @@
       ],
       "lowestComponent": "时效节奏合理性",
       "problem": "过程能力优化：最低分项为 时效节奏合理性。",
-      "action": "围绕时效节奏合理性补齐对应过程记录，并在下期快照复核改善情况。"
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -1977,7 +2012,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 25.0,
+          "value": 26,
           "unit": "人",
           "tone": "track"
         },
@@ -1985,13 +2020,13 @@
           "label": "月人均需求吞吐量",
           "value": 0.12,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 7.44,
+          "value": 7.15,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求开发周期",
@@ -2007,13 +2042,13 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.6666666666666666,
+          "value": 0.6667,
           "unit": "%",
-          "tone": "risk"
+          "tone": "critical"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0288,
+          "value": 0.03,
           "unit": "%",
           "tone": "track"
         },
@@ -2025,26 +2060,26 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.1429,
+          "value": 0.12,
           "unit": "%",
           "tone": "track"
         }
       ],
-      "lowestComponent": "交付闭环得分",
-      "problem": "过程能力优化：最低分项为 交付闭环得分。",
-      "action": "围绕交付闭环得分补齐对应过程记录，并在下期快照复核改善情况。"
+      "lowestComponent": "颗粒度对齐度",
+      "problem": "过程能力优化：最低分项为 颗粒度对齐度。",
+      "action": "围绕 颗粒度对齐度 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
       "subLine": "商业共享",
       "product": "星火纪要",
       "productStatus": "研发中",
-      "rdhs": 43.0,
-      "governanceBand": "重点治理",
-      "priority": "P0",
+      "rdhs": 50.0,
+      "governanceBand": "风险改进",
+      "priority": "P1",
       "components": {
         "linkClosure": 10.0,
-        "deliveryClosure": 8.0,
+        "deliveryClosure": 15.0,
         "timeliness": 5.0,
         "granularity": 10.0,
         "quality": 10.0
@@ -2052,7 +2087,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 13.0,
+          "value": 13,
           "unit": "人",
           "tone": "track"
         },
@@ -2060,7 +2095,7 @@
           "label": "月人均需求吞吐量",
           "value": 0.23,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
@@ -2072,25 +2107,25 @@
           "label": "需求开发周期",
           "value": 59.32,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
           "value": 59.32,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.6666666666666666,
+          "value": 1.0,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.1538,
+          "value": 0.13,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
@@ -2100,34 +2135,14 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.2381,
+          "value": 0.19,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         }
       ],
       "lowestComponent": "时效节奏合理性",
       "problem": "过程能力优化：最低分项为 时效节奏合理性。",
-      "action": "围绕时效节奏合理性补齐对应过程记录，并在下期快照复核改善情况。"
-    },
-    {
-      "businessLine": "开放平台业务群",
-      "subLine": "商业共享",
-      "product": "星火陪练",
-      "productStatus": "研发中",
-      "rdhs": null,
-      "governanceBand": "重点治理",
-      "priority": "P0",
-      "components": {
-        "linkClosure": null,
-        "deliveryClosure": null,
-        "timeliness": null,
-        "granularity": null,
-        "quality": null
-      },
-      "dependencyMetrics": [],
-      "lowestComponent": "未形成有效 RDHS 度量",
-      "problem": "产品主数据为研发中，但未关联到本期有效 RDHS 度量。",
-      "action": "确认产品主数据与度量源关联，补齐研发责任角色、需求、缺陷和验收记录；下期复核 RDHS。"
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -2147,7 +2162,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 4.0,
+          "value": 4,
           "unit": "人",
           "tone": "track"
         },
@@ -2155,13 +2170,13 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
           "value": 0.25,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求开发周期",
@@ -2177,15 +2192,15 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
           "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
@@ -2197,12 +2212,12 @@
           "label": "需求积压占比",
           "value": 0.5,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         }
       ],
-      "lowestComponent": "时效节奏合理性 / 颗粒度对齐度",
-      "problem": "价值链路不完整：人均缺陷关闭 0.2，人均需求吞吐为 0；叠加积压风险（需求总量 2，积压占比 50.0%）。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态；逐条确认积压需求的处理结论、负责人和预计完成时间。"
+      "lowestComponent": "时效节奏合理性",
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -2222,7 +2237,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 2.0,
+          "value": 2,
           "unit": "人",
           "tone": "track"
         },
@@ -2230,7 +2245,7 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
@@ -2252,9 +2267,9 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
@@ -2275,9 +2290,9 @@
           "tone": "track"
         }
       ],
-      "lowestComponent": "链路闭环得分 / 时效节奏合理性 / 颗粒度对齐度",
-      "problem": "价值链路不完整：人均需求吞吐和人均缺陷关闭均为 0。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态。"
+      "lowestComponent": "链路闭环得分",
+      "problem": "过程能力优化：最低分项为 链路闭环得分。",
+      "action": "围绕 链路闭环得分 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -2297,7 +2312,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 3.0,
+          "value": 3,
           "unit": "人",
           "tone": "track"
         },
@@ -2305,7 +2320,7 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
@@ -2327,9 +2342,9 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
@@ -2350,35 +2365,35 @@
           "tone": "track"
         }
       ],
-      "lowestComponent": "链路闭环得分 / 颗粒度对齐度",
-      "problem": "价值链路不完整：人均需求吞吐和人均缺陷关闭均为 0。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态。"
+      "lowestComponent": "链路闭环得分",
+      "problem": "过程能力优化：最低分项为 链路闭环得分。",
+      "action": "围绕 链路闭环得分 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
       "subLine": "虚拟人平台",
       "product": "虚拟人资产&能力平台",
       "productStatus": "研发中",
-      "rdhs": 48.0,
+      "rdhs": 50.0,
       "governanceBand": "风险改进",
       "priority": "P1",
       "components": {
-        "linkClosure": 15.0,
+        "linkClosure": 12.0,
         "deliveryClosure": 12.0,
         "timeliness": 11.0,
         "granularity": 0.0,
-        "quality": 10.0
+        "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 10.0,
+          "value": 15,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 0.9,
+          "value": 0.6,
           "unit": "个/人",
           "tone": "track"
         },
@@ -2392,25 +2407,25 @@
           "label": "需求开发周期",
           "value": 50.28,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
           "value": 50.28,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.7777777777777778,
+          "value": 0.8889,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.2,
+          "value": 0.06,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "低级缺陷占比",
@@ -2427,47 +2442,27 @@
       ],
       "lowestComponent": "颗粒度对齐度",
       "problem": "过程能力优化：最低分项为 颗粒度对齐度。",
-      "action": "围绕颗粒度对齐度补齐对应过程记录，并在下期快照复核改善情况。"
-    },
-    {
-      "businessLine": "开放平台业务群",
-      "subLine": "虚拟人平台",
-      "product": "虚拟数字人硬件产品",
-      "productStatus": "研发中",
-      "rdhs": null,
-      "governanceBand": "重点治理",
-      "priority": "P0",
-      "components": {
-        "linkClosure": null,
-        "deliveryClosure": null,
-        "timeliness": null,
-        "granularity": null,
-        "quality": null
-      },
-      "dependencyMetrics": [],
-      "lowestComponent": "未形成有效 RDHS 度量",
-      "problem": "产品主数据为研发中，但未关联到本期有效 RDHS 度量。",
-      "action": "确认产品主数据与度量源关联，补齐研发责任角色、需求、缺陷和验收记录；下期复核 RDHS。"
+      "action": "围绕 颗粒度对齐度 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
       "subLine": "AI交互",
       "product": "行业交互平台",
       "productStatus": "研发中",
-      "rdhs": 33.0,
+      "rdhs": 35.0,
       "governanceBand": "重点治理",
       "priority": "P0",
       "components": {
         "linkClosure": 5.0,
         "deliveryClosure": 8.0,
-        "timeliness": 0.0,
+        "timeliness": 2.0,
         "granularity": 0.0,
         "quality": 20.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 14.0,
+          "value": 15,
           "unit": "人",
           "tone": "track"
         },
@@ -2475,13 +2470,13 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 2.06,
+          "value": 1.93,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求开发周期",
@@ -2497,32 +2492,32 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.025,
+          "value": 0.02,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.05,
+          "value": 0.04,
           "unit": "%",
           "tone": "neutral"
         },
         {
           "label": "需求积压占比",
-          "value": 0.1538,
+          "value": 0.15,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         }
       ],
-      "lowestComponent": "时效节奏合理性 / 颗粒度对齐度",
-      "problem": "价值链路不完整：人均缺陷关闭 2.1，人均需求吞吐为 0。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态。"
+      "lowestComponent": "颗粒度对齐度",
+      "problem": "过程能力优化：最低分项为 颗粒度对齐度。",
+      "action": "围绕 颗粒度对齐度 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -2542,7 +2537,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 9.0,
+          "value": 9,
           "unit": "人",
           "tone": "track"
         },
@@ -2572,7 +2567,7 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.9230769230769231,
+          "value": 1.0,
           "unit": "%",
           "tone": "track"
         },
@@ -2580,7 +2575,7 @@
           "label": "严重缺陷占比",
           "value": 0.25,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
@@ -2595,9 +2590,9 @@
           "tone": "track"
         }
       ],
-      "lowestComponent": "颗粒度对齐度 / 质量敏锐度",
-      "problem": "过程能力优化：最低分项为 颗粒度对齐度 / 质量敏锐度。",
-      "action": "围绕颗粒度对齐度 / 质量敏锐度补齐对应过程记录，并在下期快照复核改善情况。"
+      "lowestComponent": "颗粒度对齐度",
+      "problem": "过程能力优化：最低分项为 颗粒度对齐度。",
+      "action": "围绕 颗粒度对齐度 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "开放平台业务群",
@@ -2617,19 +2612,19 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 20.0,
+          "value": 21,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 0.25,
+          "value": 0.24,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 1.1,
+          "value": 1.05,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -2649,11 +2644,11 @@
           "label": "需求发布闭环率",
           "value": 0.8,
           "unit": "%",
-          "tone": "track"
+          "tone": "critical"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.1356,
+          "value": 0.12,
           "unit": "%",
           "tone": "risk"
         },
@@ -2665,26 +2660,26 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.4783,
+          "value": 0.52,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "过程能力优化：最低分项为 时效节奏合理性；叠加积压风险（需求总量 23，积压占比 47.8%）。",
-      "action": "围绕时效节奏合理性补齐对应过程记录，并在下期快照复核改善情况；逐条确认积压需求的处理结论、负责人和预计完成时间。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "消费者公共研发部",
-      "subLine": null,
+      "subLine": "消费者公共研发部",
       "product": "iFlyBase基础能力平台",
       "productStatus": "研发中",
-      "rdhs": 63.0,
+      "rdhs": 66.0,
       "governanceBand": "持续优化",
       "priority": "P2",
       "components": {
         "linkClosure": 23.0,
-        "deliveryClosure": 12.0,
+        "deliveryClosure": 15.0,
         "timeliness": 3.0,
         "granularity": 15.0,
         "quality": 10.0
@@ -2692,7 +2687,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 11.0,
+          "value": 11,
           "unit": "人",
           "tone": "track"
         },
@@ -2722,15 +2717,15 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.75,
+          "value": 0.9167,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.2168,
+          "value": 0.22,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
@@ -2740,14 +2735,14 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.1666,
+          "value": 0.15,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         }
       ],
       "lowestComponent": "时效节奏合理性",
       "problem": "过程能力优化：最低分项为 时效节奏合理性。",
-      "action": "围绕时效节奏合理性补齐对应过程记录，并在下期快照复核改善情况。"
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "讯飞听见",
@@ -2767,19 +2762,19 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 12.0,
+          "value": 19,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 0.33,
+          "value": 0.21,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 2.67,
+          "value": 1.68,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -2787,7 +2782,7 @@
           "label": "需求开发周期",
           "value": 42.56,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
@@ -2803,26 +2798,26 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.025,
+          "value": 0.11,
           "unit": "%",
-          "tone": "track"
+          "tone": "risk"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.0,
+          "value": 0.07,
           "unit": "%",
           "tone": "neutral"
         },
         {
           "label": "需求积压占比",
-          "value": 0.0385,
+          "value": 0.03,
           "unit": "%",
           "tone": "track"
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "讯飞听见",
@@ -2842,7 +2837,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 20.0,
+          "value": 20,
           "unit": "人",
           "tone": "track"
         },
@@ -2850,13 +2845,13 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
           "value": 0.25,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求开发周期",
@@ -2872,13 +2867,13 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0508,
+          "value": 0.05,
           "unit": "%",
           "tone": "track"
         },
@@ -2896,15 +2891,15 @@
         }
       ],
       "lowestComponent": "颗粒度对齐度",
-      "problem": "价值链路不完整：人均缺陷关闭 0.2，人均需求吞吐为 0。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态。"
+      "problem": "过程能力优化：最低分项为 颗粒度对齐度。",
+      "action": "围绕 颗粒度对齐度 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "讯飞听见",
       "subLine": "会议办公",
       "product": "同传麦克风S30",
       "productStatus": "研发中",
-      "rdhs": 28.0,
+      "rdhs": 33.0,
       "governanceBand": "重点治理",
       "priority": "P0",
       "components": {
@@ -2912,12 +2907,12 @@
         "deliveryClosure": 8.0,
         "timeliness": 0.0,
         "granularity": 0.0,
-        "quality": 15.0
+        "quality": 20.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 14.0,
+          "value": 17,
           "unit": "人",
           "tone": "track"
         },
@@ -2925,13 +2920,13 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 2.71,
+          "value": 2.23,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求开发周期",
@@ -2947,37 +2942,37 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0248,
+          "value": 0.05,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.1404,
+          "value": 0.09,
           "unit": "%",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求积压占比",
-          "value": 0.5,
+          "value": 0.65,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         }
       ],
-      "lowestComponent": "时效节奏合理性 / 颗粒度对齐度",
-      "problem": "价值链路不完整：人均缺陷关闭 2.7，人均需求吞吐为 0；叠加积压风险（需求总量 20，积压占比 50.0%）。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态；逐条确认积压需求的处理结论、负责人和预计完成时间。"
+      "lowestComponent": "时效节奏合理性",
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "讯飞听见",
       "subLine": "会议办公",
-      "product": "科大讯飞智慧办公解决方案",
+      "product": "科大讯飞智慧办公解决方案 ",
       "productStatus": "研发中",
       "rdhs": 91.0,
       "governanceBand": "常规跟踪",
@@ -2992,7 +2987,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 18.0,
+          "value": 18,
           "unit": "人",
           "tone": "track"
         },
@@ -3012,13 +3007,13 @@
           "label": "需求开发周期",
           "value": 57.3,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
           "value": 57.3,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求发布闭环率",
@@ -3028,13 +3023,13 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0096,
+          "value": 0.01,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.0145,
+          "value": 0.01,
           "unit": "%",
           "tone": "neutral"
         },
@@ -3046,28 +3041,28 @@
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "讯飞听见",
       "subLine": "SaaS平台",
       "product": "讯飞听见C端个人业务",
       "productStatus": "研发中",
-      "rdhs": 67.0,
+      "rdhs": 61.0,
       "governanceBand": "持续优化",
       "priority": "P2",
       "components": {
-        "linkClosure": 18.0,
+        "linkClosure": 14.0,
         "deliveryClosure": 15.0,
-        "timeliness": 9.0,
+        "timeliness": 7.0,
         "granularity": 10.0,
         "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 40.0,
+          "value": 41,
           "unit": "人",
           "tone": "track"
         },
@@ -3075,11 +3070,11 @@
           "label": "月人均需求吞吐量",
           "value": 0.2,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 15.78,
+          "value": 15.39,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -3087,7 +3082,7 @@
           "label": "需求开发周期",
           "value": 34.53,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
@@ -3103,46 +3098,46 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0421,
+          "value": 0.04,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.1188,
+          "value": 0.12,
           "unit": "%",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求积压占比",
-          "value": 0.0645,
+          "value": 0.12,
           "unit": "%",
           "tone": "track"
         }
       ],
       "lowestComponent": "时效节奏合理性",
       "problem": "过程能力优化：最低分项为 时效节奏合理性。",
-      "action": "围绕时效节奏合理性补齐对应过程记录，并在下期快照复核改善情况。"
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "讯飞听见",
       "subLine": "SaaS平台",
       "product": "讯飞听见SaaS解决方案",
       "productStatus": "研发中",
-      "rdhs": 69.0,
+      "rdhs": 65.0,
       "governanceBand": "持续优化",
       "priority": "P2",
       "components": {
         "linkClosure": 9.0,
         "deliveryClosure": 15.0,
-        "timeliness": 10.0,
+        "timeliness": 6.0,
         "granularity": 20.0,
         "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 21.0,
+          "value": 21,
           "unit": "人",
           "tone": "track"
         },
@@ -3150,13 +3145,13 @@
           "label": "月人均需求吞吐量",
           "value": 0.1,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
           "value": 1.33,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求开发周期",
@@ -3178,7 +3173,7 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0299,
+          "value": 0.02,
           "unit": "%",
           "tone": "track"
         },
@@ -3190,46 +3185,46 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.1578,
+          "value": 0.29,
           "unit": "%",
           "tone": "risk"
         }
       ],
-      "lowestComponent": "链路闭环得分",
-      "problem": "过程能力优化：最低分项为 链路闭环得分。",
-      "action": "围绕链路闭环得分补齐对应过程记录，并在下期快照复核改善情况。"
+      "lowestComponent": "时效节奏合理性",
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "讯飞听见",
       "subLine": "会议办公",
       "product": "讯飞听见多语言会议系统",
       "productStatus": "研发中",
-      "rdhs": 76.0,
+      "rdhs": 78.0,
       "governanceBand": "常规跟踪",
       "priority": null,
       "components": {
         "linkClosure": 18.0,
         "deliveryClosure": 15.0,
-        "timeliness": 3.0,
+        "timeliness": 5.0,
         "granularity": 20.0,
         "quality": 20.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 27.0,
+          "value": 28,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 0.41,
+          "value": 0.39,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 9.41,
+          "value": 9.07,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -3237,13 +3232,13 @@
           "label": "需求开发周期",
           "value": 81.68,
           "unit": "天",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
           "value": 81.7,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求发布闭环率",
@@ -3253,58 +3248,58 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0811,
+          "value": 0.04,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.0024,
+          "value": 0.0,
           "unit": "%",
           "tone": "neutral"
         },
         {
           "label": "需求积压占比",
-          "value": 0.1578,
+          "value": 0.12,
           "unit": "%",
-          "tone": "risk"
+          "tone": "track"
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "讯飞听见",
       "subLine": "会议办公",
       "product": "讯飞听见智慧简报系统",
       "productStatus": "研发中",
-      "rdhs": 58.0,
-      "governanceBand": "风险改进",
-      "priority": "P1",
+      "rdhs": 66.0,
+      "governanceBand": "持续优化",
+      "priority": "P2",
       "components": {
         "linkClosure": 17.0,
         "deliveryClosure": 15.0,
-        "timeliness": 11.0,
+        "timeliness": 9.0,
         "granularity": 10.0,
-        "quality": 5.0
+        "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 11.0,
+          "value": 12,
           "unit": "人",
           "tone": "track"
         },
         {
           "label": "月人均需求吞吐量",
-          "value": 1.27,
+          "value": 1.17,
           "unit": "个/人",
           "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 0.09,
+          "value": 0.08,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -3328,7 +3323,7 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0,
+          "value": 0.07,
           "unit": "%",
           "tone": "track"
         },
@@ -3340,34 +3335,34 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.0,
+          "value": 0.03,
           "unit": "%",
           "tone": "track"
         }
       ],
-      "lowestComponent": "质量敏锐度",
-      "problem": "过程能力优化：最低分项为 质量敏锐度。",
-      "action": "围绕质量敏锐度补齐对应过程记录，并在下期快照复核改善情况。"
+      "lowestComponent": "时效节奏合理性",
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "讯飞听见",
       "subLine": "智慧传媒",
       "product": "讯飞译制",
       "productStatus": "研发中",
-      "rdhs": 81.0,
+      "rdhs": 85.0,
       "governanceBand": "常规跟踪",
       "priority": null,
       "components": {
         "linkClosure": 25.0,
         "deliveryClosure": 15.0,
-        "timeliness": 11.0,
+        "timeliness": 15.0,
         "granularity": 15.0,
         "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 10.0,
+          "value": 10,
           "unit": "人",
           "tone": "track"
         },
@@ -3387,7 +3382,7 @@
           "label": "需求开发周期",
           "value": 34.27,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
@@ -3403,30 +3398,30 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0081,
+          "value": 0.01,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "低级缺陷占比",
-          "value": 0.1371,
+          "value": 0.14,
           "unit": "%",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求积压占比",
-          "value": 0.0357,
+          "value": 0.03,
           "unit": "%",
           "tone": "track"
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "读写科技",
-      "subLine": null,
+      "subLine": "读写科技",
       "product": "智能办公本T5C",
       "productStatus": "研发中",
       "rdhs": 25.0,
@@ -3442,7 +3437,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 26.0,
+          "value": 29,
           "unit": "人",
           "tone": "track"
         },
@@ -3450,13 +3445,13 @@
           "label": "月人均需求吞吐量",
           "value": 0.0,
           "unit": "个/人",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 0.15,
+          "value": 0.16,
           "unit": "个/人",
-          "tone": "risk"
+          "tone": "neutral"
         },
         {
           "label": "需求开发周期",
@@ -3472,13 +3467,13 @@
         },
         {
           "label": "需求发布闭环率",
-          "value": null,
+          "value": 1.0,
           "unit": "%",
-          "tone": "critical"
+          "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0448,
+          "value": 0.02,
           "unit": "%",
           "tone": "track"
         },
@@ -3490,18 +3485,18 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.5,
+          "value": 0.47,
           "unit": "%",
-          "tone": "critical"
+          "tone": "risk"
         }
       ],
-      "lowestComponent": "时效节奏合理性 / 颗粒度对齐度",
-      "problem": "价值链路不完整：人均缺陷关闭 0.1，人均需求吞吐为 0；叠加积压风险（需求总量 16，积压占比 50.0%）。",
-      "action": "确认是否存在计划性研发；存在则补齐需求、拆分和状态推进，不存在则由业务接口人核查产品状态；逐条确认积压需求的处理结论、负责人和预计完成时间。"
+      "lowestComponent": "时效节奏合理性",
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "读写科技",
-      "subLine": null,
+      "subLine": "读写科技",
       "product": "智能办公本应用软件",
       "productStatus": "研发中",
       "rdhs": 81.0,
@@ -3517,7 +3512,7 @@
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 39.0,
+          "value": 39,
           "unit": "人",
           "tone": "track"
         },
@@ -3537,13 +3532,13 @@
           "label": "需求开发周期",
           "value": 46.67,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
           "value": 47.55,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求发布闭环率",
@@ -3553,7 +3548,7 @@
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0145,
+          "value": 0.01,
           "unit": "%",
           "tone": "track"
         },
@@ -3565,34 +3560,34 @@
         },
         {
           "label": "需求积压占比",
-          "value": 0.0,
+          "value": 0.01,
           "unit": "%",
           "tone": "track"
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     },
     {
       "businessLine": "读写科技",
-      "subLine": null,
+      "subLine": "读写科技",
       "product": "讯飞阅读器Fika&Cube2",
       "productStatus": "研发中",
-      "rdhs": 63.0,
-      "governanceBand": "持续优化",
-      "priority": "P2",
+      "rdhs": 86.0,
+      "governanceBand": "常规跟踪",
+      "priority": null,
       "components": {
         "linkClosure": 25.0,
-        "deliveryClosure": 0.0,
-        "timeliness": 3.0,
+        "deliveryClosure": 15.0,
+        "timeliness": 11.0,
         "granularity": 20.0,
         "quality": 15.0
       },
       "dependencyMetrics": [
         {
           "label": "有效参与人数",
-          "value": 17.0,
+          "value": 17,
           "unit": "人",
           "tone": "track"
         },
@@ -3612,98 +3607,23 @@
           "label": "需求开发周期",
           "value": 44.37,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求交付周期",
           "value": 47.17,
           "unit": "天",
-          "tone": "risk"
+          "tone": "track"
         },
         {
           "label": "需求发布闭环率",
-          "value": 0.0,
-          "unit": "%",
-          "tone": "critical"
-        },
-        {
-          "label": "严重缺陷占比",
-          "value": 0.0505,
-          "unit": "%",
-          "tone": "track"
-        },
-        {
-          "label": "低级缺陷占比",
-          "value": 0.0,
-          "unit": "%",
-          "tone": "neutral"
-        },
-        {
-          "label": "需求积压占比",
-          "value": 0.027,
-          "unit": "%",
-          "tone": "track"
-        }
-      ],
-      "lowestComponent": "交付闭环得分",
-      "problem": "过程能力优化：最低分项为 交付闭环得分。",
-      "action": "围绕交付闭环得分补齐对应过程记录，并在下期快照复核改善情况。"
-    },
-    {
-      "businessLine": "读写科技",
-      "subLine": null,
-      "product": "读写笔记",
-      "productStatus": "研发中",
-      "rdhs": 86.0,
-      "governanceBand": "常规跟踪",
-      "priority": null,
-      "components": {
-        "linkClosure": 25.0,
-        "deliveryClosure": 15.0,
-        "timeliness": 11.0,
-        "granularity": 20.0,
-        "quality": 15.0
-      },
-      "dependencyMetrics": [
-        {
-          "label": "有效参与人数",
-          "value": 23.0,
-          "unit": "人",
-          "tone": "track"
-        },
-        {
-          "label": "月人均需求吞吐量",
-          "value": 1.09,
-          "unit": "个/人",
-          "tone": "track"
-        },
-        {
-          "label": "月人均缺陷关闭量",
-          "value": 22.04,
-          "unit": "个/人",
-          "tone": "neutral"
-        },
-        {
-          "label": "需求开发周期",
-          "value": 70.1,
-          "unit": "天",
-          "tone": "critical"
-        },
-        {
-          "label": "需求交付周期",
-          "value": 70.11,
-          "unit": "天",
-          "tone": "risk"
-        },
-        {
-          "label": "需求发布闭环率",
-          "value": 0.96,
+          "value": 1.0,
           "unit": "%",
           "tone": "track"
         },
         {
           "label": "严重缺陷占比",
-          "value": 0.0031,
+          "value": 0.05,
           "unit": "%",
           "tone": "track"
         },
@@ -3721,8 +3641,83 @@
         }
       ],
       "lowestComponent": "时效节奏合理性",
-      "problem": "RDHS 已达到常规跟踪区间，继续观察过程指标稳定性。",
-      "action": "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
+    },
+    {
+      "businessLine": "读写科技",
+      "subLine": "读写科技",
+      "product": "读写笔记",
+      "productStatus": "研发中",
+      "rdhs": 86.0,
+      "governanceBand": "常规跟踪",
+      "priority": null,
+      "components": {
+        "linkClosure": 25.0,
+        "deliveryClosure": 15.0,
+        "timeliness": 11.0,
+        "granularity": 20.0,
+        "quality": 15.0
+      },
+      "dependencyMetrics": [
+        {
+          "label": "有效参与人数",
+          "value": 22,
+          "unit": "人",
+          "tone": "track"
+        },
+        {
+          "label": "月人均需求吞吐量",
+          "value": 1.13,
+          "unit": "个/人",
+          "tone": "track"
+        },
+        {
+          "label": "月人均缺陷关闭量",
+          "value": 23.05,
+          "unit": "个/人",
+          "tone": "neutral"
+        },
+        {
+          "label": "需求开发周期",
+          "value": 70.1,
+          "unit": "天",
+          "tone": "track"
+        },
+        {
+          "label": "需求交付周期",
+          "value": 70.11,
+          "unit": "天",
+          "tone": "track"
+        },
+        {
+          "label": "需求发布闭环率",
+          "value": 1.0,
+          "unit": "%",
+          "tone": "track"
+        },
+        {
+          "label": "严重缺陷占比",
+          "value": 0.0,
+          "unit": "%",
+          "tone": "track"
+        },
+        {
+          "label": "低级缺陷占比",
+          "value": 0.0,
+          "unit": "%",
+          "tone": "neutral"
+        },
+        {
+          "label": "需求积压占比",
+          "value": 0.0,
+          "unit": "%",
+          "tone": "track"
+        }
+      ],
+      "lowestComponent": "时效节奏合理性",
+      "problem": "过程能力优化：最低分项为 时效节奏合理性。",
+      "action": "围绕 时效节奏合理性 补齐对应过程记录，消减过程卡点并在下期复核改善情况。"
     }
   ]
 }
