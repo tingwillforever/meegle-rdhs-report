@@ -1,0 +1,34 @@
+# Copy to values-<env>.yaml and replace only project-specific values.
+replicaCount: 1
+
+image:
+  repository: artifacts.iflytek.com/cbg-docker-repo/cbbywkf/app
+  pullPolicy: IfNotPresent
+  tag: "0.1.0"
+
+imagePullSecrets:
+  - name: registry-credentials
+
+serviceAccount:
+  create: false
+  name: default
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: app.example.invalid
+      paths:
+        - path: /app
+          pathType: Prefix
+
+env:
+  PORT: "3000"
+  NODE_ENV: production
+
+# Add environment-specific non-secret variables here. Keep credentials as
+# existing Secret references unless the deployment policy explicitly allows
+# plaintext values in this file.
+envFrom: []
+secretName: ""

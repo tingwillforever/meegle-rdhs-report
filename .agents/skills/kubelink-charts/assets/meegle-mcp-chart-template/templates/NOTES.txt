@@ -1,0 +1,8 @@
+1. Application deployed through the Kubelinks-ready chart contract.
+
+2. Internal service:
+   http://{{ include "app.fullname" . }}:{{ .Values.service.port }}
+
+3. Troubleshooting:
+   kubectl logs -f deployment/{{ include "app.fullname" . }}
+   kubectl describe pod -l app.kubernetes.io/name={{ include "app.name" . }}

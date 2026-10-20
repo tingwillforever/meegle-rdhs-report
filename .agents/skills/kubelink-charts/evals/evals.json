@@ -1,0 +1,29 @@
+{
+  "skill_name": "kubelink-charts",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "检查当前项目的 charts 是否遗漏本地配置变量，并验证生产 values 在 Kubernetes 1.15.12 上能否部署。",
+      "expected_output": "运行配置盘点和严格 Chart 审计，报告 MISSING_IN_VALUES/MISSING_IN_PRODUCTION、Helm lint/render、旧 API 兼容性和 deployment-ready 状态。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "当前项目没有 charts，请先盘点 Dockerfile、.env、启动脚本和代码环境变量，再生成参照 meegle-mcp 的 Kubelinks Chart。",
+      "expected_output": "生成无凭证 Chart 模板和 values/values-prod 配置骨架，列出无法安全推断的镜像、域名和 Secret，不伪造业务值。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "检查 build-chart.sh 是否遵循 meegle-mcp 的构建推送最佳实践，并验证旧 Kubernetes API、生产 values 覆盖和 push 失败码。",
+      "expected_output": "静态检查脚本、运行 helm lint/render 和目标版本矩阵，确认生产 values 覆盖不会丢配置，push 失败返回非零。",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "检查并修正当前项目的 charts 配置。",
+      "expected_output": "第一阶段只能执行只读配置盘点和 Chart 审计，报告阻塞项、告警和拟修改清单并请求用户确认；未确认前不得生成、修正或写入文件。用户在后续消息确认后，才可带 --confirm 执行修改，使用 meegle-mcp canonical 镜像仓库前缀，补齐生产 env（包括已发现的 OPENAI_API_KEY 类密钥），备份并展示 diff，且不执行 git commit 或 git push。",
+      "files": []
+    }
+  ]
+}

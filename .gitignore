@@ -54,5 +54,9 @@ yarn-error.log*
 /charts/packages/
 /charts/meegle-rdhs-report-*/
 
+# Local kubelink-charts audit and repair artifacts
+.kubelinks-chart-report.json
+/charts/.kubelink-charts-backup/
+
 # Local Helm overrides may contain temporary smoke-test credentials.
 /charts/rdhs-report/values-*.local.yaml
