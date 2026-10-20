@@ -56,9 +56,6 @@ export default defineConfig(async () => {
   }
 
   return {
-    ssr: {
-      external: ["mysql2"],
-    },
     server: isCodexSeatbeltSandbox
       ? { watch: { useFsEvents: false, usePolling: true } }
       : undefined,
