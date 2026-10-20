@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Award,
   CheckCircle2,
-  FileText,
   ShieldAlert,
   Target,
   TrendingDown,
@@ -525,22 +524,6 @@ export function BgWarReport({
               })}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* Bento Row 5: Archive Links */}
-      <div className="bentoArchiveCard">
-        <div className="archiveTitle">
-          <FileText size={15} />
-          <span>历史单期例会战报归档（独立 HTML）</span>
-        </div>
-        <div className="archiveLinkGroup">
-          <a href="./reports/2026-10.html" target="_blank" rel="noopener noreferrer" className="archivePill">
-            📄 消费者 BG 10 月产研过程治理情况 (例会汇报版) ↗
-          </a>
-          <a href="./reports/2026-09.html" target="_blank" rel="noopener noreferrer" className="archivePill">
-            📄 消费者 BG 9 月产研过程治理战报 (例会汇报版) ↗
-          </a>
         </div>
       </div>
     </div>
