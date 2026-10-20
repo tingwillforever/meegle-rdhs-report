@@ -814,17 +814,6 @@ export function ReportDashboard({
                 ))}
               </select>
             </label>
-            <button
-              className="iconButton refreshButton"
-              type="button"
-              title={refreshTitle}
-              aria-label={refreshTitle}
-              onClick={refreshCurrentMonth}
-              disabled={refreshState === "loading"}
-            >
-              <RefreshCw className={refreshState === "loading" ? "spin" : ""} size={17} strokeWidth={1.8} />
-              <span className="refreshButtonLabel">刷新当月</span>
-            </button>
           </div>
         </div>
       </header>

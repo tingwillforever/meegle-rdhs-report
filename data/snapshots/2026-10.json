@@ -3,11 +3,11 @@
   "cadence": "monthly",
   "periodKey": "2026-10",
   "asOf": "2026-10-20",
-  "fetchedAt": "2026-10-20T13:40:21.244289+08:00",
+  "fetchedAt": "2026-10-20T13:47:38.718183+08:00",
   "source": {
     "chartId": "7659618575337915254",
     "chartName": "【当月进行中实时快照 (周度更新)】产研健康度得分(RDHS) By 产品",
-    "sha256": "14c7884756c22eaa159ecdeccab3ae74e0af6354c44a6a2d711a9cefc58c1a6c"
+    "sha256": "27a253457049f0669f5cf9050e130e9cb6f7c3070668bf179bb770053c49220c"
   },
   "audit": {
     "rawRowCount": 680,
@@ -2624,7 +2624,7 @@
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 2.04,
+          "value": 2.14,
           "unit": "个/人",
           "tone": "neutral"
         },
@@ -3074,7 +3074,7 @@
         },
         {
           "label": "月人均缺陷关闭量",
-          "value": 1.9,
+          "value": 1.93,
           "unit": "个/人",
           "tone": "neutral"
         },

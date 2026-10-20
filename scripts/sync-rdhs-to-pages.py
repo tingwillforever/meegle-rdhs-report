@@ -139,7 +139,8 @@ def sync_snapshot(mode="monthly", force_period=None):
             chart_map[pname] = r
 
     prods_meta = load_products()
-    assert len(prods_meta) == 48, f"Expected 48 products, got {len(prods_meta)}"
+    total_research = len(prods_meta)
+    print(f"==> 实时拉取最新产品主数据完成：当前共有 {total_research} 款有效在管在研产品")
 
     products = []
     lines_counter = {}
@@ -286,7 +287,7 @@ def sync_snapshot(mode="monthly", force_period=None):
             "acceptedRowCount": len(chart_map),
             "zeroScoreRowCount": len(chart_rows) - len(chart_map),
             "emptyDimensionRowCount": 3,
-            "researchProductCount": 48,
+            "researchProductCount": total_research,
             "measuredProductCount": measured_count,
             "unmeasuredProductCount": unmeasured_count,
             "excludedTestBusinessLineCount": 2,
@@ -295,7 +296,7 @@ def sync_snapshot(mode="monthly", force_period=None):
             "warning": None,
         },
         "overview": {
-            "conclusion": f"本期 CBG 共覆盖 48 款研发中产品（主数据 48 款，已度量 {measured_count} 款，未度量 {unmeasured_count} 款按 0 分计入基数）。",
+            "conclusion": f"本期 CBG 共覆盖 {total_research} 款研发中产品（主数据 {total_research} 款，已度量 {measured_count} 款，未度量 {unmeasured_count} 款按 0 分计入基数）。",
             "focus": "聚焦消除未度量黑户（敞口约 3.6分），修复发版登记断链，清理超期在途卡片提升交付时效。",
         },
         "businessLines": business_lines,
