@@ -67,6 +67,14 @@ test("expanded summary stays inside the RDHS report shell", async () => {
   assert.match(html, /全盘通用共性问题剖析/);
 });
 
+test("serialized metadata and DOM use the configured Pages prefix", async () => {
+  const response = await render("/?period=2026-09");
+  const html = await response.text();
+  const base = process.env.RDHS_BASE_PATH ?? "";
+  assert.match(html, new RegExp(`href="${base}/favicon\\.png"`));
+  assert.ok(!html.includes('"href":"/favicon.png"') || !base);
+});
+
 test("finished page does not expose starter preview metadata", async () => {
   const response = await render();
   const html = await response.text();

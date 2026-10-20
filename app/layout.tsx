@@ -12,25 +12,27 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const basePath = process.env.RDHS_BASE_PATH?.replace(/\/$/, "") ?? "";
+
 export const metadata: Metadata = {
   title: "CBG RDHS运营报告",
   description: "消费者BG RDHS 月度运营报告、趋势分析与产品治理下钻。",
   icons: {
-    icon: [{ url: "/favicon.png", type: "image/png", sizes: "96x96" }],
-    shortcut: "/favicon.png",
+    icon: [{ url: `${basePath}/favicon.png`, type: "image/png", sizes: "96x96" }],
+    shortcut: `${basePath}/favicon.png`,
   },
   openGraph: {
     title: "CBG RDHS运营报告",
     description: "消费者BG RDHS 月度运营报告、趋势分析与产品治理下钻。",
     type: "website",
     locale: "zh_CN",
-    images: [{ url: "/og.png", width: 1200, height: 630, alt: "RDHS 产研过程效能运营报告" }],
+    images: [{ url: `${basePath}/og.png`, width: 1200, height: 630, alt: "RDHS 产研过程效能运营报告" }],
   },
   twitter: {
     card: "summary_large_image",
     title: "CBG RDHS运营报告",
     description: "消费者BG RDHS 月度运营报告、趋势分析与产品治理下钻。",
-    images: ["/og.png"],
+    images: [`${basePath}/og.png`],
   },
 };
 
