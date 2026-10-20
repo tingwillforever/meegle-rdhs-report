@@ -735,45 +735,85 @@ export function ReportDashboard({
                   </div>
 
                   <div className="lineCtoGrid">
-                    <div className="lineCtoCard">
-                      <span className="lineCtoCardLabel">达标及格率 (≥70)</span>
-                      <div className="lineCtoCardNum">
-                        {currentLineRanking ? `${currentLineRanking.passRate}%` : `${(activeLineSummary.complianceRate * 100).toFixed(1)}%`}
-                      </div>
-                      <span className="lineCtoCardDesc">
-                        及格 {activeLineSummary.complianceCount} / {activeLineSummary.productTotal} 款
-                      </span>
-                    </div>
+                    {/* 1. 达标及格率 */}
+                    {(() => {
+                      const passRateVal = currentLineRanking ? currentLineRanking.passRate : (activeLineSummary.complianceRate * 100);
+                      const barTone = passRateVal >= 70 ? "var(--track)" : passRateVal >= 50 ? "var(--optimize)" : passRateVal > 0 ? "var(--risk)" : "var(--critical)";
+                      return (
+                        <div className="lineCtoCard">
+                          <span className="lineCtoCardLabel">达标及格率 (≥70)</span>
+                          <div className="lineCtoCardNum">
+                            <span style={{ color: barTone }}>{passRateVal.toFixed(1)}%</span>
+                          </div>
+                          <div className="lineCtoProgressTrack">
+                            <i style={{ width: `${Math.min(100, Math.max(0, passRateVal))}%`, background: barTone }} />
+                          </div>
+                          <span className="lineCtoCardDesc">
+                            及格 {activeLineSummary.complianceCount} / {activeLineSummary.productTotal} 款
+                          </span>
+                        </div>
+                      );
+                    })()}
 
-                    <div className="lineCtoCard">
-                      <span className="lineCtoCardLabel">度量覆盖率</span>
-                      <div className="lineCtoCardNum">
-                        {(activeLineSummary.measurementCoverage * 100).toFixed(1)}%
-                      </div>
-                      <span className="lineCtoCardDesc">
-                        已度量 {activeLineSummary.measuredProductCount} 款 · 未度量 {activeLineSummary.unmeasuredProductCount} 款
-                      </span>
-                    </div>
+                    {/* 2. 度量覆盖率 */}
+                    {(() => {
+                      const covVal = activeLineSummary.measurementCoverage * 100;
+                      const covTone = covVal === 100 ? "var(--track)" : covVal >= 80 ? "var(--optimize)" : "var(--critical)";
+                      return (
+                        <div className="lineCtoCard">
+                          <span className="lineCtoCardLabel">度量覆盖率</span>
+                          <div className="lineCtoCardNum">
+                            <span style={{ color: covTone }}>{covVal.toFixed(1)}%</span>
+                          </div>
+                          <div className="lineCtoProgressTrack">
+                            <i style={{ width: `${Math.min(100, Math.max(0, covVal))}%`, background: covTone }} />
+                          </div>
+                          <span className="lineCtoCardDesc">
+                            已度量 {activeLineSummary.measuredProductCount} 款 · 未度量 {activeLineSummary.unmeasuredProductCount} 款
+                          </span>
+                        </div>
+                      );
+                    })()}
 
+                    {/* 3. 重点治理敞口 (P0/<45) */}
                     <div className="lineCtoCard">
                       <span className="lineCtoCardLabel">重点治理敞口 (P0/&lt;45)</span>
                       <div className="lineCtoCardNum textRed">
                         {activeLineSummary.bandCounts.keyGovernance} <small>款</small>
+                      </div>
+                      <div className="lineCtoCardBadgeRow">
+                        <span className={`badge ${activeLineSummary.bandCounts.keyGovernance > 0 ? "critical" : "track"}`} style={{ fontSize: 11, padding: "2px 6px" }}>
+                          {activeLineSummary.bandCounts.keyGovernance > 0 ? "待重点突破" : "无高危产品"}
+                        </span>
                       </div>
                       <span className="lineCtoCardDesc">
                         含未度量计0；待治理(&lt;70)共 {activeLineSummary.pendingGovernanceCount} 款
                       </span>
                     </div>
 
-                    <div className="lineCtoCard">
-                      <span className="lineCtoCardLabel">最低过程短板</span>
-                      <div className="lineCtoCardNum" style={{ fontSize: 14 }}>
-                        {activeLineLowestComponent ? activeLineLowestComponent.label : "暂无"}
-                      </div>
-                      <span className="lineCtoCardDesc">
-                        {activeLineLowestComponent ? `${formatComponentScore(activeLineLowestComponent.value)} / ${activeLineLowestComponent.maximum}` : "—"}
-                      </span>
-                    </div>
+                    {/* 4. 最低过程短板 */}
+                    {(() => {
+                      const compRatio = activeLineLowestComponent && activeLineLowestComponent.value !== null
+                        ? (activeLineLowestComponent.value / activeLineLowestComponent.maximum) * 100
+                        : 0;
+                      const compTone = compRatio >= 70 ? "var(--track)" : compRatio >= 50 ? "var(--optimize)" : "var(--critical)";
+                      return (
+                        <div className="lineCtoCard">
+                          <span className="lineCtoCardLabel">最低过程短板</span>
+                          <div className="lineCtoCardNum" style={{ fontSize: 16 }}>
+                            <span>{activeLineLowestComponent ? activeLineLowestComponent.label : "暂无"}</span>
+                          </div>
+                          <div className="lineCtoProgressTrack">
+                            <i style={{ width: `${Math.min(100, Math.max(0, compRatio))}%`, background: compTone }} />
+                          </div>
+                          <span className="lineCtoCardDesc">
+                            {activeLineLowestComponent && activeLineLowestComponent.value !== null
+                              ? `实测得分: ${formatComponentScore(activeLineLowestComponent.value)} / ${activeLineLowestComponent.maximum}`
+                              : "—"}
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 

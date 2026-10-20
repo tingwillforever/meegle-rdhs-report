@@ -2757,6 +2757,25 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   margin-top: auto;
 }
 
+.lineCtoProgressTrack {
+  height: 4px;
+  background: var(--soft);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 3px 0 2px;
+}
+.lineCtoProgressTrack i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.lineCtoCardBadgeRow {
+  margin: 2px 0;
+  display: flex;
+}
+
 .compNotice, .mtdNotice {
   font-size: 10.5px;
   line-height: 1.35;
