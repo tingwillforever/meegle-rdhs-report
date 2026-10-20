@@ -1,20 +1,22 @@
 import type { RdhsSnapshot } from "./types";
 import { validateSnapshot } from "./validate";
 
-import s04 from "@/data/snapshots/2026-04.json";
-import s05 from "@/data/snapshots/2026-05.json";
-import s06 from "@/data/snapshots/2026-06.json";
-import s07 from "@/data/snapshots/2026-07.json";
-import s08 from "@/data/snapshots/2026-08.json";
-import s09 from "@/data/snapshots/2026-09.json";
+import s_2026_04 from "@/data/snapshots/2026-04.json";
+import s_2026_05 from "@/data/snapshots/2026-05.json";
+import s_2026_06 from "@/data/snapshots/2026-06.json";
+import s_2026_07 from "@/data/snapshots/2026-07.json";
+import s_2026_08 from "@/data/snapshots/2026-08.json";
+import s_2026_09 from "@/data/snapshots/2026-09.json";
+import s_2026_10 from "@/data/snapshots/2026-10.json";
 
 const BUNDLED_SNAPSHOTS: RdhsSnapshot[] = [
-  validateSnapshot(s04),
-  validateSnapshot(s05),
-  validateSnapshot(s06),
-  validateSnapshot(s07),
-  validateSnapshot(s08),
-  validateSnapshot(s09),
+  validateSnapshot(s_2026_04),
+  validateSnapshot(s_2026_05),
+  validateSnapshot(s_2026_06),
+  validateSnapshot(s_2026_07),
+  validateSnapshot(s_2026_08),
+  validateSnapshot(s_2026_09),
+  validateSnapshot(s_2026_10),
 ];
 
 export function loadStaticSnapshots(): RdhsSnapshot[] {
