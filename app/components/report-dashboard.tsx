@@ -35,7 +35,6 @@ import type {
   ProductDependencyMetric,
   ProductMetric,
   RdhsSnapshot,
-  SnapshotSummary,
 } from "@/lib/rdhs/types";
 import { BgWarReport } from "./bg-war-report";
 
@@ -114,13 +113,6 @@ function bandClass(band: GovernanceBand) {
   if (band === "风险改进") return "risk";
   if (band === "持续优化") return "optimize";
   return "track";
-}
-
-function modeForSummary(summary: SnapshotSummary): GovernanceBand {
-  if (summary.bandCounts.keyGovernance > 0) return "重点治理";
-  if (summary.bandCounts.riskImprovement > 0) return "风险改进";
-  if (summary.bandCounts.continuousOptimization > 0) return "持续优化";
-  return "常规跟踪";
 }
 
 function productKey(product: Pick<ProductMetric, "businessLine" | "product">) {
@@ -649,30 +641,11 @@ export function ReportDashboard({
                 <span className="currentLineTitle">
                   {selectedLine === "全部业务线" ? "全在研产品治理工作台" : selectedLine}
                 </span>
-                {selectedLine !== "全部业务线" && activeLineSummary ? (
-                  <>
-                    <span className={`lineStatusChip ${bandClass(modeForSummary(activeLineSummary))}`}>
-                      {modeForSummary(activeLineSummary)}
-                    </span>
-                    <div className="lineMetricsSummary">
-                      <span>均分 <b>{activeLineSummary.averageRdhs !== null ? activeLineSummary.averageRdhs.toFixed(1) : "—"} 分</b></span>
-                      <span>·</span>
-                      <span>在研 <b>{filteredProducts.length} 款</b></span>
-                      <span>·</span>
-                      <span>P0重点治理 <b className="textRed">{activeLineSummary.bandCounts.keyGovernance} 款</b></span>
-                      {activeLineLowestComponent ? (
-                        <>
-                          <span>·</span>
-                          <span>短板: <b className="textRed">{activeLineLowestComponent.label} ({activeLineLowestComponent.value !== null ? formatComponentScore(activeLineLowestComponent.value) : "—"}/{activeLineLowestComponent.maximum})</b></span>
-                        </>
-                      ) : null}
-                    </div>
-                  </>
-                ) : (
+                {selectedLine === "全部业务线" ? (
                   <div className="lineMetricsSummary">
                     <span>覆盖全 BG 共 <b>{snapshot.products.length} 款在研产品</b></span>
                   </div>
-                )}
+                ) : null}
               </div>
 
               <div className="navRight">
