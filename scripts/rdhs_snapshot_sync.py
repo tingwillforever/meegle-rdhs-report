@@ -935,6 +935,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--site-url", default=os.environ.get("RDHS_SITE_URL", ""))
     parser.add_argument("--token", default=os.environ.get("RDHS_INGEST_TOKEN", ""))
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--export-json", type=Path, help="导出快照 JSON 到指定文件路径")
+    parser.add_argument("--export-dir", type=Path, help="导出快照 JSON 到指定目录（文件名为 <periodKey>.json）")
+    parser.add_argument("--no-upload", action="store_true", help="跳过远程 HTTP 上传")
     return parser
 
 
@@ -980,8 +983,29 @@ def main(argv: Optional[list[str]] = None) -> int:
             json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8",
         )
-        if args.dry_run:
-            result = {"snapshot_path": str(snapshot_path), "uploaded": False}
+        if args.export_json:
+            args.export_json.parent.mkdir(parents=True, exist_ok=True)
+            args.export_json.write_text(
+                json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        if args.export_dir:
+            args.export_dir.mkdir(parents=True, exist_ok=True)
+            target_export = args.export_dir / f"{snapshot['periodKey']}.json"
+            target_export.write_text(
+                json.dumps(snapshot, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8",
+            )
+        if args.dry_run or args.no_upload or not args.site_url:
+            result = {
+                "snapshot_path": str(snapshot_path),
+                "periodKey": snapshot["periodKey"],
+                "uploaded": False,
+            }
+            if args.export_json:
+                result["exported_json"] = str(args.export_json)
+            if args.export_dir:
+                result["exported_dir"] = str(args.export_dir)
         else:
             result = {
                 "snapshot_path": str(snapshot_path),

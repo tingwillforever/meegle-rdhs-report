@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案 A：战情指挥官 · 沉浸式管理战情室 (Tactical Mission Control)</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --surface: #0f172a;
+      --surface-card: #141f36;
+      --surface-hover: #1b2947;
+      --border: rgba(255, 255, 255, 0.1);
+      --border-accent: rgba(56, 189, 248, 0.3);
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --primary: #38bdf8;
+      --red: #ef4444;
+      --red-glow: rgba(239, 68, 68, 0.25);
+      --amber: #f59e0b;
+      --amber-glow: rgba(245, 158, 11, 0.25);
+      --green: #10b981;
+      --green-glow: rgba(16, 185, 129, 0.25);
+      --blue: #60a5fa;
+      --mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+      padding-bottom: 80px;
+    }
+    
+    /* Top HUD Navigation */
+    .hud-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(7, 11, 20, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .hud-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .status-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--green);
+      box-shadow: 0 0 10px var(--green);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+    .hud-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #fff;
+    }
+    .hud-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      background: rgba(56, 189, 248, 0.12);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .hud-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .hud-select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .scheme-badge {
+      background: #ef4444;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    .container {
+      max-width: 1240px;
+      margin: 24px auto 0;
+      padding: 0 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Hero Section: Asymmetric HUD */
+    .hero-hud {
+      display: grid;
+      grid-template-columns: 1.3fr 1.7fr;
+      gap: 20px;
+    }
+    .hud-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hud-card::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-accent), transparent);
+    }
+    
+    /* Left Core Gauge */
+    .core-gauge {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.08), transparent 70%), var(--surface);
+    }
+    .gauge-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .gauge-label {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .stage-tag {
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      box-shadow: 0 0 12px var(--red-glow);
+    }
+    .gauge-center {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+    }
+    .gauge-score {
+      font-size: 64px;
+      font-weight: 800;
+      font-family: var(--mono);
+      line-height: 1;
+      color: #fff;
+      text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+    }
+    .gauge-delta {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-family: var(--mono);
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--green);
+    }
+    .gauge-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .progress-bar-wrap {
+      width: 100%;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      position: relative;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      width: 56.2%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--red), var(--amber));
+      box-shadow: 0 0 8px var(--amber-glow);
+    }
+    .gauge-benchmark {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-dim);
+      font-family: var(--mono);
+    }
+
+    /* Right Support Matrix */
+    .support-matrix {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .matrix-cell {
+      background: var(--surface-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: border-color 0.15s;
+    }
+    .matrix-cell:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    .cell-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .cell-val {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: #fff;
+    }
+    .cell-unit {
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text-dim);
+    }
+    .cell-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* Section Header */
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #fff;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .section-hint {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Top 3 Attack Cards */
+    .attack-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+    .attack-card {
+      background: var(--surface);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 10px;
+      padding: 20px;
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .attack-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(239, 68, 68, 0.15);
+      border-color: var(--red);
+    }
+    .attack-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--red);
+      box-shadow: 0 0 10px var(--red);
+    }
+    .attack-p1::before {
+      background: var(--amber);
+      box-shadow: 0 0 10px var(--amber);
+    }
+    .attack-p1 {
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    .attack-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .priority-badge {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--red);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .attack-p1 .priority-badge {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--amber);
+      border-color: rgba(245, 158, 11, 0.3);
+    }
+    .attack-score {
+      font-family: var(--mono);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--red);
+    }
+    .attack-p1 .attack-score {
+      color: var(--amber);
+    }
+    .attack-name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+    }
+    .attack-stat-row {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+    .attack-stat-row b {
+      color: #fff;
+      font-family: var(--mono);
+    }
+    .attack-detail {
+      font-size: 12px;
+      color: #cbd5e1;
+      line-height: 1.55;
+      flex: 1;
+    }
+    .attack-detail strong {
+      color: var(--primary);
+    }
+    .attack-btn {
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--primary);
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 8px 12px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .attack-card:hover .attack-btn {
+      background: rgba(56, 189, 248, 0.18);
+    }
+
+    /* Ranking Table */
+    .ranking-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .hud-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    .hud-table th {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: var(--mono);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+    .hud-table td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-muted);
+    }
+    .hud-table tr:hover td {
+      background: var(--surface-card);
+      color: #fff;
+    }
+    .rank-cell {
+      font-family: var(--mono);
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .rank-top1 { color: #facc15; }
+    .rank-top2 { color: #cbd5e1; }
+    .rank-top3 { color: #f97316; }
+    .line-name {
+      font-weight: 600;
+      color: #fff;
+    }
+    .score-cell {
+      font-family: var(--mono);
+      font-weight: 700;
+    }
+    .score-g { color: var(--green); }
+    .score-a { color: var(--amber); }
+    .score-r { color: var(--red); }
+    .mini-bar {
+      width: 60px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 2px;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
+      overflow: hidden;
+    }
+    .mini-fill {
+      height: 100%;
+    }
+    .action-link {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .action-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Drilldown Drawer Simulation */
+    .drilldown-panel {
+      margin-top: 24px;
+      background: #0b1120;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 0 30px rgba(56, 189, 248, 0.1);
+    }
+    .drawer-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 12px;
+    }
+    .drawer-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .drawer-badge {
+      background: var(--red);
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+    }
+    .product-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .p-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+    }
+    .p-card-head {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .p-name { font-weight: 700; font-size: 14px; color: #fff; }
+    .p-score { font-family: var(--mono); font-weight: 700; color: var(--red); }
+    .p-problem { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+    .p-action { font-size: 12px; color: #38bdf8; }
+  </style>
+</head>
+<body>
+  <!-- Top HUD Bar -->
+  <header class="hud-topbar">
+    <div class="hud-brand">
+      <span class="status-pulse"></span>
+      <span class="hud-title">消费者 BG 产研健康度 (RDHS) 战情室</span>
+      <span class="hud-badge">TACTICAL HUD · V2.0</span>
+      <span class="scheme-badge">方案 A 设计稿</span>
+    </div>
+    <div class="hud-controls">
+      <select class="hud-select" aria-label="快照月份">
+        <option>2026-09 快照归档</option>
+        <option>2026-08 历史快照</option>
+      </select>
+      <a href="direction-c.html" style="color:var(--text-muted);font-size:12px;text-decoration:none;margin-left:8px;">👉 切换查看方案 C</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Section 1: Non-symmetric HUD Hero -->
+    <div class="hero-hud">
+      <!-- Core Gauge -->
+      <div class="hud-card core-gauge">
+        <div class="gauge-top">
+          <div>
+            <div class="gauge-label">BG 综合健康度得分</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:2px;">基准收口时间: 2026-09-30</div>
+          </div>
+          <span class="stage-tag">重点治理阶段</span>
+        </div>
+
+        <div class="gauge-center">
+          <div class="gauge-score">56.2</div>
+          <div class="gauge-delta">
+            ▲ +5.9 <small style="font-size:12px;color:var(--text-dim)">环比 8 月</small>
+          </div>
+        </div>
+
+        <div class="gauge-meta">
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill"></div>
+          </div>
+          <div class="gauge-benchmark">
+            <span>0分 阻塞</span>
+            <span>45分 风险</span>
+            <span>60分 优化</span>
+            <span style="color:var(--green)">70分 达标线</span>
+            <span>100分</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Support Matrix -->
+      <div class="hud-card support-matrix">
+        <div class="matrix-cell">
+          <div class="cell-label">健康达标率 (≥70分)</div>
+          <div class="cell-val">33.3<span class="cell-unit">%</span></div>
+          <div class="cell-sub" style="color:var(--amber)">达标 16 款 / 在管 48 款</div>
+        </div>
+
+        <div class="matrix-cell">
+          <div class="cell-label">度量覆盖率</div>
+          <div class="cell-val">92.2<span class="cell-unit">%</span></div>
+          <div class="cell-sub" style="color:var(--green)">已度量 47 款 / 待关联 4 款</div>
+        </div>
+
+        <div class="matrix-cell">
+          <div class="cell-label">重点治理敞口</div>
+          <div class="cell-val" style="color:var(--red)">34<span class="cell-unit"> 款</span></div>
+          <div class="cell-sub">占在管总数 66.7% (含未度量)</div>
+        </div>
+
+        <div class="matrix-cell">
+          <div class="cell-label">人均需求交付周期</div>
+          <div class="cell-val">32.7<span class="cell-unit"> 天</span></div>
+          <div class="cell-sub" style="color:var(--green)">时效显著提速 41.4%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 2: Top 3 Attack Focus Cards -->
+    <div>
+      <div class="section-head">
+        <div class="section-title">
+          <span style="color:var(--red)">🎯</span> Top 3 重点治理业务线攻坚方案（优先关注排查）
+        </div>
+        <span class="section-hint">按重点治理产品数与过程短板综合排序</span>
+      </div>
+
+      <div class="attack-grid">
+        <!-- Line 1: Enterprise Digitization -->
+        <div class="attack-card" onclick="alert('点击已穿透下钻至【企业数字化业务群】明细工作台！')">
+          <div class="attack-top">
+            <span class="priority-badge">P0 攻坚 · 倒数第 1</span>
+            <span class="attack-score">20.5 分</span>
+          </div>
+          <div class="attack-name">企业数字化业务群</div>
+          <div class="attack-stat-row">
+            <span>在研 <b>3</b> 款</span>
+            <span>重点治理 <b style="color:var(--red)">3</b> 款</span>
+            <span>未度量 <b>1</b> 款</span>
+          </div>
+          <div class="attack-detail">
+            <p><strong>失分根因：</strong>《智能评标》未度量黑户计0分；驾驶舱严重缺陷占比达 66.1%。</p>
+            <p style="margin-top:6px;"><strong>攻坚抓手：</strong>本周补齐飞书卡片绑定与工作流，执行冒烟测试质量红线拦截。</p>
+          </div>
+          <div class="attack-btn">
+            <span>下钻该业务线 3 款产品明细</span>
+            <span>➔</span>
+          </div>
+        </div>
+
+        <!-- Line 2: Open Platform -->
+        <div class="attack-card" onclick="alert('点击已穿透下钻至【开放平台业务群】明细工作台！')">
+          <div class="attack-top">
+            <span class="priority-badge">P0 攻坚 · 倒数第 2</span>
+            <span class="attack-score">43.3 分</span>
+          </div>
+          <div class="attack-name">开放平台业务群</div>
+          <div class="attack-stat-row">
+            <span>在研 <b>17</b> 款</span>
+            <span>重点治理 <b style="color:var(--red)">10</b> 款</span>
+            <span>未度量 <b>3</b> 款</span>
+          </div>
+          <div class="attack-detail">
+            <p><strong>失分根因：</strong>长在途卡片积压超 130 天导致时效仅 5.9 分，且存在 3 款未度量黑户。</p>
+            <p style="margin-top:6px;"><strong>攻坚抓手：</strong>核实补齐 Spark Insight 空间度量，两周内清理 90 天以上超期在途卡片。</p>
+          </div>
+          <div class="attack-btn">
+            <span>下钻该业务线 17 款产品明细</span>
+            <span>➔</span>
+          </div>
+        </div>
+
+        <!-- Line 3: Hardware -->
+        <div class="attack-card attack-p1" onclick="alert('点击已穿透下钻至【C端硬件创新中心】明细工作台！')">
+          <div class="attack-top">
+            <span class="priority-badge">P1 攻坚 · 倒数第 3</span>
+            <span class="attack-score">46.0 分</span>
+          </div>
+          <div class="attack-name">C端硬件创新中心</div>
+          <div class="attack-stat-row">
+            <span>在研 <b>3</b> 款</span>
+            <span>重点治理 <b style="color:var(--amber)">2</b> 款</span>
+            <span>未度量 <b>0</b> 款</span>
+          </div>
+          <div class="attack-detail">
+            <p><strong>失分根因：</strong>“只修固件 Bug、不流转验收需求”，讯飞录音环仅 23 分，吞吐断链。</p>
+            <p style="margin-top:6px;"><strong>攻坚抓手：</strong>每周盘点转测完成的固件需求，在飞书项目中流转到“已完成”。</p>
+          </div>
+          <div class="attack-btn">
+            <span>下钻该业务线 3 款产品明细</span>
+            <span>➔</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: Ranking Table -->
+    <div class="ranking-section">
+      <div class="section-head">
+        <div class="section-title">
+          <span>🏆</span> 9 大一级业务线 RDHS 综合战备考核榜
+        </div>
+        <span class="section-hint">按考核均分降序排列 · 鼠标悬停行可高亮</span>
+      </div>
+
+      <table class="hud-table">
+        <thead>
+          <tr>
+            <th>战备排名</th>
+            <th>一级业务线</th>
+            <th>在管产品</th>
+            <th>已度量 / 待关联</th>
+            <th>综合考核均分</th>
+            <th>环比 Δ</th>
+            <th>达标率 (≥70)</th>
+            <th>领跑标杆产品</th>
+            <th>重点治理产品</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="rank-cell rank-top1">TOP 1</span></td>
+            <td><span class="line-name">AI营销业务群</span></td>
+            <td>3 款</td>
+            <td>3 / 0</td>
+            <td><span class="score-cell score-g">78.7 分</span><span class="mini-bar"><i class="mini-fill" style="width:78.7%;background:var(--green)"></i></span></td>
+            <td style="color:var(--green)">+4.2 ▲</td>
+            <td>100.0%</td>
+            <td style="color:var(--green)">营销SaaS平台 (88分)</td>
+            <td style="color:var(--text-dim)">海外媒体代理 (73分)</td>
+            <td><a href="javascript:void(0)" class="action-link" onclick="alert('下钻至【AI营销业务群】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="rank-cell rank-top2">TOP 2</span></td>
+            <td><span class="line-name">AI文娱业务群</span></td>
+            <td>2 款</td>
+            <td>2 / 0</td>
+            <td><span class="score-cell score-g">72.0 分</span><span class="mini-bar"><i class="mini-fill" style="width:72%;background:var(--green)"></i></span></td>
+            <td style="color:var(--green)">+5.5 ▲</td>
+            <td>50.0%</td>
+            <td style="color:var(--green)">讯飞输入法 (79分)</td>
+            <td style="color:var(--amber)">互联网酷音 (65分)</td>
+            <td><a href="javascript:void(0)" class="action-link" onclick="alert('下钻至【AI文娱业务群】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="rank-cell rank-top3">TOP 3</span></td>
+            <td><span class="line-name">讯飞听见</span></td>
+            <td>9 款</td>
+            <td>9 / 0</td>
+            <td><span class="score-cell score-a">64.0 分</span><span class="mini-bar"><i class="mini-fill" style="width:64%;background:var(--blue)"></i></span></td>
+            <td style="color:var(--green)">+1.8 ▲</td>
+            <td>44.4%</td>
+            <td style="color:var(--green)">智慧办公解决方案 (91分)</td>
+            <td style="color:var(--red)">同传麦克风S30 (28分)</td>
+            <td><a href="javascript:void(0)" class="action-link" onclick="alert('下钻至【讯飞听见】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="rank-cell">04</span></td>
+            <td><span class="line-name">读写科技</span></td>
+            <td>6 款</td>
+            <td>6 / 0</td>
+            <td><span class="score-cell score-a">63.8 分</span><span class="mini-bar"><i class="mini-fill" style="width:63.8%;background:var(--blue)"></i></span></td>
+            <td style="color:var(--red)">-2.1 ▼</td>
+            <td>50.0%</td>
+            <td style="color:var(--green)">读写笔记 (86分)</td>
+            <td style="color:var(--red)">智能办公本T5C (25分)</td>
+            <td><a href="javascript:void(0)" class="action-link" onclick="alert('下钻至【读写科技】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="rank-cell">05</span></td>
+            <td><span class="line-name">消费者公共研发部</span></td>
+            <td>1 款</td>
+            <td>1 / 0</td>
+            <td><span class="score-cell score-a">63.0 分</span><span class="mini-bar"><i class="mini-fill" style="width:63%;background:var(--blue)"></i></span></td>
+            <td style="color:var(--red)">-4.0 ▼</td>
+            <td>0.0%</td>
+            <td style="color:var(--blue)">iFlyBase能力平台 (63分)</td>
+            <td style="color:var(--blue)">iFlyBase能力平台 (63分)</td>
+            <td><a href="javascript:void(0)" class="action-link" onclick="alert('下钻至【公共研发部】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="rank-cell">06</span></td>
+            <td><span class="line-name">AI翻译业务群</span></td>
+            <td>6 款</td>
+            <td>6 / 0</td>
+            <td><span class="score-cell score-a">57.5 分</span><span class="mini-bar"><i class="mini-fill" style="width:57.5%;background:var(--amber)"></i></span></td>
+            <td style="color:var(--green)">+3.1 ▲</td>
+            <td>16.7%</td>
+            <td style="color:var(--green)">双屏翻译机 (77分)</td>
+            <td style="color:var(--red)">同传多语种系统 (32分)</td>
+            <td><a href="javascript:void(0)" class="action-link" onclick="alert('下钻至【AI翻译】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="rank-cell" style="color:var(--red)">07</span></td>
+            <td><span class="line-name">C端硬件创新中心</span></td>
+            <td>3 款</td>
+            <td>3 / 0</td>
+            <td><span class="score-cell score-a">46.0 分</span><span class="mini-bar"><i class="mini-fill" style="width:46%;background:var(--amber)"></i></span></td>
+            <td style="color:var(--red)">-3.0 ▼</td>
+            <td>33.3%</td>
+            <td style="color:var(--green)">讯飞录音笔App (71分)</td>
+            <td style="color:var(--red)">讯飞录音环录 (23分)</td>
+            <td><a href="javascript:void(0)" class="action-link" onclick="alert('下钻至【硬件中心】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="rank-cell" style="color:var(--red)">08</span></td>
+            <td><span class="line-name">开放平台业务群</span></td>
+            <td>17 款</td>
+            <td>14 / 3</td>
+            <td><span class="score-cell score-r">43.3 分</span><span class="mini-bar"><i class="mini-fill" style="width:43.3%;background:var(--red)"></i></span></td>
+            <td style="color:var(--green)">+2.5 ▲</td>
+            <td>11.8%</td>
+            <td style="color:var(--green)">开放平台网站 (71分)</td>
+            <td style="color:var(--red)">Spark Insight (未度量)</td>
+            <td><a href="javascript:void(0)" class="action-link" onclick="alert('下钻至【开放平台】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="rank-cell" style="color:var(--red)">09</span></td>
+            <td><span class="line-name">企业数字化业务群</span></td>
+            <td>3 款</td>
+            <td>2 / 1</td>
+            <td><span class="score-cell score-r">20.5 分</span><span class="mini-bar"><i class="mini-fill" style="width:20.5%;background:var(--red)"></i></span></td>
+            <td style="color:var(--green)">+6.8 ▲</td>
+            <td>0.0%</td>
+            <td style="color:var(--red)">生成式智慧驾驶舱 (23分)</td>
+            <td style="color:var(--red)">智能评标 (未度量)</td>
+            <td><a href="javascript:void(0)" class="action-link" onclick="alert('下钻至【企业数字化】')">下钻明细 ➔</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Section 4: Live Drilldown Drawer Preview -->
+    <div class="drilldown-panel">
+      <div class="drawer-head">
+        <div class="drawer-title">
+          <span>🔍</span> 业务明细穿透预览：企业数字化业务群 (3款在研产品)
+          <span class="drawer-badge">重点治理 P0</span>
+        </div>
+        <span style="font-size:12px;color:var(--primary);cursor:pointer;" onclick="alert('收起抽屉')">▲ 收起明细抽屉</span>
+      </div>
+
+      <div class="product-cards-grid">
+        <div class="p-card">
+          <div class="p-card-head">
+            <span class="p-name">生成式智慧驾驶舱</span>
+            <span class="p-score">23 分</span>
+          </div>
+          <div class="p-problem">问题：严重缺陷占比 66.1%，低级缺陷占比 15%，交付时效显著滞后。</div>
+          <div class="p-action">动作：提测质量红线拦截，严禁带病提测，压降严重缺陷。</div>
+        </div>
+
+        <div class="p-card">
+          <div class="p-card-head">
+            <span class="p-name">星火数字员工平台</span>
+            <span class="p-score">18 分</span>
+          </div>
+          <div class="p-problem">问题：需求发布闭环率仅 20%，流转存在长在途卡片积压。</div>
+          <div class="p-action">动作：补齐上线流转节点与发布单关联，清理超期在途卡片。</div>
+        </div>
+
+        <div class="p-card">
+          <div class="p-card-head">
+            <span class="p-name">智能评标</span>
+            <span class="p-score" style="color:#94a3b8">未度量</span>
+          </div>
+          <div class="p-problem">问题：主数据“黑户”，未关联飞书项目度量空间，考核计 0 分。</div>
+          <div class="p-action">动作：本周完成空间关联与研发责任角色绑定，消除 0 分敞口。</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

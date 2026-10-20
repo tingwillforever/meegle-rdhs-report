@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RDHS 前端设计方案对比 (方案 A vs 方案 C)</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+      background: #0f172a;
+      color: #f8fafc;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    header {
+      background: #1e293b;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .toggle-bar {
+      display: flex;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 4px;
+    }
+    .toggle-btn {
+      padding: 6px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .toggle-btn.active {
+      background: #38bdf8;
+      color: #0f172a;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+    }
+    .links {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+    .links a {
+      color: #38bdf8;
+      text-decoration: none;
+      margin-left: 8px;
+    }
+    iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      flex: 1;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <span>🎨 RDHS 设计提案评审</span>
+      <span style="font-size:12px;font-weight:400;color:#94a3b8;">花叔Design · 专家级高保真原型</span>
+    </div>
+    <div class="toggle-bar">
+      <button class="toggle-btn active" id="btnA" onclick="switchPreview('A')">方案 A：战情指挥官 (暗色战情室)</button>
+      <button class="toggle-btn" id="btnC" onclick="switchPreview('C')">方案 C：敏捷驾驶舱 (浅色便当盒)</button>
+    </div>
+    <div class="links">
+      <span>新标签独立打开:</span>
+      <a href="direction-a.html" target="_blank">方案 A ↗</a>
+      <a href="direction-c.html" target="_blank">方案 C ↗</a>
+    </div>
+  </header>
+
+  <iframe id="previewFrame" src="direction-a.html" title="RDHS 设计预览"></iframe>
+
+  <script>
+    function switchPreview(scheme) {
+      const frame = document.getElementById('previewFrame');
+      const btnA = document.getElementById('btnA');
+      const btnC = document.getElementById('btnC');
+      if (scheme === 'A') {
+        frame.src = 'direction-a.html';
+        btnA.classList.add('active');
+        btnC.classList.remove('active');
+      } else {
+        frame.src = 'direction-c.html';
+        btnC.classList.add('active');
+        btnA.classList.remove('active');
+      }
+    }
+  </script>
+</body>
+</html>

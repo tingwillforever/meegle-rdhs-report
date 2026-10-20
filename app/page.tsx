@@ -4,6 +4,7 @@ import { ReportDashboard } from "@/app/components/report-dashboard";
 import type { RdhsSnapshot } from "@/lib/rdhs/types";
 import { allowPreviewFallback } from "@/lib/rdhs/runtime";
 import { validateSnapshot } from "@/lib/rdhs/validate";
+import { loadStaticSnapshots } from "@/lib/rdhs/static-snapshots";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,8 @@ type HomeProps = {
 export default async function Home({ searchParams }: HomeProps) {
   const params = new URLSearchParams(await searchParams ?? []);
   const requestedPeriod = params.get("period") ?? undefined;
+  const requestedView = params.get("view") === "workbench" ? "workbench" : "bg";
+  const requestedLine = params.get("line") ?? undefined;
   let snapshots: RdhsSnapshot[] = [];
   let dataMode: "live" | "preview" = "preview";
 
@@ -25,6 +28,14 @@ export default async function Home({ searchParams }: HomeProps) {
     dataMode = snapshots.length > 0 ? "live" : "preview";
   } catch {
     // Local preview and first deployment remain useful before D1 receives its first snapshot.
+  }
+
+  if (snapshots.length === 0) {
+    const staticList = loadStaticSnapshots();
+    if (staticList.length > 0) {
+      snapshots = staticList;
+      dataMode = "live";
+    }
   }
 
   if (snapshots.length === 0) {
@@ -48,6 +59,8 @@ export default async function Home({ searchParams }: HomeProps) {
       initialSnapshots={snapshots}
       dataMode={dataMode}
       initialPeriodKey={requestedPeriod}
+      initialView={requestedView}
+      initialLine={requestedLine}
     />
   );
 }

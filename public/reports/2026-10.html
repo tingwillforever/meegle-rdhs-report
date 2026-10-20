@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>消费者 BG 10 月产研过程 RDHS 治理情况</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #1c1c1a; --ink-2: #57564f; --ink-3: #8a8981;
+    --line: #e5e4e0; --line-2: #f0efeb;
+    --bg: #f5f5f3; --card: #ffffff;
+    --red: #a32d2d; --red-bg: #fbf0ef;
+    --green: #0f6e56; --green-bg: #eef6f3;
+    --amber: #8a5a12; --amber-bg: #fdf6e8;
+    --slate: #4a4a46;
+  }
+  body {
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.65;
+    padding: 32px 20px 64px; -webkit-font-smoothing: antialiased;
+  }
+  .page { width: 1180px; max-width: 100%; margin: 0 auto; }
+
+  /* ---------- header ---------- */
+  header { padding: 8px 4px 0; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 12px; letter-spacing: .08em; color: var(--ink-3);
+    text-transform: uppercase; margin-bottom: 14px;
+  }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+  h1 { font-size: 30px; font-weight: 600; letter-spacing: -.4px; line-height: 1.3; }
+  .sub { margin-top: 10px; font-size: 13.5px; color: var(--ink-3); }
+  .meta-row {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px;
+  }
+  .tag {
+    font-size: 12px; padding: 5px 11px; border-radius: 999px;
+    background: #fff; border: 1px solid var(--line); color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .tag.warn { background: var(--amber-bg); border-color: #eddfc4; color: var(--amber); font-weight: 500; }
+
+  /* ---------- alert ---------- */
+  .alert {
+    margin: 24px 0 28px; background: var(--amber-bg);
+    border: 1px solid #eddfc4; border-left: 3px solid #c99a3f;
+    border-radius: 8px; padding: 16px 20px; font-size: 13.5px; color: #6b4a12;
+  }
+  .alert b { color: #4a3309; }
+  .alert .t { font-weight: 600; margin-bottom: 4px; color: #4a3309; font-size: 14px; }
+
+  /* ---------- kpi ---------- */
+  .kpis { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 32px; }
+  .kpi {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px 15px;
+  }
+  .kpi .lab { font-size: 12px; color: var(--ink-3); margin-bottom: 10px; white-space: nowrap; }
+  .kpi .val {
+    font-size: 30px; font-weight: 600; letter-spacing: -.8px; line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi .val small { font-size: 13px; font-weight: 400; color: var(--ink-3); letter-spacing: 0; margin-left: 3px; }
+  .kpi .dl { font-size: 12px; color: var(--ink-3); margin-top: 9px; }
+  .kpi.accent { background: #fbfbfa; border-color: #dcdbd5; }
+
+  .up { color: var(--green); font-weight: 500; }
+  .down { color: var(--red); font-weight: 500; }
+  .flat { color: var(--ink-3); }
+
+  /* ---------- section ---------- */
+  section { margin-bottom: 34px; }
+  h2 {
+    font-size: 16px; font-weight: 600; margin-bottom: 6px;
+    display: flex; align-items: center; gap: 9px;
+  }
+  h2::before { content: ""; width: 3px; height: 15px; background: var(--slate); border-radius: 2px; }
+  .h2-sub { font-size: 12.5px; color: var(--ink-3); margin: 0 0 14px 12px; }
+
+  .panel {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 22px 24px;
+  }
+
+  /* ---------- table ---------- */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th {
+    text-align: left; font-size: 11.5px; font-weight: 500; color: var(--ink-3);
+    padding: 0 10px 10px; border-bottom: 1px solid var(--line); white-space: nowrap;
+  }
+  th.num, td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td { padding: 11px 10px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  td.rank { color: #b0afa7; font-size: 12px; width: 26px; }
+  td.bl { font-weight: 500; }
+  td.strong { font-weight: 600; font-size: 14px; }
+  td.muted { color: var(--ink-3); }
+  td.prod { font-size: 12.5px; color: var(--ink-2); max-width: 200px; overflow: hidden; text-overflow: ellipsis; }
+  td.prod b { color: var(--ink); font-weight: 600; margin-left: 3px; }
+  .pill {
+    display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 4px;
+    font-variant-numeric: tabular-nums; font-weight: 500;
+  }
+  .pill.red { background: var(--red-bg); color: var(--red); }
+  .pill.green { background: var(--green-bg); color: var(--green); }
+  .pill.gray { background: #f2f1ed; color: var(--ink-2); }
+
+  /* ---------- waterfall ---------- */
+  .wf { display: grid; gap: 14px; }
+  .wf-row { display: grid; grid-template-columns: 150px 1fr 96px; align-items: center; gap: 14px; }
+  .wf-name { font-size: 13px; color: var(--ink-2); }
+  .wf-name span { color: var(--ink-3); font-size: 11.5px; margin-left: 4px; }
+  .wf-track { position: relative; height: 22px; background: #f4f3ef; border-radius: 4px; overflow: hidden; }
+  .wf-bar { position: absolute; top: 0; height: 100%; border-radius: 4px; }
+  .wf-bar.neg { background: linear-gradient(90deg, #c85a5a, #a32d2d); }
+  .wf-bar.pos { background: linear-gradient(90deg, #3f9a7d, #0f6e56); }
+  .wf-val { text-align: right; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* ---------- issue cards ---------- */
+  .issues { display: grid; gap: 14px; }
+  .issue {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px 24px; border-left: 3px solid var(--red);
+  }
+  .issue.amber { border-left-color: #c99a3f; }
+  .issue-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+  .issue-no {
+    font-size: 11px; font-weight: 600; color: var(--ink-3); letter-spacing: .06em;
+  }
+  .issue-title { font-size: 15px; font-weight: 600; }
+  .issue-body { font-size: 13.5px; color: var(--ink-2); margin-top: 6px; }
+  .issue-body b { color: var(--ink); font-weight: 600; }
+  .mini { margin-top: 12px; display: grid; gap: 6px; }
+  .mini-row {
+    display: grid; grid-template-columns: 1fr 120px; gap: 12px;
+    font-size: 12.5px; color: var(--ink-2); padding: 6px 0;
+    border-top: 1px dashed var(--line-2);
+  }
+  .mini-row:first-child { border-top: none; }
+  .mini-row .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+  /* ---------- action ---------- */
+  .actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .action {
+    background: var(--card); border: 1px solid var(--line); border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .action .who { font-size: 11.5px; color: var(--ink-3); margin-bottom: 5px; }
+  .action .what { font-size: 13.5px; font-weight: 500; line-height: 1.6; }
+  .action .why { font-size: 12.5px; color: var(--ink-2); margin-top: 6px; }
+  .action .p0 {
+    display: inline-block; font-size: 10.5px; font-weight: 600; color: #fff;
+    background: var(--red); padding: 1px 6px; border-radius: 3px; margin-right: 6px;
+    vertical-align: 1px;
+  }
+  .action .p1 {
+    display: inline-block; font-size: 10.5px; font-weight: 600; color: #fff;
+    background: #8a8981; padding: 1px 6px; border-radius: 3px; margin-right: 6px;
+    vertical-align: 1px;
+  }
+
+  /* ---------- footnote ---------- */
+  .foot {
+    margin-top: 34px; padding-top: 18px; border-top: 1px solid var(--line);
+    font-size: 11.5px; color: var(--ink-3); line-height: 1.95;
+  }
+  .foot code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px;
+    background: #efeee9; padding: 1px 5px; border-radius: 4px; color: var(--ink-2);
+  }
+  .foot b { color: var(--ink-2); font-weight: 500; }
+
+  @media (max-width: 1100px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .actions { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="eyebrow"><span class="dot"></span>消费者 BG · 研发效能治理月报</div>
+  <h1>10 月产研过程健康度（RDHS）治理情况</h1>
+  <div class="sub">数据源：飞书项目空间 <b style="font-weight:500;color:var(--ink-2)">cbg_product_develop</b>　｜　取数时间：2026-10-19 15:30　｜　口径：研发中 ＆ 非交付定制 ＆ 非测试业务线</div>
+  <div class="meta-row">
+    <span class="tag warn">⚠ 月中快照 · 非月末收口值</span>
+    <span class="tag">在管产品 48 款</span>
+    <span class="tag">已度量 45 款 · 覆盖 93.8%</span>
+    <span class="tag">达标线 RDHS ≥ 70</span>
+    <span class="tag">得分＝五维之和（满分 100）</span>
+  </div>
+</header>
+
+<div class="alert">
+  <div class="t">本月数据是 10 月 1 日至 19 日的进行中口径，不能与 9 月整月结果直接对比</div>
+  「链路闭环」「交付闭环」两项按<b>月度收口</b>计分，月中尚未完成的发布与验收会被计为未闭环。当前应发布需求 216 项（9 月整月 598 项）、发布完成量 71 项（9 月 224 项），仅完成月度节奏的约三分之一。
+  <b>因此本月 39.2 分反映的是"月底能收多少"的进行中水位，而非治理水平的真实滑坡。</b>本报告已将失真部分单独剥离，并给出可比口径与真实问题清单。
+</div>
+
+<!-- ============ KPI ============ -->
+<div class="kpis">
+  <div class="kpi">
+    <div class="lab">BG 均分（月中口径）</div>
+    <div class="val">39.2<small>分</small></div>
+    <div class="dl">9 月整月 54.6　<span class="down">−15.4</span></div>
+  </div>
+  <div class="kpi accent">
+    <div class="lab">可比口径均分</div>
+    <div class="val">54.5<small>分</small></div>
+    <div class="dl">两月均有吞吐的 24 款　<span class="down">−13.3</span></div>
+  </div>
+  <div class="kpi">
+    <div class="lab">达标率（≥70）</div>
+    <div class="val">4.2<small>%</small></div>
+    <div class="dl">2 / 48 款　9 月 35.4%</div>
+  </div>
+  <div class="kpi">
+    <div class="lab">重点治理（&lt;45）</div>
+    <div class="val">28<small>款</small></div>
+    <div class="dl">占在管 58%　9 月 15 款</div>
+  </div>
+  <div class="kpi">
+    <div class="lab">未度量产品</div>
+    <div class="val">3<small>款</small></div>
+    <div class="dl">连续两月零进展</div>
+  </div>
+</div>
+
+<!-- ============ 归因 ============ -->
+<section>
+  <h2>−15.4 分是怎么掉下来的</h2>
+  <div class="h2-sub">RDHS 等于五维得分之和，因此跌幅可精确拆分到每个维度，无需估算</div>
+  <div class="panel">
+    <div class="wf">
+      <div class="wf-row">
+        <div class="wf-name">链路闭环 <span>/25</span></div>
+        <div class="wf-track"><div class="wf-bar neg" style="left:0;width:100%"></div></div>
+        <div class="wf-val down">−6.23</div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-name">交付闭环 <span>/15</span></div>
+        <div class="wf-track"><div class="wf-bar neg" style="left:0;width:67.3%"></div></div>
+        <div class="wf-val down">−4.19</div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-name">颗粒度对齐 <span>/20</span></div>
+        <div class="wf-track"><div class="wf-bar neg" style="left:0;width:45.1%"></div></div>
+        <div class="wf-val down">−2.81</div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-name">质量敏锐度 <span>/20</span></div>
+        <div class="wf-track"><div class="wf-bar neg" style="left:0;width:20.1%"></div></div>
+        <div class="wf-val down">−1.25</div>
+      </div>
+      <div class="wf-row">
+        <div class="wf-name">时效节奏 <span>/20</span></div>
+        <div class="wf-track"><div class="wf-bar neg" style="left:0;width:14.8%"></div></div>
+        <div class="wf-val down">−0.92</div>
+      </div>
+    </div>
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--line-2);font-size:13px;color:var(--ink-2);">
+      两项<b style="color:var(--ink)">流程闭环</b>合计 <b class="down">−10.42 分</b>，占全部跌幅 <b>68%</b>；这两项正是月中未收口影响最大的指标。
+      颗粒度、质量、时效合计 <b class="down">−4.98 分</b>，其中时效在可比样本中反而小幅回升。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 业务线 ============ -->
+<section>
+  <h2>一级业务线排行</h2>
+  <div class="h2-sub">按 10 月月中均分降序；「零吞吐」指本月尚无已验收需求，是月中失分最集中的原因</div>
+  <div class="panel">
+    <table>
+      <thead>
+        <tr>
+          <th></th><th>一级业务线</th><th class="num">n</th>
+          <th class="num">10 月</th><th class="num">9 月</th><th class="num">Δ</th>
+          <th class="num">达标率</th><th class="num">&lt;45</th><th class="num">零吞吐</th>
+          <th>标杆</th><th>垫底</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="rank">1</td><td class="bl">C端硬件创新中心</td><td class="num">2</td>
+          <td class="num strong">61.5</td><td class="num muted">49.0</td>
+          <td class="num"><span class="pill green">+12.5</span></td>
+          <td class="num">0%</td><td class="num">0</td><td class="num">0</td>
+          <td class="prod">讯飞录音环 <b>65</b></td><td class="prod">讯飞录音笔软件平台 <b>58</b></td>
+        </tr>
+        <tr>
+          <td class="rank">2</td><td class="bl">AI文娱业务群</td><td class="num">2</td>
+          <td class="num strong">60.0</td><td class="num muted">73.5</td>
+          <td class="num"><span class="pill red">−13.5</span></td>
+          <td class="num">0%</td><td class="num">0</td><td class="num">0</td>
+          <td class="prod">讯飞输入法 <b>64</b></td><td class="prod">互联网酷音 <b>56</b></td>
+        </tr>
+        <tr>
+          <td class="rank">3</td><td class="bl">AI翻译业务群</td><td class="num">5</td>
+          <td class="num strong">52.8</td><td class="num muted">63.6</td>
+          <td class="num"><span class="pill red">−10.8</span></td>
+          <td class="num">0%</td><td class="num">1</td><td class="num">1</td>
+          <td class="prod">讯飞翻译SaaS平台 <b>68</b></td><td class="prod">双屏翻译机（同传导览版） <b>22</b></td>
+        </tr>
+        <tr>
+          <td class="rank">4</td><td class="bl">读写科技</td><td class="num">4</td>
+          <td class="num strong">50.5</td><td class="num muted">69.5</td>
+          <td class="num"><span class="pill red">−19.0</span></td>
+          <td class="num">25%</td><td class="num">1</td><td class="num">1</td>
+          <td class="prod">阅读器Fika&amp;Cube2 <b>70</b></td><td class="prod">智能办公本应用软件 <b>29</b></td>
+        </tr>
+        <tr>
+          <td class="rank">5</td><td class="bl">AI营销业务群</td><td class="num">7</td>
+          <td class="num strong">49.1</td><td class="num muted">65.4</td>
+          <td class="num"><span class="pill red">−16.3</span></td>
+          <td class="num">0%</td><td class="num">2</td><td class="num">0</td>
+          <td class="prod">超级制图 APP <b>69</b></td><td class="prod">aiBoost存量营销平台 <b>0</b></td>
+        </tr>
+        <tr>
+          <td class="rank">6</td><td class="bl">消费者公共研发部</td><td class="num">1</td>
+          <td class="num strong">38.0</td><td class="num muted">66.0</td>
+          <td class="num"><span class="pill red">−28.0</span></td>
+          <td class="num">0%</td><td class="num">1</td><td class="num">0</td>
+          <td class="prod">iFlyBase基础能力平台 <b>38</b></td><td class="prod">iFlyBase基础能力平台 <b>38</b></td>
+        </tr>
+        <tr>
+          <td class="rank">7</td><td class="bl">开放平台业务群</td><td class="num">15</td>
+          <td class="num strong">31.8</td><td class="num muted">40.9</td>
+          <td class="num"><span class="pill red">−9.1</span></td>
+          <td class="num">7%</td><td class="num">11</td><td class="num">10</td>
+          <td class="prod">星火纪要 <b>70</b></td><td class="prod">Spark Insight <b>0</b></td>
+        </tr>
+        <tr>
+          <td class="rank">8</td><td class="bl">讯飞听见</td><td class="num">9</td>
+          <td class="num strong">30.6</td><td class="num muted">66.8</td>
+          <td class="num"><span class="pill red">−36.2</span></td>
+          <td class="num">0%</td><td class="num">9</td><td class="num">8</td>
+          <td class="prod">听见智慧简报系统 <b>37</b></td><td class="prod">智慧办公解决方案 <b>17</b></td>
+        </tr>
+        <tr>
+          <td class="rank">9</td><td class="bl">企业数字化业务群</td><td class="num">3</td>
+          <td class="num strong">12.7</td><td class="num muted">13.7</td>
+          <td class="num"><span class="pill red">−1.0</span></td>
+          <td class="num">0%</td><td class="num">3</td><td class="num">2</td>
+          <td class="prod">生成式智慧驾驶舱 <b>20</b></td><td class="prod">智能评标 <b>0</b></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 失真证据 ============ -->
+<section>
+  <h2>月中口径失真有多大：四项硬证据</h2>
+  <div class="h2-sub">同一批 45 款已度量产品，10 月进行中 vs 9 月整月</div>
+  <div class="panel">
+    <table>
+      <thead>
+        <tr><th>观测项</th><th class="num">10 月（至 19 日）</th><th class="num">9 月（整月）</th><th class="num">比值</th><th>说明</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>应发布需求数</td><td class="num strong">216</td><td class="num muted">598</td><td class="num">36%</td><td class="muted">发布义务随月份推进逐步显性化</td></tr>
+        <tr><td>有效发布需求数</td><td class="num strong">148</td><td class="num muted">550</td><td class="num">27%</td><td class="muted">已闭环发布尚未追平义务</td></tr>
+        <tr><td>发布完成量</td><td class="num strong">71</td><td class="num muted">224</td><td class="num">32%</td><td class="muted">交付闭环分子严重不足</td></tr>
+        <tr><td>零吞吐产品数</td><td class="num strong">19 / 45</td><td class="num muted">11 / 45</td><td class="num">+8 款</td><td class="muted">本月尚无已验收需求 → 颗粒度直接计 0</td></tr>
+        <tr><td>零应发布产品数</td><td class="num strong">20 / 45</td><td class="num muted">11 / 45</td><td class="num">+9 款</td><td class="muted">无发布义务时交付闭环封顶 8 分</td></tr>
+        <tr><td>有效参与人数</td><td class="num strong">926</td><td class="num muted">966</td><td class="num">96%</td><td class="muted">投入侧基本持平，非人员流失所致</td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--line-2);font-size:12.5px;color:var(--ink-2);">
+      投入人数只降 4%，产出侧却只有三分之一 —— 说明缺口在<b style="color:var(--ink)">系统登记与收口</b>，不在产能。
+    </div>
+  </div>
+</section>
+
+<!-- ============ 真实问题 ============ -->
+<section>
+  <h2>剥离失真后，真正需要治理的三件事</h2>
+  <div class="h2-sub">以下问题与月份进度无关，即使到月末收口也不会自动修复</div>
+
+  <div class="issues">
+    <div class="issue">
+      <div class="issue-head">
+        <span class="issue-no">问题 01</span>
+        <span class="issue-title">质量敏锐度是唯一持续恶化的维度</span>
+        <span class="pill red">可比样本 −1.25 分</span>
+      </div>
+      <div class="issue-body">
+        全 BG 有 <b>12 款产品</b>质量敏锐度落在最低档（≤5 分）。企业数字化业务群严重缺陷占比高达 <b>41.8%</b>，消费者公共研发部 <b>27.2%</b>，C端硬件 <b>20.2%</b>。缺陷不是没发现，而是发现得太晚、关闭得太慢。
+      </div>
+      <div class="mini">
+        <div class="mini-row"><span>生成式智慧驾驶舱 · 严重缺陷占比</span><span class="v down">66.4%</span></div>
+        <div class="mini-row"><span>讯飞双屏翻译机（同传导览版）· 严重缺陷占比</span><span class="v down">42.9%</span></div>
+        <div class="mini-row"><span>讯飞录音环 · 严重缺陷占比</span><span class="v down">27.6%</span></div>
+        <div class="mini-row"><span>iFlyBase基础能力平台 · 严重缺陷占比（缺陷量 114）</span><span class="v down">27.2%</span></div>
+        <div class="mini-row"><span>讯飞智作 · 线上缺陷 17 个，严重占比 27.3%</span><span class="v down">27.3%</span></div>
+      </div>
+    </div>
+
+    <div class="issue">
+      <div class="issue-head">
+        <span class="issue-no">问题 02</span>
+        <span class="issue-title">长在途卡片仍是时效的最大拖累</span>
+        <span class="pill gray">时效维度整体持平</span>
+      </div>
+      <div class="issue-body">
+        时效维度在可比样本中反而 <b>+0.50 分</b>，但结构性积压没解决：<b>9 款产品</b>需求在途超过 100 天，其中 <b>6 款积压率 ≥ 50%</b>。这些卡片既不推进也不关闭，持续吞噬时效得分。
+      </div>
+      <div class="mini">
+        <div class="mini-row"><span>星火SparkDesk · 在途 240 天 · 交付周期 537 天</span><span class="v down">积压 78.9%</span></div>
+        <div class="mini-row"><span>星火企业知识库 · 在途 224 天</span><span class="v down">积压 100%</span></div>
+        <div class="mini-row"><span>星火数字员工平台 · 在途 216 天</span><span class="v down">积压 50.0%</span></div>
+        <div class="mini-row"><span>讯飞智文 · 在途 167 天</span><span class="v down">积压 55.0%</span></div>
+        <div class="mini-row"><span>生成式智慧驾驶舱 · 在途 130 天</span><span class="v down">积压 58.7%</span></div>
+      </div>
+    </div>
+
+    <div class="issue amber">
+      <div class="issue-head">
+        <span class="issue-no">问题 03</span>
+        <span class="issue-title">3 款未度量产品连续两个月零动作</span>
+        <span class="pill gray">9 月已点名，10 月未变</span>
+      </div>
+      <div class="issue-body">
+        <b>Spark Insight</b>（开放平台）、<b>aiBoost存量营销平台</b>（AI营销）、<b>智能评标</b>（企业数字化）主数据口径有效，但图表中完全没有产品行，按 0 分计入考核。9 月报告已明确列为行动项，本月核查结果<b>完全未变</b>。这三款按 0 分计入，若达到已度量产品均分（41.8），BG 均分可提升约 <b>2.6 分</b>。
+      </div>
+      <div class="mini">
+        <div class="mini-row"><span>Spark Insight · 海外产品部 · 开放平台业务群</span><span class="v down">0 分</span></div>
+        <div class="mini-row"><span>aiBoost存量营销平台 · 数据增值 · AI营销业务群</span><span class="v down">0 分</span></div>
+        <div class="mini-row"><span>智能评标 · 数字员工 · 企业数字化业务群</span><span class="v down">0 分</span></div>
+      </div>
+    </div>
+
+    <div class="issue amber">
+      <div class="issue-head">
+        <span class="issue-no">问题 04</span>
+        <span class="issue-title">讯飞听见 9 款产品全部零吞吐，需先确认是数据断链还是真停摆</span>
+        <span class="pill red">单线拖累 −6.79 分</span>
+      </div>
+      <div class="issue-body">
+        讯飞听见 9 款产品本月<b>全部无已验收需求</b>，均分从 66.8 跌至 30.6，单条业务线贡献了 BG 总跌幅的 <b>44%</b>。9 款产品同时零产出在业务上不合理，更可能是<b>需求未在飞书项目中流转到"已完成"</b>。这是本月最优先需要核实的数据链路问题。
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 行动 ============ -->
+<section>
+  <h2>本月治理动作</h2>
+  <div class="h2-sub">按优先级排序；P0 项直接决定 10 月收口分数</div>
+  <div class="actions">
+    <div class="action">
+      <div class="who">讯飞听见 · 业务线负责人 + PMO</div>
+      <div class="what"><span class="p0">P0</span>核实 9 款产品零吞吐原因</div>
+      <div class="why">确认是需求未流转到"已完成"，还是本月确实无交付。若为登记问题，本周内完成存量需求收口，可直接回收约 6 分。</div>
+    </div>
+    <div class="action">
+      <div class="who">开放平台 / AI营销 / 企业数字化 · PMO</div>
+      <div class="what"><span class="p0">P0</span>3 款未度量产品强制入图</div>
+      <div class="why">Spark Insight、aiBoost存量营销平台、智能评标补齐飞书项目产品关联与工作流，月末前必须产生度量行，回收约 2.6 分。</div>
+    </div>
+    <div class="action">
+      <div class="who">全 BG · 各业务线 PMO</div>
+      <div class="what"><span class="p0">P0</span>发布闭环周清，盯"应发布未发布"</div>
+      <div class="why">当前应发布 216 项、有效发布 148 项，缺口 68 项。按周核销发布计划关联，是月末收口提分最快的手段。</div>
+    </div>
+    <div class="action">
+      <div class="who">企业数字化 · 消费者公共研发部</div>
+      <div class="what"><span class="p1">P1</span>严重缺陷专项压降</div>
+      <div class="why">两条线严重缺陷占比 41.8% / 27.2%，远高于 10% 健康线。从提测准入与缺陷关闭时效两侧同时压。</div>
+    </div>
+    <div class="action">
+      <div class="who">开放平台 · 企业数字化</div>
+      <div class="what"><span class="p1">P1</span>清理超 100 天在途卡片</div>
+      <div class="why">7 款产品在途超 100 天。逐张评估：有价值则拆分推进，无价值立即终止归档，释放时效得分。</div>
+    </div>
+    <div class="action">
+      <div class="who">研发效能部 · 数据中心</div>
+      <div class="what"><span class="p1">P1</span>月末收口后出正式月报</div>
+      <div class="why">10 月 31 日数据收口后重跑本报告，与 9 月整月同口径对比，届时结论才可作为考核依据。</div>
+    </div>
+  </div>
+</section>
+
+<div class="foot">
+  <b>数据口径</b>　在管产品＝状态"研发中" ＆ 产品属性≠"交付定制" ＆ 业务线≠"测试业务线"，共 48 款；其中图表有评分 45 款，未度量 3 款按 0 分计入基数。<br>
+  <b>聚合规则</b>　RDHS 为五维得分之和（链路闭环 25 + 交付闭环 15 + 时效节奏 20 + 颗粒度对齐 20 + 质量敏锐 20），按产品二次平均，不按人数加权。<br>
+  <b>可比样本</b>　指 9 月与 10 月人均需求吞吐量均大于 0 的 24 款产品，用于剔除"本月尚未产出"造成的样本结构偏差。<br>
+  <b>双向对账</b>　主数据 48 款 − 未度量 3 款 ＝ 图表 68 款 − 口径外 23 款 → 闭合 ✅　｜　两月产品集合一致 ✅<br>
+  <b>数据源</b>　飞书项目 <code>cbg_product_develop</code>　本月图表 <code>7659618575337915254</code>　上月图表 <code>7681204196376314742</code><br>
+  <b>生成时间</b>　2026-10-19 15:30　｜　消费者 BG 研发效能部
+</div>
+
+</div>
+</body>
+</html>

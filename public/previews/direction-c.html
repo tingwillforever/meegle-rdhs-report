@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>方案 C：敏捷驾驶舱 · 模块化 Bento 便当盒工作台 (Modular Bento Cockpit)</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-subtle: #f1f5f9;
+      --surface-hover: #f8fafc;
+      --border: #e2e8f0;
+      --border-focus: #3b82f6;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-faint: #94a3b8;
+      --brand: #2563eb;
+      --brand-light: #eff6ff;
+      --red: #e11d48;
+      --red-bg: #fff1f2;
+      --amber: #d97706;
+      --amber-bg: #fffbeb;
+      --green: #059669;
+      --green-bg: #ecfdf5;
+      --blue: #2563eb;
+      --blue-bg: #eff6ff;
+      --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.03);
+      --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.05);
+      --mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+      padding-bottom: 80px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Top Navigation Bar */
+    .bento-nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .bento-logo-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .bento-logo {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #2563eb, #38bdf8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .bento-title {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text-main);
+    }
+    .scheme-badge {
+      background: #2563eb;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+    .bento-tabs {
+      display: flex;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 4px;
+    }
+    .bento-tab-btn {
+      padding: 5px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .bento-tab-btn.active {
+      background: #fff;
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+    }
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .bento-select {
+      background: #fff;
+      border: 1px solid var(--border);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 6px 12px;
+      border-radius: 8px;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+    }
+
+    .container {
+      max-width: 1240px;
+      margin: 28px auto 0;
+      padding: 0 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Bento Grid Layout */
+    .bento-grid-row {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr;
+      gap: 20px;
+    }
+
+    .bento-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+    .bento-card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: #cbd5e1;
+    }
+
+    /* Bento Card 1: Core Hero */
+    .bento-hero {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .hero-meta-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .period-chip {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--brand);
+      background: var(--brand-light);
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+    .status-chip-red {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--red);
+      background: var(--red-bg);
+      border: 1px solid rgba(225, 29, 72, 0.2);
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+    .hero-score-block {
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      margin: 8px 0;
+    }
+    .hero-score-num {
+      font-size: 56px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      font-family: var(--mono);
+      color: var(--text-main);
+    }
+    .hero-delta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--mono);
+      background: var(--green-bg);
+      color: var(--green);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+    .hero-summary-text {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+    .scale-bar {
+      width: 100%;
+      height: 6px;
+      background: #e2e8f0;
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 12px;
+    }
+    .scale-bar-fill {
+      width: 56.2%;
+      height: 100%;
+      background: linear-gradient(90deg, #f43f5e, #f59e0b);
+      border-radius: 3px;
+    }
+    .scale-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: var(--text-faint);
+      margin-top: 6px;
+      font-family: var(--mono);
+    }
+
+    /* Bento Card 2: 2x2 Metric Capsules */
+    .metric-capsules-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .metric-capsule {
+      background: var(--surface-subtle);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .capsule-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .capsule-num {
+      font-size: 26px;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--text-main);
+      margin: 4px 0;
+    }
+    .capsule-unit {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .capsule-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* Section Title */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Top 3 Attack Focus Bento Cards */
+    .focus-bento-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+    .focus-bento-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+      cursor: pointer;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+      position: relative;
+    }
+    .focus-bento-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+      border-color: #94a3b8;
+    }
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge-p0 {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--mono);
+      background: var(--red-bg);
+      color: var(--red);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .badge-p1 {
+      font-size: 11px;
+      font-weight: 700;
+      font-family: var(--mono);
+      background: var(--amber-bg);
+      color: var(--amber);
+      padding: 2px 7px;
+      border-radius: 6px;
+    }
+    .focus-score {
+      font-size: 13px;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: var(--red);
+    }
+    .focus-card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .focus-metric-chips {
+      display: flex;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .focus-metric-chips b {
+      color: var(--text-main);
+      font-family: var(--mono);
+    }
+    .focus-body {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.55;
+      background: var(--surface-subtle);
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+    .focus-body strong {
+      color: var(--text-main);
+    }
+    .focus-action-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      background: var(--surface-subtle);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--brand);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .focus-bento-card:hover .focus-action-btn {
+      background: var(--brand-light);
+      border-color: #bfdbfe;
+    }
+
+    /* Ranking Table in Bento Container */
+    .table-container {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+    }
+    .bento-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    .bento-table th {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 12px;
+    }
+    .bento-table td {
+      padding: 14px;
+      border-bottom: 1px solid #f1f5f9;
+      color: var(--text-muted);
+      vertical-align: middle;
+    }
+    .bento-table tr:hover td {
+      background: #f8fafc;
+      color: var(--text-main);
+    }
+    .bento-rank-badge {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: var(--surface-subtle);
+    }
+    .rank-gold { background: #fef08a; color: #854d0e; }
+    .rank-silver { background: #e2e8f0; color: #334155; }
+    .rank-bronze { background: #fed7aa; color: #9a3412; }
+    .table-score {
+      font-family: var(--mono);
+      font-weight: 700;
+      color: var(--text-main);
+    }
+    .table-progress-bar {
+      display: inline-block;
+      width: 50px;
+      height: 5px;
+      background: #e2e8f0;
+      border-radius: 3px;
+      margin-left: 8px;
+      vertical-align: middle;
+      overflow: hidden;
+    }
+    .table-progress-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+    .drilldown-action-text {
+      color: var(--brand);
+      font-weight: 600;
+      font-size: 12px;
+      text-decoration: none;
+    }
+    .drilldown-action-text:hover {
+      text-decoration: underline;
+    }
+
+    /* Embedded Drilldown Drawer */
+    .embedded-drawer {
+      background: #f8fafc;
+      border: 2px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .drawer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .breadcrumb-text {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .breadcrumb-text b {
+      color: var(--text-main);
+    }
+    .product-list-preview {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .preview-prod-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      box-shadow: var(--shadow-sm);
+    }
+    .prod-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .prod-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <nav class="bento-nav">
+    <div class="bento-logo-group">
+      <div class="bento-logo">R</div>
+      <span class="bento-title">CBG RDHS 产研效能运营看板</span>
+      <span class="scheme-badge">方案 C 设计稿</span>
+    </div>
+
+    <div class="bento-tabs">
+      <button class="bento-tab-btn active">📊 BG 全局大盘</button>
+      <button class="bento-tab-btn" onclick="alert('切换至业务明细工作台')">🔍 业务明细工作台</button>
+    </div>
+
+    <div class="nav-controls">
+      <select class="bento-select" aria-label="选择快照周期">
+        <option>2026-09 月报快照</option>
+        <option>2026-08 历史快照</option>
+      </select>
+      <a href="direction-a.html" style="color:var(--text-muted);font-size:12px;text-decoration:none;margin-left:8px;">👉 切换查看方案 A</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- Bento Row 1: Hero & Metric Capsules -->
+    <div class="bento-grid-row">
+      <!-- Bento Hero Card -->
+      <div class="bento-card bento-hero">
+        <div>
+          <div class="hero-meta-top">
+            <span class="period-chip">2026-09 运营总览</span>
+            <span class="status-chip-red">重点治理阶段</span>
+          </div>
+
+          <div class="hero-score-block">
+            <div class="hero-score-num">56.2</div>
+            <div class="hero-delta-pill">
+              <span>▲ +5.9</span>
+              <span style="font-size:11px;font-weight:500;">环比 8 月</span>
+            </div>
+          </div>
+
+          <p class="hero-summary-text">
+            本期 CBG 共覆盖 <b>51</b> 款研发中产品。达标率为 <b>33.3%</b>，虽环比回升，但主数据关联断链与长在途需求积压仍为首要治理短板。
+          </p>
+        </div>
+
+        <div>
+          <div class="scale-bar">
+            <div class="scale-bar-fill"></div>
+          </div>
+          <div class="scale-labels">
+            <span>0分 阻塞</span>
+            <span>45分 风险</span>
+            <span>60分 优化</span>
+            <span style="color:var(--green);font-weight:700;">70分 达标</span>
+            <span>100分</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bento Metric Capsules -->
+      <div class="bento-card metric-capsules-grid">
+        <div class="metric-capsule">
+          <div class="capsule-label">在研产品总数</div>
+          <div class="capsule-num">51<span class="capsule-unit"> 款</span></div>
+          <div class="capsule-desc">状态为 In Progress</div>
+        </div>
+
+        <div class="metric-capsule">
+          <div class="capsule-label">度量覆盖率</div>
+          <div class="capsule-num" style="color:var(--green)">92.2<span class="capsule-unit">%</span></div>
+          <div class="capsule-desc">已度量 47 / 待关联 4</div>
+        </div>
+
+        <div class="metric-capsule">
+          <div class="capsule-label">重点治理敞口</div>
+          <div class="capsule-num" style="color:var(--red)">34<span class="capsule-unit"> 款</span></div>
+          <div class="capsule-desc">占比 66.7% (含未度量)</div>
+        </div>
+
+        <div class="metric-capsule">
+          <div class="capsule-label">健康达标率 (≥70)</div>
+          <div class="capsule-num" style="color:var(--amber)">33.3<span class="capsule-unit">%</span></div>
+          <div class="capsule-desc">达标 16 / 在管 48 款</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: Top 3 Attack Focus Bento -->
+    <div>
+      <div class="section-header">
+        <div class="section-title">
+          <span>🎯</span> 最需关注治理业务线（Top 3 攻坚重点）
+        </div>
+        <span style="font-size:12px;color:var(--text-muted)">点击任一卡片可直接在下方同屏展开明细</span>
+      </div>
+
+      <div class="focus-bento-grid" style="margin-top:14px;">
+        <!-- Card 1 -->
+        <div class="focus-bento-card" onclick="alert('同屏联动展开【开放平台业务群】产品明细！')">
+          <div>
+            <div class="card-top">
+              <span class="badge-p0">P0 攻坚 · 倒数第 2</span>
+              <span class="focus-score">均分 43.3 分</span>
+            </div>
+            <div class="focus-card-title" style="margin-top:8px;">开放平台业务群</div>
+            <div class="focus-metric-chips" style="margin-top:4px;">
+              <span>在研 <b>17</b> 款</span>
+              <span>·</span>
+              <span style="color:var(--red)">重点治理 <b>10</b> 款</span>
+              <span>·</span>
+              <span>未度量 <b>3</b> 款</span>
+            </div>
+          </div>
+
+          <div class="focus-body">
+            <div><strong>最低过程项：</strong>时效节奏 (5.9 / 20)</div>
+            <div style="margin-top:4px;"><strong>攻坚抓手：</strong>补齐 Spark Insight 空间度量，两周内清理 90 天以上超期在途卡片。</div>
+          </div>
+
+          <div class="focus-action-btn">
+            <span>穿透下钻 17 款产品明细</span>
+            <span>➔</span>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="focus-bento-card" onclick="alert('同屏联动展开【企业数字化业务群】产品明细！')">
+          <div>
+            <div class="card-top">
+              <span class="badge-p0">P0 攻坚 · 倒数第 1</span>
+              <span class="focus-score">均分 20.5 分</span>
+            </div>
+            <div class="focus-card-title" style="margin-top:8px;">企业数字化业务群</div>
+            <div class="focus-metric-chips" style="margin-top:4px;">
+              <span>在研 <b>3</b> 款</span>
+              <span>·</span>
+              <span style="color:var(--red)">重点治理 <b>3</b> 款</span>
+              <span>·</span>
+              <span>未度量 <b>1</b> 款</span>
+            </div>
+          </div>
+
+          <div class="focus-body">
+            <div><strong>最低过程项：</strong>时效节奏 (0.0 / 20)</div>
+            <div style="margin-top:4px;"><strong>攻坚抓手：</strong>补齐《智能评标》工作流绑定，执行冒烟测试质量红线拦截。</div>
+          </div>
+
+          <div class="focus-action-btn">
+            <span>穿透下钻 3 款产品明细</span>
+            <span>➔</span>
+          </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="focus-bento-card" onclick="alert('同屏联动展开【C端硬件创新中心】产品明细！')">
+          <div>
+            <div class="card-top">
+              <span class="badge-p1">P1 攻坚 · 倒数第 3</span>
+              <span class="focus-score" style="color:var(--amber)">均分 46.0 分</span>
+            </div>
+            <div class="focus-card-title" style="margin-top:8px;">C端硬件创新中心</div>
+            <div class="focus-metric-chips" style="margin-top:4px;">
+              <span>在研 <b>3</b> 款</span>
+              <span>·</span>
+              <span style="color:var(--amber)">重点治理 <b>2</b> 款</span>
+              <span>·</span>
+              <span>未度量 <b>0</b> 款</span>
+            </div>
+          </div>
+
+          <div class="focus-body">
+            <div><strong>最低过程项：</strong>时效节奏 (2.0 / 20)</div>
+            <div style="margin-top:4px;"><strong>攻坚抓手：</strong>每周盘点转测完成的固件/软件需求，在系统中流转到已完成。</div>
+          </div>
+
+          <div class="focus-action-btn">
+            <span>穿透下钻 3 款产品明细</span>
+            <span>➔</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section: Bento Ranking Table -->
+    <div class="table-container">
+      <div class="section-header" style="margin-bottom:16px;">
+        <div class="section-title">
+          <span>🏆</span> 一级业务线综合考核矩阵 (9 大业务线)
+        </div>
+        <span style="font-size:12px;color:var(--text-muted)">带水平分数刻度指示 · 点击任意业务线即刻在下方展开明细</span>
+      </div>
+
+      <table class="bento-table">
+        <thead>
+          <tr>
+            <th style="width:50px;">排名</th>
+            <th>一级业务线</th>
+            <th>在管产品</th>
+            <th>已度量 / 待关联</th>
+            <th>考核均分</th>
+            <th>环比变化</th>
+            <th>达标率 (≥70)</th>
+            <th>领跑标杆产品</th>
+            <th>重点治理产品</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="bento-rank-badge rank-gold">1</span></td>
+            <td><b>AI营销业务群</b></td>
+            <td>3 款</td>
+            <td>3 / 0</td>
+            <td><span class="table-score">78.7 分</span><span class="table-progress-bar"><i class="table-progress-fill" style="width:78.7%;background:var(--green)"></i></span></td>
+            <td style="color:var(--green)">+4.2 ▲</td>
+            <td>100.0%</td>
+            <td style="color:var(--green)">营销SaaS平台 (88分)</td>
+            <td style="color:var(--text-muted)">海外媒体代理 (73分)</td>
+            <td><a href="javascript:void(0)" class="drilldown-action-text" onclick="alert('已下钻至【AI营销业务群】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="bento-rank-badge rank-silver">2</span></td>
+            <td><b>AI文娱业务群</b></td>
+            <td>2 款</td>
+            <td>2 / 0</td>
+            <td><span class="table-score">72.0 分</span><span class="table-progress-bar"><i class="table-progress-fill" style="width:72%;background:var(--green)"></i></span></td>
+            <td style="color:var(--green)">+5.5 ▲</td>
+            <td>50.0%</td>
+            <td style="color:var(--green)">讯飞输入法 (79分)</td>
+            <td style="color:var(--amber)">互联网酷音 (65分)</td>
+            <td><a href="javascript:void(0)" class="drilldown-action-text" onclick="alert('已下钻至【AI文娱业务群】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="bento-rank-badge rank-bronze">3</span></td>
+            <td><b>讯飞听见</b></td>
+            <td>9 款</td>
+            <td>9 / 0</td>
+            <td><span class="table-score">64.0 分</span><span class="table-progress-bar"><i class="table-progress-fill" style="width:64%;background:var(--blue)"></i></span></td>
+            <td style="color:var(--green)">+1.8 ▲</td>
+            <td>44.4%</td>
+            <td style="color:var(--green)">智慧办公解决方案 (91分)</td>
+            <td style="color:var(--red)">同传麦克风S30 (28分)</td>
+            <td><a href="javascript:void(0)" class="drilldown-action-text" onclick="alert('已下钻至【讯飞听见】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="bento-rank-badge">4</span></td>
+            <td><b>读写科技</b></td>
+            <td>6 款</td>
+            <td>6 / 0</td>
+            <td><span class="table-score">63.8 分</span><span class="table-progress-bar"><i class="table-progress-fill" style="width:63.8%;background:var(--blue)"></i></span></td>
+            <td style="color:var(--red)">-2.1 ▼</td>
+            <td>50.0%</td>
+            <td style="color:var(--green)">读写笔记 (86分)</td>
+            <td style="color:var(--red)">智能办公本T5C (25分)</td>
+            <td><a href="javascript:void(0)" class="drilldown-action-text" onclick="alert('已下钻至【读写科技】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="bento-rank-badge">5</span></td>
+            <td><b>消费者公共研发部</b></td>
+            <td>1 款</td>
+            <td>1 / 0</td>
+            <td><span class="table-score">63.0 分</span><span class="table-progress-bar"><i class="table-progress-fill" style="width:63%;background:var(--blue)"></i></span></td>
+            <td style="color:var(--red)">-4.0 ▼</td>
+            <td>0.0%</td>
+            <td style="color:var(--blue)">iFlyBase能力平台 (63分)</td>
+            <td style="color:var(--blue)">iFlyBase能力平台 (63分)</td>
+            <td><a href="javascript:void(0)" class="drilldown-action-text" onclick="alert('已下钻至【公共研发部】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="bento-rank-badge">6</span></td>
+            <td><b>AI翻译业务群</b></td>
+            <td>6 款</td>
+            <td>6 / 0</td>
+            <td><span class="table-score">57.5 分</span><span class="table-progress-bar"><i class="table-progress-fill" style="width:57.5%;background:var(--amber)"></i></span></td>
+            <td style="color:var(--green)">+3.1 ▲</td>
+            <td>16.7%</td>
+            <td style="color:var(--green)">双屏翻译机 (77分)</td>
+            <td style="color:var(--red)">同传多语种系统 (32分)</td>
+            <td><a href="javascript:void(0)" class="drilldown-action-text" onclick="alert('已下钻至【AI翻译】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="bento-rank-badge" style="color:var(--red)">7</span></td>
+            <td><b>C端硬件创新中心</b></td>
+            <td>3 款</td>
+            <td>3 / 0</td>
+            <td><span class="table-score" style="color:var(--amber)">46.0 分</span><span class="table-progress-bar"><i class="table-progress-fill" style="width:46%;background:var(--amber)"></i></span></td>
+            <td style="color:var(--red)">-3.0 ▼</td>
+            <td>33.3%</td>
+            <td style="color:var(--green)">讯飞录音笔App (71分)</td>
+            <td style="color:var(--red)">讯飞录音环录 (23分)</td>
+            <td><a href="javascript:void(0)" class="drilldown-action-text" onclick="alert('已下钻至【硬件中心】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="bento-rank-badge" style="color:var(--red)">8</span></td>
+            <td><b>开放平台业务群</b></td>
+            <td>17 款</td>
+            <td>14 / 3</td>
+            <td><span class="table-score" style="color:var(--red)">43.3 分</span><span class="table-progress-bar"><i class="table-progress-fill" style="width:43.3%;background:var(--red)"></i></span></td>
+            <td style="color:var(--green)">+2.5 ▲</td>
+            <td>11.8%</td>
+            <td style="color:var(--green)">开放平台网站 (71分)</td>
+            <td style="color:var(--red)">Spark Insight (未度量)</td>
+            <td><a href="javascript:void(0)" class="drilldown-action-text" onclick="alert('已下钻至【开放平台】')">下钻明细 ➔</a></td>
+          </tr>
+          <tr>
+            <td><span class="bento-rank-badge" style="color:var(--red)">9</span></td>
+            <td><b>企业数字化业务群</b></td>
+            <td>3 款</td>
+            <td>2 / 1</td>
+            <td><span class="table-score" style="color:var(--red)">20.5 分</span><span class="table-progress-bar"><i class="table-progress-fill" style="width:20.5%;background:var(--red)"></i></span></td>
+            <td style="color:var(--green)">+6.8 ▲</td>
+            <td>0.0%</td>
+            <td style="color:var(--red)">生成式智慧驾驶舱 (23分)</td>
+            <td style="color:var(--red)">智能评标 (未度量)</td>
+            <td><a href="javascript:void(0)" class="drilldown-action-text" onclick="alert('已下钻至【企业数字化】')">下钻明细 ➔</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</body>
+</html>

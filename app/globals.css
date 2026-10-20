@@ -41,14 +41,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   position: sticky;
   top: 0;
   z-index: 20;
-  display: flex;
-  align-items: center;
-  min-height: 64px;
-  padding: 0 28px;
-  gap: 18px;
   border-bottom: 1px solid var(--border);
   background: color-mix(in oklch, var(--surface) 95%, transparent);
   backdrop-filter: blur(14px);
+}
+.topbarInner {
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  min-height: 60px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 .brand {
   display: flex;
@@ -127,9 +132,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 .refreshButtonLabel { font-size: 12px; font-weight: 650; white-space: nowrap; }
 .pageInner {
-  width: min(1600px, calc(100% - 56px));
+  max-width: 1200px;
+  width: 100%;
   margin: 0 auto;
-  padding: 27px 0 48px;
+  padding: 24px 24px 48px;
 }
 .reportHead {
   display: flex;
@@ -1329,4 +1335,1282 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
   }
+}
+
+/* View Switcher */
+.viewSwitcher {
+  display: inline-flex;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+}
+.viewTabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  transition: all 0.15s ease;
+}
+.viewTabBtn:hover {
+  color: var(--fg);
+}
+.viewTabBtn.active {
+  background: var(--surface);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+.returnBgBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  transition: all 0.15s ease;
+}
+.returnBgBtn:hover {
+  color: var(--fg);
+  border-color: var(--fg);
+}
+
+/* BG War Report Styles */
+.bgWarReportContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.warReportHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 24px 28px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.warReportTitleGroup h1 {
+  margin: 6px 0 4px;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.warReportEyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.warReportBadge {
+  background: var(--soft);
+  color: var(--muted);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.warReportSubtext {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+.drilldownMainBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--fg);
+  color: var(--surface);
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  transition: opacity 0.15s;
+}
+.drilldownMainBtn:hover {
+  opacity: 0.9;
+}
+
+/* War KPI Grid */
+.warKpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+.warKpiCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  position: relative;
+  overflow: hidden;
+}
+.warKpiCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+}
+.cardAccentGreen::before { background: var(--track); }
+.cardAccentAmber::before { background: var(--risk); }
+.cardAccentBlue::before { background: var(--optimize); }
+.cardAccentRed::before { background: var(--critical); }
+.cardAccentSlate::before { background: var(--muted); }
+.warKpiLabel {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.warKpiValue {
+  font-size: 32px;
+  font-weight: 700;
+  font-family: var(--font-geist-mono), monospace;
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+.warKpiUnit {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.warKpiMeta {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.warKpiSubinfo {
+  margin-left: auto;
+}
+.deltaPositive {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--track);
+  font-weight: 600;
+}
+.deltaNegative {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--critical);
+  font-weight: 600;
+}
+
+/* War Section & Ranking Table */
+.warSectionCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px 24px;
+}
+.warSectionHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.warSectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.warSectionNote {
+  font-size: 12px;
+  color: var(--muted);
+}
+.warTableWrap {
+  overflow-x: auto;
+}
+.warRankingTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+.warRankingTable th {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.warRankingTable td {
+  padding: 12px;
+  border-bottom: 1px solid var(--soft);
+  vertical-align: middle;
+}
+.warTableRow {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.warTableRow:hover {
+  background: var(--soft);
+}
+.warRankBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--soft);
+  color: var(--muted);
+}
+.rank-1 { background: #fef3c7; color: #b45309; }
+.rank-2 { background: #e2e8f0; color: #475569; }
+.rank-3 { background: #fed7aa; color: #9a3412; }
+.lineNameText { font-weight: 600; }
+.warScorePill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+}
+.scoreTone-green { background: color-mix(in oklch, var(--track) 12%, transparent); color: var(--track); }
+.scoreTone-blue { background: color-mix(in oklch, var(--optimize) 12%, transparent); color: var(--optimize); }
+.scoreTone-yellow { background: color-mix(in oklch, var(--risk) 12%, transparent); color: var(--risk); }
+.scoreTone-red { background: color-mix(in oklch, var(--critical) 12%, transparent); color: var(--critical); }
+.deltaBadge {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-geist-mono), monospace;
+}
+.deltaUp { color: var(--track); background: color-mix(in oklch, var(--track) 10%, transparent); }
+.deltaDown { color: var(--critical); background: color-mix(in oklch, var(--critical) 10%, transparent); }
+.textLead { color: var(--track); font-weight: 500; font-size: 12px; }
+.textLag { color: var(--critical); font-weight: 500; font-size: 12px; }
+.tableActionLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--muted);
+  border: none;
+  background: transparent;
+  padding: 0;
+}
+.tableActionLink:hover { color: var(--fg); }
+
+/* Focus Grid */
+.warFocusGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+}
+.warFocusCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+}
+.warFocusHead {
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.focusLeadText {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--fg);
+}
+.focusItemList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.focusItem {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+}
+.focusItemDot { font-size: 14px; line-height: 1.2; }
+.focusItem strong { font-size: 13px; display: block; margin-bottom: 2px; }
+.focusItem p { margin: 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.archiveBox {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: var(--soft);
+  border-radius: 8px;
+}
+.archiveBoxTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.archiveList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.archiveList a {
+  font-size: 12px;
+  color: var(--fg);
+  text-decoration: none;
+}
+.archiveList a:hover {
+  text-decoration: underline;
+}
+.textRed { color: var(--critical); }
+.textAmber { color: var(--risk); }
+.textBlue { color: var(--optimize); }
+.textGreen { color: var(--track); }
+.textMuted { color: var(--muted); }
+
+/* Top Focus Lines Section */
+.warFocusLinesSection {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 22px 24px;
+}
+.warFocusLinesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+  gap: 16px;
+}
+.warFocusLineCard {
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+  overflow: hidden;
+}
+.warFocusLineCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-color: var(--fg);
+}
+.focusCardP0::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--critical);
+}
+.focusCardP1::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--risk);
+}
+.warFocusLineHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.warFocusLineTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+}
+.priorityTag {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-geist-mono), monospace;
+}
+.priority-p0 {
+  background: color-mix(in oklch, var(--critical) 15%, transparent);
+  color: var(--critical);
+}
+.priority-p1 {
+  background: color-mix(in oklch, var(--risk) 15%, transparent);
+  color: var(--risk);
+}
+.scoreTag {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: var(--font-geist-mono), monospace;
+}
+.warFocusLineMeta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.warFocusLineMeta b {
+  color: var(--fg);
+}
+.warFocusLineBody {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.lowestDimBox {
+  font-size: 12px;
+  background: var(--surface);
+  padding: 6px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.lowestDimLabel {
+  color: var(--muted);
+}
+.lowestDimValue {
+  color: var(--critical);
+  font-weight: 600;
+}
+.focusActionText {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.55;
+}
+.warFocusLineFooter {
+  padding-top: 8px;
+  border-top: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+}
+.focusDrilldownBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  padding: 0;
+  cursor: pointer;
+}
+.focusDrilldownBtn:hover {
+  text-decoration: underline;
+}
+
+/* ==========================================================================
+   Bento Design System (Option C - Modular Bento Cockpit)
+   ========================================================================== */
+
+.bentoWarReportContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.bentoGridRow {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr;
+  gap: 18px;
+}
+@media (max-width: 900px) {
+  .bentoGridRow {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bentoCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.bentoCard:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  border-color: color-mix(in oklch, var(--border) 70%, var(--fg));
+}
+
+/* Bento Hero */
+.bentoHero {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 20px;
+}
+.heroMetaTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+.periodChip {
+  font-size: 12px;
+  font-weight: 600;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+.statusChip {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 6px;
+}
+.status-重点治理 {
+  color: var(--critical);
+  background: color-mix(in oklch, var(--critical) 12%, transparent);
+}
+.status-风险改进 {
+  color: var(--risk);
+  background: color-mix(in oklch, var(--risk) 12%, transparent);
+}
+.status-持续优化 {
+  color: var(--optimize);
+  background: color-mix(in oklch, var(--optimize) 12%, transparent);
+}
+.status-常规跟踪 {
+  color: var(--track);
+  background: color-mix(in oklch, var(--track) 12%, transparent);
+}
+
+.heroScoreBlock {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin: 10px 0 8px;
+  flex-wrap: wrap;
+}
+.heroScoreNum {
+  font-size: 58px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  font-family: var(--font-geist-mono), monospace;
+  color: var(--fg);
+}
+.heroMetaPills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.heroDeltaPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-geist-mono), monospace;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.heroPassPill {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--soft);
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+.heroSummaryText {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Scale Bar */
+.scaleBar {
+  width: 100%;
+  height: 6px;
+  background: var(--soft);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 14px;
+}
+.scaleBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--critical), var(--risk) 60%, var(--track));
+  border-radius: 3px;
+}
+.scaleLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 6px;
+  font-family: var(--font-geist-mono), monospace;
+}
+.scaleTarget {
+  color: var(--track);
+  font-weight: 700;
+}
+
+/* Metric Capsules Grid (2x2) */
+.metricCapsulesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.metricCapsule {
+  background: var(--soft);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: background 0.15s;
+}
+.metricCapsule:hover {
+  background: color-mix(in oklch, var(--soft) 70%, var(--surface));
+}
+.capsuleLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.capsuleNum {
+  font-size: 28px;
+  font-weight: 700;
+  font-family: var(--font-geist-mono), monospace;
+  color: var(--fg);
+  margin: 4px 0 2px;
+}
+.capsuleUnit {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.capsuleDesc {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Section Header */
+.focusSectionWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sectionTitle {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg);
+}
+.sectionSubtitle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Focus Bento Cards */
+.focusBentoGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .focusBentoGrid {
+    grid-template-columns: 1fr;
+  }
+}
+.focusBentoCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.focusBentoCard:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--border) 60%, var(--fg));
+}
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.priorityBadge {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-geist-mono), monospace;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+.priority-p0 {
+  background: color-mix(in oklch, var(--critical) 12%, transparent);
+  color: var(--critical);
+}
+.priority-p1 {
+  background: color-mix(in oklch, var(--risk) 12%, transparent);
+  color: var(--risk);
+}
+.focusScore {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-geist-mono), monospace;
+}
+.focusCardTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fg);
+  margin-top: 8px;
+}
+.focusMetricChips {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.focusMetricChips b {
+  color: var(--fg);
+  font-family: var(--font-geist-mono), monospace;
+}
+.focusBody {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.55;
+  background: var(--soft);
+  padding: 10px 12px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.focusDimRow {
+  display: flex;
+  gap: 4px;
+}
+.dimLabel {
+  color: var(--muted);
+}
+.dimVal {
+  font-weight: 600;
+}
+.focusActionText {
+  margin: 0;
+  color: var(--ink);
+}
+.focusActionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.focusBentoCard:hover .focusActionBtn {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+/* Bento Table Container */
+.tableContainer {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.tableHeader {
+  margin-bottom: 16px;
+}
+.tableScrollWrap {
+  overflow-x: auto;
+}
+.bentoTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  text-align: left;
+}
+.bentoTable th {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.bentoTable td {
+  padding: 14px;
+  border-bottom: 1px solid var(--soft);
+  color: var(--muted);
+  vertical-align: middle;
+}
+.bentoTableRow {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.bentoTableRow:hover td {
+  background: var(--soft);
+  color: var(--fg);
+}
+.bentoRankBadge {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 12px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--soft);
+  color: var(--muted);
+}
+.rankGold { background: #fef08a; color: #854d0e; }
+.rankSilver { background: #e2e8f0; color: #334155; }
+.rankBronze { background: #fed7aa; color: #9a3412; }
+.rankDefault { background: var(--soft); color: var(--muted); }
+.lineNameBold { font-weight: 600; color: var(--fg); }
+.tableScoreNum {
+  font-family: var(--font-geist-mono), monospace;
+  font-weight: 700;
+  color: var(--fg);
+}
+.tableProgressBar {
+  display: inline-block;
+  width: 50px;
+  height: 5px;
+  background: var(--soft);
+  border-radius: 3px;
+  margin-left: 8px;
+  vertical-align: middle;
+  overflow: hidden;
+}
+.tableProgressFill {
+  height: 100%;
+  border-radius: 3px;
+}
+.drilldownActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
+  color: var(--muted);
+  border: none;
+  background: transparent;
+  padding: 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bentoTableRow:hover .drilldownActionBtn {
+  color: #2563eb;
+}
+
+/* Bento Archive Card */
+.bentoArchiveCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.archiveTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.archiveLinkGroup {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.archivePill {
+  font-size: 12px;
+  color: var(--fg);
+  background: var(--soft);
+  border: 1px solid var(--border);
+  padding: 5px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+.archivePill:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+/* Workbench Context Bar & Breadcrumb */
+.workbenchContextBar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+.workbenchBreadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.breadcrumbLink {
+  background: transparent;
+  border: none;
+  color: #2563eb;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+.breadcrumbLink:hover {
+  text-decoration: underline;
+}
+.breadcrumbSeparator {
+  color: var(--faint);
+}
+.breadcrumbCurrent {
+  font-weight: 700;
+  color: var(--fg);
+}
+.breadcrumbMeta {
+  color: var(--muted);
+  font-size: 12px;
+}
+.workbenchContextActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.contextResetBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.contextResetBtn:hover {
+  color: var(--critical);
+  border-color: var(--critical);
+}
+
+/* Common Problems Section */
+.commonProblemsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.commonProblemsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .commonProblemsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+.problemCard {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.problemCard:hover {
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+.cardBorderRed::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--critical);
+  border-radius: 14px 0 0 14px;
+}
+.cardBorderAmber::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--risk);
+  border-radius: 14px 0 0 14px;
+}
+.cardBorderBlue::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #2563eb;
+  border-radius: 14px 0 0 14px;
+}
+
+.problemCardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.problemBadge {
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-geist-mono), monospace;
+  padding: 2px 7px;
+  border-radius: 6px;
+}
+.badgeRed {
+  background: color-mix(in oklch, var(--critical) 12%, transparent);
+  color: var(--critical);
+}
+.badgeAmber {
+  background: color-mix(in oklch, var(--risk) 12%, transparent);
+  color: var(--risk);
+}
+.badgeBlue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.problemImpactTag {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  background: var(--soft);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.problemCardTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--fg);
+  line-height: 1.4;
+}
+.problemDesc {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.problemActionBox {
+  background: var(--soft);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.actionBadge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg);
+}
+.problemActionBox p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+.scaleWarning {
+  color: var(--risk);
+  font-weight: 600;
+}
+
+/* Workstation Integrated Header (V2) */
+.workstation {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.workstationNavHeader {
+  padding: 14px 22px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.navLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.backBtnPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--soft);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.backBtnPill:hover {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #2563eb;
+}
+
+.navDivider {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+}
+
+.currentLineTitle {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+.lineStatusChip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.lineMetricsSummary {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lineMetricsSummary b {
+  color: var(--fg);
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.navRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.clearLineBtn {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+.clearLineBtn:hover {
+  color: var(--critical);
+  background: color-mix(in oklch, var(--critical) 8%, transparent);
 }

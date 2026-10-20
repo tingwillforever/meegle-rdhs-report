@@ -34,24 +34,18 @@ test("server-renders the RDHS operations overview", async () => {
   assert.match(html, /月报工作台/);
   assert.doesNotMatch(html, /周报/);
   assert.match(html, /月报/);
-  assert.match(html, /研发中产品/);
+  assert.match(html, /在研产品/);
   assert.match(html, /平均 RDHS/);
   assert.match(html, /度量覆盖率/);
-  assert.match(html, /产品规范率/);
-  assert.match(html, /待治理占比/);
   assert.match(html, /刷新当月/);
-  assert.match(html, /历史快照已生成/);
-  assert.match(html, /生成于/);
-  assert.match(html, /RDHS 阈值标尺/);
-  assert.match(html, /业务线总览/);
-  assert.match(html, /规范占比/);
-  assert.match(html, /规范占比趋势/);
-  assert.match(html, /常规跟踪/);
-  assert.match(html, /产品治理工作区/);
+  assert.match(html, /及格达标线/);
+  assert.match(html, /一级业务线 RDHS 综合考核矩阵/);
+  assert.match(html, /最需关注治理业务线/);
+  assert.match(html, /全盘通用共性问题剖析与改进建议/);
+  assert.match(html, /产品治理工作台/);
   assert.match(html, /有效参与人数/);
   assert.match(html, /产品列表分页/);
   assert.match(html, /每页/);
-  assert.match(html, /悬停趋势点查看每月指标值/);
   assert.match(html, /排除交付定制/);
   assert.match(html, /数据质量审计/);
   assert.match(html, /og\.png/);
@@ -70,9 +64,8 @@ test("expanded summary stays inside the RDHS report shell", async () => {
   const html = await response.text();
 
   assert.match(html, /CBG RDHS运营报告/);
-  assert.match(html, /重点关注业务线/);
-  assert.match(html, /RDHS 分项得分/);
-  assert.match(html, /当前分 \/ 满分/);
+  assert.match(html, /最需关注治理业务线/);
+  assert.match(html, /全盘通用共性问题剖析/);
 });
 
 test("finished page does not expose starter preview metadata", async () => {

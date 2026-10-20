@@ -13,12 +13,7 @@ if [[ -f "$env_file" ]]; then
   set -a
   source "$env_file"
   set +a
-elif [[ -z "${RDHS_SITE_URL:-}" || -z "${RDHS_INGEST_TOKEN:-}" ]]; then
-  echo "RDHS sync environment not found: $env_file" >&2
-  exit 1
 fi
-: "${RDHS_SITE_URL:?RDHS_SITE_URL is required}"
-: "${RDHS_INGEST_TOKEN:?RDHS_INGEST_TOKEN is required}"
 
 select_python() {
   local candidate resolved
@@ -48,4 +43,45 @@ select_python() {
 }
 
 python_bin="$(select_python)"
-exec "$python_bin" "$site_root/scripts/sync-rdhs-snapshot.py" --cadence "$cadence"
+
+# 1. 导出快照到本地 data/snapshots
+echo "==> Running RDHS monthly sync and exporting to data/snapshots..."
+mkdir -p "$site_root/data/snapshots"
+
+sync_args=(
+  "$site_root/scripts/sync-rdhs-snapshot.py"
+  --cadence "$cadence"
+  --export-dir "$site_root/data/snapshots"
+)
+
+# 保留旧内网上传兼容（若提供了凭据则继续上传，实现双轨支持）
+if [[ -n "${RDHS_SITE_URL:-}" && -n "${RDHS_INGEST_TOKEN:-}" ]]; then
+  sync_args+=(--site-url "$RDHS_SITE_URL" --token "$RDHS_INGEST_TOKEN")
+else
+  sync_args+=(--no-upload)
+fi
+
+"$python_bin" "${sync_args[@]}"
+
+# 2. 如果检测到新快照文件，自动 commit 并推送
+cd "$site_root"
+if [[ -n "$(git status -s data/snapshots/)" ]]; then
+  echo "==> Detected new or updated snapshot files in data/snapshots/:"
+  git status -s data/snapshots/
+  
+  if [[ "${RDHS_NO_GIT_PUSH:-0}" != "1" ]]; then
+    git add data/snapshots/
+    current_month="$(date +%Y-%m)"
+    git commit -m "chore(data): auto-sync monthly snapshot for $current_month"
+    echo "==> Pushing to git remote..."
+    git push origin "$(git branch --show-current)" || {
+      echo "WARN: git push failed or credentials required. Please push manually." >&2
+    }
+  else
+    echo "==> RDHS_NO_GIT_PUSH is enabled. Skipped git commit & push."
+  fi
+else
+  echo "==> No changes in data/snapshots/. Snapshots are already up to date."
+fi
+
+echo "==> Monthly sync job finished successfully."

@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>消费者 BG 9 月产研过程健康度（RDHS）治理战报</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-card: #334155;
+      --border: #475569;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #38bdf8;
+      --green: #4ade80;
+      --yellow: #facc15;
+      --red: #f87171;
+      --blue: #60a5fa;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 32px 20px;
+    }
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+    header {
+      margin-bottom: 36px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .header-main h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-main p {
+      margin-top: 8px;
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    .badge-period {
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    
+    /* KPI Cards */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 36px;
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .kpi-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: var(--primary);
+    }
+    .kpi-card.green::before { background: var(--green); }
+    .kpi-card.yellow::before { background: var(--yellow); }
+    .kpi-card.red::before { background: var(--red); }
+    .kpi-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-size: 32px;
+      font-weight: 700;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+    .kpi-value small {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+    .kpi-meta {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+    .delta-good { color: var(--green); font-weight: 600; }
+    .delta-bad { color: var(--red); font-weight: 600; }
+    .delta-badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 12px;
+      display: inline-block;
+    }
+    .delta-up { background: rgba(74, 222, 128, 0.15); color: var(--green); }
+    .delta-down { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+
+
+    /* Section */
+    section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .section-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--surface-card);
+      padding-bottom: 12px;
+    }
+
+    /* Table */
+    .table-responsive {
+      overflow-x: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      text-align: left;
+    }
+    th {
+      background: rgba(51, 65, 85, 0.4);
+      color: var(--text-muted);
+      font-weight: 600;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    td {
+      padding: 14px;
+      border-bottom: 1px solid rgba(71, 85, 105, 0.5);
+      color: var(--text);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255, 255, 255, 0.02); }
+    .score-badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      display: inline-block;
+    }
+    .score-green { background: rgba(74, 222, 128, 0.15); color: var(--green); }
+    .score-yellow { background: rgba(250, 204, 21, 0.15); color: var(--yellow); }
+    .score-red { background: rgba(248, 113, 113, 0.15); color: var(--red); }
+    .rank-num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--surface-card);
+      color: var(--text);
+    }
+    .rank-top1 { background: #eab308; color: #000; }
+    .rank-top2 { background: #94a3b8; color: #000; }
+    .rank-top3 { background: #b45309; color: #fff; }
+
+    /* Cards grid */
+    .analysis-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 18px;
+    }
+    .analysis-card {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+    }
+    .analysis-card h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .analysis-card p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+    .action-box {
+      background: rgba(15, 23, 42, 0.6);
+      border-left: 3px solid var(--primary);
+      padding: 10px 12px;
+      border-radius: 0 6px 6px 0;
+      font-size: 12px;
+      color: #e2e8f0;
+    }
+
+    /* Top 3 Focus */
+    .focus-card {
+      border: 1px solid var(--border);
+      background: rgba(30, 41, 59, 0.9);
+      border-radius: 12px;
+      margin-bottom: 16px;
+      padding: 20px;
+    }
+    .focus-card.c-red { border-left: 5px solid var(--red); }
+    .focus-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .focus-title {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .action-steps {
+      list-style: none;
+      margin-top: 10px;
+    }
+    .action-steps li {
+      position: relative;
+      padding-left: 22px;
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: #cbd5e1;
+    }
+    .action-steps li::before {
+      content: "➔";
+      position: absolute;
+      left: 0;
+      color: var(--primary);
+      font-size: 11px;
+    }
+    .role-tag {
+      background: rgba(96, 165, 250, 0.15);
+      color: var(--blue);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 11px;
+      margin-left: 6px;
+    }
+    
+    footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 12px;
+      margin-top: 40px;
+      border-top: 1px solid var(--surface-card);
+      padding-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="header-main">
+        <h1>📊 消费者 BG 9 月产研过程健康度（RDHS）治理战报</h1>
+        <p>BG 效能例会汇报专版 · 基准数据已于 2026-09-30 收口归档</p>
+      </div>
+      <div>
+        <span class="badge-period">统计口径: 48 款在研 (含未度量考核)</span>
+      </div>
+    </header>
+
+    <!-- KPI Summary Cards -->
+    <div class="kpi-grid">
+      <div class="kpi-card green">
+        <div class="kpi-label">9 月最终均分 (含未度量计0)</div>
+        <div class="kpi-value">54.0 <small>分</small></div>
+        <div class="kpi-meta">45款已度量均分: <b style="color:var(--text)">57.6分</b></div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-label">健康达标率 (≥70分)</div>
+        <div class="kpi-value">33.3 <small>%</small></div>
+        <div class="kpi-meta">达标 16 款 / 在管 48 款</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">需求完成总量 / 人均吞吐</div>
+        <div class="kpi-value">631 <small>个</small></div>
+        <div class="kpi-meta">人均 1.14 <span class="delta-good">+15.2% 🟢</span></div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-label">需求平均交付周期</div>
+        <div class="kpi-value">32.7 <small>天</small></div>
+        <div class="kpi-meta">时效提速 <span class="delta-good">-23.1天 (41.4%) 🟢</span></div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-label">发版登记闭环率</div>
+        <div class="kpi-value">85.5 <small>%</small></div>
+        <div class="kpi-meta">漏登差额 <span class="delta-bad">87 项未关联 🔴</span></div>
+      </div>
+    </div>
+
+    <!-- Section 1: Business Line Ranking -->
+    <section>
+      <div class="section-title">
+        <span>🏆</span> 9 大一级业务线 RDHS 最终排行（按考核均分降序）
+      </div>
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 50px;">排名</th>
+              <th>一级业务线</th>
+              <th>在研总数</th>
+              <th>已度量 / 待关联</th>
+              <th>9月考核均分 (含0)</th>
+              <th>8月基线</th>
+              <th>环比变化 (Δ)</th>
+              <th>达标率 (≥70)</th>
+              <th>领跑标杆产品</th>
+              <th>垫底重点治理产品</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="rank-num rank-top1">1</span></td>
+              <td><b>AI文娱业务群</b></td>
+              <td>2 款</td>
+              <td>2 / 0</td>
+              <td><span class="score-badge score-green">73.5 分</span></td>
+              <td style="color:var(--text-muted)">66.5 分</td>
+              <td><span class="delta-badge delta-up">+7.0 🟢</span></td>
+              <td>50% (1/2)</td>
+              <td>讯飞输入法 (79分)</td>
+              <td>互联网酷音 (68分)</td>
+            </tr>
+            <tr>
+              <td><span class="rank-num rank-top2">2</span></td>
+              <td><b>消费者公共研发部</b></td>
+              <td>1 款</td>
+              <td>1 / 0</td>
+              <td><span class="score-badge score-green">66.0 分</span></td>
+              <td style="color:var(--text-muted)">67.0 分</td>
+              <td><span class="delta-badge delta-down">-1.0 🔴</span></td>
+              <td>0% (0/1)</td>
+              <td>iFlyBase基础平台 (66分)</td>
+              <td>iFlyBase基础平台 (66分)</td>
+            </tr>
+            <tr>
+              <td><span class="rank-num rank-top3">3</span></td>
+              <td><b>AI翻译业务群</b></td>
+              <td>5 款</td>
+              <td>5 / 0</td>
+              <td><span class="score-badge score-green">65.6 分</span></td>
+              <td style="color:var(--text-muted)">63.0 分</td>
+              <td><span class="delta-badge delta-up">+2.6 🟢</span></td>
+              <td>20% (1/5)</td>
+              <td>双屏翻译机导览版 (77分)</td>
+              <td>讯飞翻译APP (59分)</td>
+            </tr>
+            <tr>
+              <td><span class="rank-num">4</span></td>
+              <td><b>AI营销业务群</b></td>
+              <td>7 款</td>
+              <td>6 / 1</td>
+              <td><span class="score-badge score-green">65.4 分</span></td>
+              <td style="color:var(--text-muted)">75.8 分</td>
+              <td><span class="delta-badge delta-down">-10.4 🔴</span></td>
+              <td>71% (5/7)</td>
+              <td>营销SaaS平台 (88分)</td>
+              <td>aiBoost存量营销平台 (0分)</td>
+            </tr>
+            <tr>
+              <td><span class="rank-num">5</span></td>
+              <td><b>讯飞听见</b></td>
+              <td>9 款</td>
+              <td>9 / 0</td>
+              <td><span class="score-badge score-green">65.3 分</span></td>
+              <td style="color:var(--text-muted)">59.1 分</td>
+              <td><span class="delta-badge delta-up">+6.2 🟢</span></td>
+              <td>44% (4/9)</td>
+              <td>智慧办公解决方案 (91分)</td>
+              <td>同传麦克风S30 (28分)</td>
+            </tr>
+            <tr>
+              <td><span class="rank-num">6</span></td>
+              <td><b>读写科技</b></td>
+              <td>4 款</td>
+              <td>4 / 0</td>
+              <td><span class="score-badge score-green">63.8 分</span></td>
+              <td style="color:var(--text-muted)">67.5 分</td>
+              <td><span class="delta-badge delta-down">-3.7 🔴</span></td>
+              <td>50% (2/4)</td>
+              <td>读写笔记 (86分)</td>
+              <td>智能办公本T5C (25分)</td>
+            </tr>
+            <tr>
+              <td><span class="rank-num">7</span></td>
+              <td><b>C端硬件创新中心</b></td>
+              <td>2 款</td>
+              <td>2 / 0</td>
+              <td><span class="score-badge score-red">49.0 分</span></td>
+              <td style="color:var(--text-muted)">40.7 分</td>
+              <td><span class="delta-badge delta-up">+8.3 🟢</span></td>
+              <td>50% (1/2)</td>
+              <td>录音笔软件平台 (71分)</td>
+              <td>讯飞录音环 (27分)</td>
+            </tr>
+            <tr>
+              <td><span class="rank-num">8</span></td>
+              <td><b>开放平台业务群</b></td>
+              <td>15 款</td>
+              <td>14 / 1</td>
+              <td><span class="score-badge score-red">40.8 分</span></td>
+              <td style="color:var(--text-muted)">32.6 分</td>
+              <td><span class="delta-badge delta-up">+8.2 🟢</span></td>
+              <td>13% (2/15)</td>
+              <td>星火SparkDesk (73分)</td>
+              <td>Spark Insight (0分)</td>
+            </tr>
+            <tr>
+              <td><span class="rank-num">9</span></td>
+              <td><b>企业数字化业务群</b></td>
+              <td>3 款</td>
+              <td>2 / 1</td>
+              <td><span class="score-badge score-red">13.7 分</span></td>
+              <td style="color:var(--text-muted)">23.0 分</td>
+              <td><span class="delta-badge delta-down">-9.3 🔴</span></td>
+              <td>0% (0/3)</td>
+              <td>生成式驾驶舱 (23分)</td>
+              <td>智能评标 (0分)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Section 2: Common Issues -->
+    <section>
+      <div class="section-title">
+        <span>🔍</span> 全盘三大共性病因剖析与改进建议
+      </div>
+      <div class="analysis-grid">
+        <div class="analysis-card">
+          <h3>⚠️ 1. 产品主数据“黑户” (扣分敞口 3.6分)</h3>
+          <p>智能评标、Spark Insight、aiBoost营销平台 3 款产品实际在研，但未挂入度量图表体系，直接按 0 分计入考核，严重拉垮所属业务线均分。</p>
+          <div class="action-box">
+            <b>【行动抓手】</b> 各业务线 PMO 联合负责人立即在飞书项目中补齐产品关联与工作流，下月全 BG 均分可自然回升 3~4 分。
+          </div>
+        </div>
+
+        <div class="analysis-card">
+          <h3>⚠️ 2. 发布登记断链 (差额达 87 项)</h3>
+          <p>9 月全 BG 发版 222 次，但发布登记闭环率跌至 85.50%，产生 87 项未闭环差额（读写科技与开放平台为主），导致交付闭环得分腰斩。</p>
+          <div class="action-box">
+            <b>【行动抓手】</b> 每周四建立上线卡片核销机制，项目管理代表必须将已上线的发版单与卡片完成闭环绑定，消灭挂账。
+          </div>
+        </div>
+
+        <div class="analysis-card">
+          <h3>⚠️ 3. 长在途卡片积压 (时效归零)</h3>
+          <p>重点产品平均在途时长超 130~230 天（如星火SparkDesk 234天、讯飞智文 145天），积压率超 20%~80%，时效节奏得分趋近于 0。</p>
+          <div class="action-box">
+            <b>【行动抓手】</b> 启动“僵尸卡片清退专项”，对在途超 90 天的需求评估：有价值则分期拆小、无价值立即终止归档。
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3: Top 3 Focus -->
+    <section>
+      <div class="section-title">
+        <span>🎯</span> Top 3 重点治理业务线攻坚方案（责任到人）
+      </div>
+
+      <!-- Line 1: Enterprise Digitization -->
+      <div class="focus-card c-red">
+        <div class="focus-head">
+          <div class="focus-title">
+            <span class="score-badge score-red">倒数第 1</span>
+            <b>企业数字化业务群</b> (均分 13.7 分 · 达标率 0%)
+          </div>
+          <span style="font-size:12px;color:var(--text-muted)">在研 3 款 · 重点治理 P0 达 2 款</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+          <b>失分根因：</b>未度量黑户（智能评标计0分）+ 生成式驾驶舱严重缺陷占比高达 66.1%。
+        </p>
+        <ul class="action-steps">
+          <li><b>本周消除 0 分黑户：</b>补齐《智能评标》飞书项目卡片绑定与工作流。<span class="role-tag">蔡文静 / 梅俊</span></li>
+          <li><b>提测质量红线拦截：</b>严格执行冒烟测试，严禁带病提测，压降严重缺陷。<span class="role-tag">牛润泽 / 刘君</span></li>
+        </ul>
+      </div>
+
+      <!-- Line 2: Open Platform -->
+      <div class="focus-card c-red">
+        <div class="focus-head">
+          <div class="focus-title">
+            <span class="score-badge score-red">倒数第 2</span>
+            <b>开放平台业务群</b> (均分 40.8 分 · 达标率 13%)
+          </div>
+          <span style="font-size:12px;color:var(--text-muted)">在研 15 款 · 重点治理 P0 达 11 款 (占全BG一半)</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+          <b>失分根因：</b>Spark Insight 未度量计0分；Smart Space、营销数字人等长在途（超130天）+ 口头提测导致颗粒度得分为0。
+        </p>
+        <ul class="action-steps">
+          <li><b>消除未度量黑户：</b>核实并补齐《Spark Insight》空间度量。<span class="role-tag">彭程</span></li>
+          <li><b>清理长在途卡片：</b>两周内清查超期 90 天积压需求，执行分期拆分或终止。<span class="role-tag">王磊磊 / 王雨露 / 闫争龙</span></li>
+          <li><b>规范系统提测与挂载：</b>严禁群内口头提 Bug，必须录入系统挂载到对应需求。<span class="role-tag">吴斌</span></li>
+        </ul>
+      </div>
+
+      <!-- Line 3: Consumer Hardware -->
+      <div class="focus-card c-red">
+        <div class="focus-head">
+          <div class="focus-title">
+            <span class="score-badge score-red">倒数第 3</span>
+            <b>C端硬件创新中心</b> (均分 49.0 分 · 达标率 50%)
+          </div>
+          <span style="font-size:12px;color:var(--text-muted)">在研 2 款 · 重点治理 P0 达 1 款</span>
+        </div>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 10px;">
+          <b>失分根因：</b>“只修固件 Bug、不流转验收需求”，讯飞录音环仅 27 分，吞吐断链。
+        </p>
+        <ul class="action-steps">
+          <li><b>打通软硬件流转闭环：</b>每周盘点转测完成的固件/软件需求，在飞书项目中流转到“已完成”。<span class="role-tag">李昂 / 陈小梅 / 孙佳丽</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <footer>
+      消费者 BG 研发效能部 · 飞书项目（Meegle）数据中心 · 2026-10-10
+    </footer>
+  </div>
+</body>
+</html>
