@@ -17,6 +17,10 @@
 }
 
 * { box-sizing: border-box; }
+::selection {
+  background: color-mix(in oklch, var(--fg) 14%, transparent);
+  color: inherit;
+}
 html { background: var(--bg); color: var(--fg); }
 body {
   min-width: 320px;
@@ -25,17 +29,46 @@ body {
   color: var(--fg);
   font-family: var(--font-geist-sans), "PingFang SC", "Microsoft YaHei", sans-serif;
   letter-spacing: 0;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-button, input, select { font: inherit; }
+h1, h2, h3, h4, .panelTitle, .sectionTitle, .warHeaderTitle, .problemCardTitle, .govRecProductTitle {
+  text-wrap: balance;
+}
+p, .problemDesc, .desc {
+  text-wrap: pretty;
+}
+button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 button, select { color: inherit; }
+input, select, textarea { caret-color: var(--fg); }
+a { text-underline-offset: 3px; }
 button:disabled, select:disabled { cursor: not-allowed; opacity: 0.58; }
 button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focus-visible {
   outline: 3px solid oklch(0.67 0.11 235 / 0.42);
   outline-offset: 2px;
 }
 
-.mono { font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace; }
+.mono {
+  font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+table,
+th,
+td,
+.tabularNum,
+.metricValue,
+.detailScoreNum,
+.lineCtoCardNum,
+.trendMeta,
+.trendCurrentValue,
+.trendComplianceValue,
+.rankBadge {
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
 .dashboardShell { min-height: 100vh; }
 .topbar {
   position: sticky;
@@ -61,7 +94,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   min-width: 236px;
   gap: 10px;
   font-size: 15px;
-  font-weight: 730;
+  font-weight: 700;
   letter-spacing: 0;
   white-space: nowrap;
 }
@@ -153,7 +186,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .reportHead h1 {
   margin: 9px 0 0;
   font-size: clamp(24px, 2.1vw, 31px);
-  font-weight: 720;
+  font-weight: 700;
   line-height: 1.17;
   letter-spacing: 0;
 }
@@ -255,7 +288,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   color: var(--fg);
   font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
   font-size: 22px;
-  font-weight: 710;
+  font-weight: 700;
   line-height: 1;
   letter-spacing: 0;
 }
@@ -674,7 +707,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 .overviewTable tbody tr { cursor: pointer; transition: background 0.15s; }
 .overviewTable tbody tr:hover, .overviewTable tbody tr.selected { background: var(--soft); }
-.overviewTable .totalRow { cursor: default; background: color-mix(in oklch, var(--soft) 75%, var(--surface)); font-weight: 720; }
+.overviewTable .totalRow { cursor: default; background: color-mix(in oklch, var(--soft) 75%, var(--surface)); font-weight: 700; }
 .nCritical { color: oklch(0.48 0.155 30) !important; }
 .nRisk { color: oklch(0.49 0.11 72) !important; }
 .nOptimize { color: oklch(0.43 0.08 174) !important; }
@@ -870,7 +903,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .detailTitle {
   margin: 0;
   font-size: 19px;
-  font-weight: 710;
+  font-weight: 700;
   line-height: 1.25;
   letter-spacing: 0;
   overflow-wrap: anywhere;
@@ -886,7 +919,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .detailScoreNum {
   font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
   font-size: 29px;
-  font-weight: 720;
+  font-weight: 700;
   letter-spacing: 0;
 }
 .detailScoreLabel { color: var(--muted); font-size: 11px; }
@@ -955,7 +988,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   color: var(--fg);
   font-family: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
   font-size: 13px;
-  font-weight: 720;
+  font-weight: 700;
   letter-spacing: 0;
 }
 .dependencyCard.prominent dd { font-size: 15px; }
@@ -1330,10 +1363,19 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 
 @media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
   *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
-    animation-duration: 0.01ms !important;
+  }
+  /* Preserve non-displacing color & opacity transitions for interactive feedback */
+  button, input, select, a, [tabindex], .viewTabBtn, .filterPill {
+    transition-duration: 0.1s !important;
+    transition-property: opacity, background-color, border-color, color, box-shadow !important;
   }
 }
 
@@ -1733,23 +1775,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   border-color: var(--fg);
 }
-.focusCardP0::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--critical);
+.warFocusLineCard:where(.focusCardP0) {
+  border-color: color-mix(in oklch, var(--critical) 35%, var(--border));
 }
-.focusCardP1::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--risk);
+.warFocusLineCard:where(.focusCardP1) {
+  border-color: color-mix(in oklch, var(--risk) 35%, var(--border));
 }
 .warFocusLineHead {
   display: flex;
@@ -1777,6 +1807,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .priority-p1 {
   background: color-mix(in oklch, var(--risk) 15%, transparent);
   color: var(--risk);
+}
+.priority-p2 {
+  background: color-mix(in oklch, var(--optimize) 15%, transparent);
+  color: var(--optimize);
 }
 .scoreTag {
   font-size: 12px;
@@ -2109,6 +2143,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   background: color-mix(in oklch, var(--risk) 12%, transparent);
   color: var(--risk);
 }
+.priority-p2 {
+  background: color-mix(in oklch, var(--optimize) 12%, transparent);
+  color: var(--optimize);
+}
 .focusScore {
   font-size: 13px;
   font-weight: 700;
@@ -2413,35 +2451,17 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
   transform: translateY(-2px);
 }
-.cardBorderRed::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--critical);
-  border-radius: 14px 0 0 14px;
+.problemCard.cardBorderRed {
+  border-color: color-mix(in oklch, var(--critical) 28%, var(--border));
+  background: linear-gradient(180deg, color-mix(in oklch, var(--critical) 3%, var(--surface)) 0%, var(--surface) 100%);
 }
-.cardBorderAmber::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--risk);
-  border-radius: 14px 0 0 14px;
+.problemCard.cardBorderAmber {
+  border-color: color-mix(in oklch, var(--risk) 28%, var(--border));
+  background: linear-gradient(180deg, color-mix(in oklch, var(--risk) 3%, var(--surface)) 0%, var(--surface) 100%);
 }
-.cardBorderBlue::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: #2563eb;
-  border-radius: 14px 0 0 14px;
+.problemCard.cardBorderBlue {
+  border-color: color-mix(in oklch, var(--optimize) 28%, var(--border));
+  background: linear-gradient(180deg, color-mix(in oklch, var(--optimize) 3%, var(--surface)) 0%, var(--surface) 100%);
 }
 
 .problemCardHead {
@@ -2467,8 +2487,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   color: var(--risk);
 }
 .badgeBlue {
-  background: #eff6ff;
-  color: #2563eb;
+  background: color-mix(in oklch, var(--optimize) 12%, transparent);
+  color: var(--optimize);
 }
 .problemImpactTag {
   font-size: 11px;
@@ -3005,25 +3025,28 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 .govRecCard {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 11px 13px;
+  border-radius: 8px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 6px;
-  border-left: 3px solid var(--border);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .govRecCard.p0 {
-  border-left-color: var(--critical);
+  border-color: color-mix(in oklch, var(--critical) 35%, var(--border));
+  background: linear-gradient(180deg, color-mix(in oklch, var(--critical) 2.5%, var(--surface)) 0%, var(--surface) 100%);
 }
 
 .govRecCard.p1 {
-  border-left-color: #f59e0b;
+  border-color: color-mix(in oklch, var(--risk) 35%, var(--border));
+  background: linear-gradient(180deg, color-mix(in oklch, var(--risk) 2.5%, var(--surface)) 0%, var(--surface) 100%);
 }
 
 .govRecCard.p2 {
-  border-left-color: #3b82f6;
+  border-color: color-mix(in oklch, var(--optimize) 35%, var(--border));
+  background: linear-gradient(180deg, color-mix(in oklch, var(--optimize) 2.5%, var(--surface)) 0%, var(--surface) 100%);
 }
 
 .govRecCardTop {
@@ -3075,7 +3098,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   gap: 4px;
   background: transparent;
   border: none;
-  color: #2563eb;
+  color: var(--optimize);
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;

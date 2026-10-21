@@ -125,3 +125,25 @@ test("missing period in URL shows notice banner and falls back safely", async ()
 
   assert.match(html, /指定月份.*2025-01.*暂无有效快照/);
 });
+
+test("Bento dashboard renders Top 3 focus cards with accurate priority badges and excludes non-struggling lines in 2026-09", async () => {
+  const response = await render("/?period=2026-09&view=bg");
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.match(html, /最需关注治理业务线/);
+  assert.match(html, /企业数字化业务群/);
+  assert.match(html, /开放平台业务群/);
+  assert.match(html, /C端硬件创新中心/);
+  assert.match(html, /priority-p0">P0(?:<!-- -->)? 攻坚/);
+  assert.match(html, /priority-p1">P1(?:<!-- -->)? 攻坚/);
+});
+
+test("when view is bg, line parameter is ignored and does not filter the overview", async () => {
+  const response = await render("/?period=2026-09&view=bg&line=" + encodeURIComponent("讯飞听见"));
+  assert.equal(response.status, 200);
+  const html = await response.text();
+
+  assert.match(html, /bentoWarReportContainer/);
+  assert.match(html, /最需关注治理业务线/);
+});

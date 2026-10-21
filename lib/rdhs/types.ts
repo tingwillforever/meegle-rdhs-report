@@ -38,6 +38,8 @@ export type ProductMetric = {
   lowestComponent: string;
   problem: string;
   action: string;
+  prodRep?: string | null;
+  pmRep?: string | null;
 };
 
 export type BusinessLineMetric = {
@@ -152,3 +154,15 @@ export type TrendPoint = SnapshotSummary & {
   periodKey: string;
   asOf: string;
 };
+
+export type FocusLineItem = {
+  name: string;
+  unmeasuredCount: number;
+  keyGovCount: number;
+  productTotal: number;
+  avgScore: number;
+  lowest: string;
+  focus: string;
+  priority: "P0" | "P1" | "P2";
+};
+

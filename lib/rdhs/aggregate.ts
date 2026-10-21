@@ -3,6 +3,7 @@ import type {
   BusinessLineRankingItem,
   ComponentScores,
   CompositionChange,
+  FocusLineItem,
   GovernanceBand,
   ProductMetric,
   RdhsSnapshot,
@@ -365,3 +366,71 @@ export function getLineGovernanceCandidates(
     .sort((a, b) => (a.rdhs ?? -1) - (b.rdhs ?? -1))
     .slice(0, limit);
 }
+
+const COMPONENT_LABELS: Array<[string, string, number]> = [
+  ["linkClosure", "链路闭环", 25],
+  ["deliveryClosure", "交付闭环", 15],
+  ["timeliness", "时效节奏", 20],
+  ["granularity", "颗粒度对齐", 20],
+  ["quality", "质量敏锐度", 20],
+];
+
+export function getTopFocusLines(snapshot: RdhsSnapshot, limit = 3): FocusLineItem[] {
+  const list = snapshot.businessLines
+    .map((line) => {
+      const lineProducts = snapshot.products.filter((p) => p.businessLine === line.businessLine);
+      const lineSummary = summarizeProducts(lineProducts);
+
+      const componentAverages = COMPONENT_LABELS
+        .map(([key, label, max]) => ({
+          key,
+          label,
+          max,
+          val: lineSummary.componentAverages[key as keyof typeof lineSummary.componentAverages],
+        }))
+        .filter((c) => c.val !== null);
+
+      const lowest = [...componentAverages].sort(
+        (a, b) => ((a.val ?? 0) / a.max) - ((b.val ?? 0) / b.max)
+      )[0] ?? null;
+
+      const avgScore = lineSummary.averageRdhs !== null ? Math.round(lineSummary.averageRdhs * 10) / 10 : 0;
+      const keyGovRatio = line.productTotal > 0 ? line.keyGovernanceCount / line.productTotal : 0;
+      const priority: "P0" | "P1" | "P2" = avgScore < 45 ? "P0" : avgScore < 60 ? "P1" : "P2";
+
+      return {
+        name: line.businessLine,
+        unmeasuredCount: lineSummary.unmeasuredProductCount,
+        keyGovCount: line.keyGovernanceCount,
+        productTotal: line.productTotal,
+        avgScore,
+        lowest: lowest ? `${lowest.label} (${lowest.val?.toFixed(1)} / ${lowest.max})` : "暂无",
+        focus: line.focus,
+        priority,
+        keyGovRatio,
+      };
+    })
+    .filter((entry) => entry.keyGovCount > 0 || entry.avgScore < 70);
+
+  // Sort by:
+  // 1. Line risk priority (P0 < 45 first, then P1 < 60, then P2)
+  // 2. Average score ascending (lowest score first)
+  // 3. Key governance product proportion descending
+  // 4. Key governance product count descending
+  list.sort((a, b) => {
+    const pRank = { P0: 0, P1: 1, P2: 2 };
+    if (pRank[a.priority] !== pRank[b.priority]) {
+      return pRank[a.priority] - pRank[b.priority];
+    }
+    if (a.avgScore !== b.avgScore) {
+      return a.avgScore - b.avgScore;
+    }
+    if (b.keyGovRatio !== a.keyGovRatio) {
+      return b.keyGovRatio - a.keyGovRatio;
+    }
+    return b.keyGovCount - a.keyGovCount;
+  });
+
+  return list.slice(0, limit);
+}
+

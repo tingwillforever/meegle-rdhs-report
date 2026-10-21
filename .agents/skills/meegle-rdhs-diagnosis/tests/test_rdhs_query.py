@@ -37,6 +37,8 @@ class RdhsQueryTest(unittest.TestCase):
         ]
         summary = summarize_scope(matched)
 
+        self.assertEqual(summary["audit_average_rdhs"], 40.0)
+        self.assertEqual(summary["measured_average_rdhs"], 60.0)
         self.assertEqual(summary["average_rdhs"], 60)
         self.assertEqual(summary["comparison_count"], 2)
         self.assertEqual(summary["comparison_current_average"], 60)

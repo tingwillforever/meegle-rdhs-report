@@ -8,9 +8,10 @@ import {
   TrendingDown,
   TrendingUp,
 } from "lucide-react";
-import type { RdhsSnapshot, SnapshotSummary } from "@/lib/rdhs/types";
+import type { FocusLineItem, RdhsSnapshot, SnapshotSummary } from "@/lib/rdhs/types";
 import {
   calculateBusinessLineRankings,
+  getTopFocusLines,
   summarizeSnapshot,
 } from "@/lib/rdhs/aggregate";
 
@@ -19,62 +20,6 @@ type BgWarReportProps = {
   previousSnapshot: RdhsSnapshot | null;
   onDrilldown: (businessLine?: string) => void;
 };
-
-type FocusLineItem = {
-  name: string;
-  unmeasuredCount: number;
-  keyGovCount: number;
-  productTotal: number;
-  avgScore: number;
-  lowest: string;
-  focus: string;
-};
-
-const COMPONENT_LABELS: Array<[string, string, number]> = [
-  ["linkClosure", "价值链路闭环", 25],
-  ["deliveryClosure", "交付闭环", 15],
-  ["timeliness", "时效节奏", 20],
-  ["granularity", "颗粒度对齐", 20],
-  ["quality", "质量表现", 20],
-];
-
-function getTopFocusLines(snapshot: RdhsSnapshot): FocusLineItem[] {
-  return snapshot.businessLines
-    .map((line) => {
-      const lineProducts = snapshot.products.filter((p) => p.businessLine === line.businessLine);
-      const lineSummary = summarizeSnapshot({ ...snapshot, products: lineProducts });
-
-      const componentAverages = COMPONENT_LABELS
-        .map(([key, label, max]) => ({
-          key,
-          label,
-          max,
-          val: lineSummary.componentAverages[key as keyof typeof lineSummary.componentAverages],
-        }))
-        .filter((c) => c.val !== null);
-
-      const lowest = [...componentAverages].sort(
-        (a, b) => ((a.val ?? 0) / a.max) - ((b.val ?? 0) / b.max)
-      )[0] ?? null;
-
-      return {
-        name: line.businessLine,
-        unmeasuredCount: lineSummary.unmeasuredProductCount,
-        keyGovCount: line.keyGovernanceCount,
-        productTotal: line.productTotal,
-        avgScore: lineSummary.averageRdhs !== null ? Math.round(lineSummary.averageRdhs * 10) / 10 : 0,
-        lowest: lowest ? `${lowest.label} (${lowest.val?.toFixed(1)} / ${lowest.max})` : "暂无",
-        focus: line.focus,
-      };
-    })
-    .filter((entry) => entry.keyGovCount > 0 || entry.avgScore < 60)
-    .sort((a, b) => {
-      const diff = b.keyGovCount - a.keyGovCount;
-      if (diff !== 0) return diff;
-      return a.avgScore - b.avgScore;
-    })
-    .slice(0, 3);
-}
 
 export function BgWarReport({
   snapshot,
@@ -286,8 +231,8 @@ export function BgWarReport({
         </div>
 
         <div className="focusBentoGrid">
-          {focusLines.map((item, index) => {
-            const priority = index < 2 ? "P0" : "P1";
+          {focusLines.map((item) => {
+            const priority = item.priority;
             return (
               <div
                 key={item.name}

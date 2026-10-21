@@ -132,6 +132,8 @@ function productAt(value: unknown, index: number): ProductMetric {
     lowestComponent: stringAt(input.lowestComponent, `${path}.lowestComponent`),
     problem: stringAt(input.problem, `${path}.problem`),
     action: stringAt(input.action, `${path}.action`),
+    prodRep: optionalStringAt(input.prodRep, `${path}.prodRep`),
+    pmRep: optionalStringAt(input.pmRep, `${path}.pmRep`),
   };
 }
 

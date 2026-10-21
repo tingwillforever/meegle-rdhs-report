@@ -501,6 +501,7 @@ def summarize_scope(
     measured = [item for item in matched if item[1] is not None]
     missing = [item[0] for item in matched if item[1] is None]
     avg = sum(item[1]["rdhs"] for item in measured) / len(measured) if measured else None
+    audit_avg = sum(item[1]["rdhs"] if item[1] is not None else 0 for item in matched) / len(matched) if matched else None
     paired = [item for item in matched if item[1] is not None and item[2] is not None]
     paired_current_avg = sum(item[1]["rdhs"] for item in paired) / len(paired) if paired else None
     paired_last_avg = sum(item[2]["rdhs"] for item in paired) / len(paired) if paired else None
@@ -509,6 +510,8 @@ def summarize_scope(
         tiers[get_tier(current["rdhs"])[1]] += 1
     return {
         "average_rdhs": avg,
+        "audit_average_rdhs": audit_avg,
+        "measured_average_rdhs": avg,
         "comparison_count": len(paired),
         "comparison_current_average": paired_current_avg,
         "last_average_rdhs": paired_last_avg,
@@ -727,12 +730,14 @@ def format_scope_summary(
     scope_uncertain: bool = False,
 ) -> str:
     summary = summarize_scope(matched)
-    average = summary["average_rdhs"]
-    average_text = f"{average:.1f} 分" if average is not None else "—"
+    audit_avg = summary["audit_average_rdhs"]
+    audit_avg_text = f"{audit_avg:.1f} 分" if audit_avg is not None else "—"
+    measured_avg = summary["measured_average_rdhs"]
+    measured_avg_text = f"{measured_avg:.1f} 分" if measured_avg is not None else "—"
     if summary["missing_products"] or scope_uncertain:
         tier_text = "范围待核实，不作整体分档"
     else:
-        tier_text = get_tier(average)[0] if average is not None else "无有效度量"
+        tier_text = get_tier(audit_avg)[0] if audit_avg is not None else "无有效度量"
     compare_text = ""
     if compare and summary["comparison_current_average"] is not None and summary["last_average_rdhs"] is not None:
         delta = summary["comparison_current_average"] - summary["last_average_rdhs"]
@@ -742,8 +747,8 @@ def format_scope_summary(
         )
     return "\n".join([
         f"## 📊 {title} RDHS 当下健康度",
-        f"- **已度量样本 RDHS 算术平均**：**{average_text}**（{tier_text}）{compare_text}",
-        f"- **度量覆盖**：{summary['measured_count']} / {summary['eligible_count']} 款产品（{summary['coverage'] * 100:.1f}%）",
+        f"- **考核均分（未度量计0）**：**{audit_avg_text}**（{tier_text}）{compare_text}",
+        f"- **实测样本均分**：{measured_avg_text}（度量覆盖：{summary['measured_count']} / {summary['eligible_count']} 款产品，{summary['coverage'] * 100:.1f}%）",
         f"- **产品分布**：P0 {summary['tiers']['P0']}｜P1 {summary['tiers']['P1']}｜P2 {summary['tiers']['P2']}｜达标 {summary['tiers']['达标']}",
     ])
 
@@ -756,17 +761,19 @@ def format_business_line_summary(
         groups.setdefault(path.split("/")[0], []).append(item)
     lines = [
         "### 一级业务线概览",
-        "| 一级业务线 | 产品平均 RDHS | P0 产品 | 度量覆盖 |",
-        "| :--- | ---: | ---: | ---: |",
+        "| 一级业务线 | 考核均分(计0) | 实测均分 | P0 产品 | 度量覆盖 |",
+        "| :--- | ---: | ---: | ---: | ---: |",
     ]
     ranked = []
     for line_name, products in groups.items():
         summary = summarize_scope(products)
-        ranked.append((summary["average_rdhs"] if summary["average_rdhs"] is not None else -1, line_name, summary))
-    for average, line_name, summary in sorted(ranked):
-        average_text = f"{average:.1f}" if average >= 0 else "—"
+        ranked.append((summary["audit_average_rdhs"] if summary["audit_average_rdhs"] is not None else -1, line_name, summary))
+    for audit_avg, line_name, summary in sorted(ranked):
+        audit_text = f"{audit_avg:.1f}" if audit_avg >= 0 else "—"
+        measured_avg = summary["measured_average_rdhs"]
+        measured_text = f"{measured_avg:.1f}" if measured_avg is not None else "—"
         lines.append(
-            f"| **{line_name}** | {average_text} | {summary['tiers']['P0']} | "
+            f"| **{line_name}** | {audit_text} | {measured_text} | {summary['tiers']['P0']} | "
             f"{summary['measured_count']} / {summary['eligible_count']}（{summary['coverage'] * 100:.1f}%） |"
         )
     return "\n".join(lines)

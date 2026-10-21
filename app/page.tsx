@@ -12,7 +12,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const params = new URLSearchParams(await searchParams ?? []);
   const requestedPeriod = params.get("period") ?? undefined;
   const requestedView = params.get("view") === "workbench" ? "workbench" : "bg";
-  const requestedLine = params.get("line") ?? undefined;
+  const requestedLine = requestedView === "bg" ? undefined : (params.get("line") ?? undefined);
 
   const snapshots: RdhsSnapshot[] = loadStaticSnapshots();
   const dataMode: "live" | "preview" = snapshots.length > 0 ? "live" : "preview";

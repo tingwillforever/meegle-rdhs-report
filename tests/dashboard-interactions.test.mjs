@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import test from "node:test";
 
 import {
@@ -8,6 +9,7 @@ import {
   detectCompositionChange,
   findPreviousSnapshot,
   getLineGovernanceCandidates,
+  getTopFocusLines,
   previousCalendarMonth,
   summarizeProducts,
 } from "../lib/rdhs/aggregate.ts";
@@ -277,4 +279,56 @@ test("detectCompositionChange detects added and removed products", () => {
   assert.deepEqual(change.removedNames, ["A"]);
   assert.equal(change.currentCount, 2);
   assert.equal(change.previousCount, 2);
+});
+
+test("getTopFocusLines prioritizes P0 and P1 struggling lines over higher-scoring lines with high volume", () => {
+  const data09 = JSON.parse(
+    fs.readFileSync(new URL("../data/snapshots/2026-09.json", import.meta.url), "utf8"),
+  );
+  const focus = getTopFocusLines(data09);
+  assert.equal(focus.length, 3);
+  assert.equal(focus[0].name, "企业数字化业务群");
+  assert.equal(focus[0].priority, "P0");
+  assert.equal(focus[1].name, "开放平台业务群");
+  assert.equal(focus[1].priority, "P0");
+  assert.equal(focus[2].name, "C端硬件创新中心");
+  assert.equal(focus[2].priority, "P1");
+
+  // 讯飞听见 (2026-09 均分 65.0, 全 BG 排名第 5) 不应进入 Top 3 攻坚重点
+  assert.ok(!focus.some((f) => f.name === "讯飞听见"));
+});
+
+test("getTopFocusLines: synthetic test that volume cannot outrank severity", () => {
+  const syntheticSnapshot = {
+    periodKey: "2026-09",
+    cadence: "monthly",
+    businessLines: [
+      { businessLine: "大体量健康线", productTotal: 20, focus: "ok", keyGovernanceCount: 1 },
+      { businessLine: "中小体量危重线", productTotal: 2, focus: "bad", keyGovernanceCount: 2 },
+      { businessLine: "轻度风险线", productTotal: 2, focus: "warn", keyGovernanceCount: 0 },
+    ],
+    products: [
+      // 大体量健康线: 19 款 100 分, 1 款未度量 (计0), avg = 95.0 (P3), keyGov = 1
+      ...Array.from({ length: 19 }, (_, i) => ({
+        businessLine: "大体量健康线", product: `HP${i}`, rdhs: 100, components: {},
+      })),
+      { businessLine: "大体量健康线", product: "HP_unmeasured", rdhs: null, components: {} },
+
+      // 中小体量危重线: 2 款 20 分, avg = 20.0 (P0), keyGov = 2
+      { businessLine: "中小体量危重线", product: "CP1", rdhs: 20, components: {} },
+      { businessLine: "中小体量危重线", product: "CP2", rdhs: 20, components: {} },
+
+      // 轻度风险线: 2 款 50 分, avg = 50.0 (P1), keyGov = 0
+      { businessLine: "轻度风险线", product: "WP1", rdhs: 50, components: {} },
+      { businessLine: "轻度风险线", product: "WP2", rdhs: 50, components: {} },
+    ],
+  };
+
+  const focus = getTopFocusLines(syntheticSnapshot);
+  assert.equal(focus[0].name, "中小体量危重线");
+  assert.equal(focus[0].priority, "P0");
+  assert.equal(focus[1].name, "轻度风险线");
+  assert.equal(focus[1].priority, "P1");
+  // 大体量健康线虽然 keyGovCount = 1，但均分 95，属于及格线，排在末位
+  assert.equal(focus[2].name, "大体量健康线");
 });

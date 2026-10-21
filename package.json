@@ -16,7 +16,7 @@
     "sync:monthly": "bash scripts/run-sync-job.sh monthly",
     "test": "npm run test:unit && npm run test:python && npm run test:render",
     "test:unit": "node --test tests/rdhs-domain.test.mjs tests/rdhs-http.test.mjs tests/rdhs-repository.test.mjs tests/rdhs-runtime.test.mjs tests/dashboard-interactions.test.mjs tests/automation-shell.test.mjs",
-    "test:python": "python3 -m unittest tests/test_rdhs_web_sync.py",
+    "test:python": "python3 -m unittest tests/test_rdhs_web_sync.py && python3 -m unittest discover -s .agents/skills/meegle-rdhs-diagnosis/tests",
     "test:render": "npm run build && node --test tests/rendered-html.test.mjs",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next"
   },

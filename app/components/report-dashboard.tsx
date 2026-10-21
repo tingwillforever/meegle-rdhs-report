@@ -50,11 +50,11 @@ const BANDS: GovernanceBand[] = ["重点治理", "风险改进", "持续优化",
 const PRODUCT_PAGE_SIZE = 10;
 const FEATURED_DEPENDENCY_METRICS = new Set(["需求发布闭环率", "需求积压占比"]);
 const COMPONENT_LABELS: Array<[keyof ComponentScores, string, number]> = [
-  ["linkClosure", "价值链路闭环", 25],
+  ["linkClosure", "链路闭环", 25],
   ["deliveryClosure", "交付闭环", 15],
   ["timeliness", "时效节奏", 20],
   ["granularity", "颗粒度对齐", 20],
-  ["quality", "质量表现", 20],
+  ["quality", "质量敏锐度", 20],
 ];
 
 function currentMonthKey() {
@@ -80,13 +80,19 @@ function syncUrl(
   const url = new URL(window.location.href);
   if (params.period) url.searchParams.set("period", params.period);
   if (params.view) url.searchParams.set("view", params.view);
-  if (params.line !== undefined) {
+
+  const effectiveView = params.view ?? (url.searchParams.get("view") as "bg" | "workbench" | null);
+  if (effectiveView === "bg") {
+    // BG 全局大盘属于全景概览，不绑定单业务线，清除 line 参数
+    url.searchParams.delete("line");
+  } else if (params.line !== undefined) {
     if (params.line === "全部业务线" || !params.line) {
       url.searchParams.delete("line");
     } else {
       url.searchParams.set("line", params.line);
     }
   }
+
   if (push) {
     window.history.pushState(null, "", url);
   } else {
@@ -266,6 +272,19 @@ function ProductDetail({
         </div>
       </div>
       <div className="detailSection">
+        <h3>责任角色</h3>
+        <p>
+          {product.prodRep || product.pmRep
+            ? [
+                product.prodRep ? `产品代表：${product.prodRep}` : null,
+                product.pmRep ? `项目管理代表：${product.pmRep}` : null,
+              ]
+                .filter(Boolean)
+                .join(" ｜ ")
+            : "本期快照未提供，待业务线确认"}
+        </p>
+      </div>
+      <div className="detailSection">
         <h3>快照问题提示（待核实）</h3>
         <p>{product.rdhs === null ? "本期无有效评分，需核实产品状态、图表范围与数据关联，不能直接认定过程未开展。" : product.problem}</p>
       </div>
@@ -319,7 +338,8 @@ export function ReportDashboard({
       const urlLine = searchParams.get("line")?.trim();
       const requestedSnapshot = available.find((s) => s.periodKey === urlPeriod);
       const fallbackPeriod = available.find((s) => s.periodKey === currentMonthKey())?.periodKey ?? available.at(-1)?.periodKey ?? "";
-      setViewMode(urlView === "workbench" || (urlLine && urlView !== "bg") ? "workbench" : "bg");
+      const effectiveView = urlView === "workbench" || (urlLine && urlView !== "bg") ? "workbench" : "bg";
+      setViewMode(effectiveView);
       setPeriodKey(requestedSnapshot?.periodKey ?? fallbackPeriod);
       setMissingPeriodNotice(urlPeriod && !requestedSnapshot ? urlPeriod : null);
       setSelectedLine(urlLine || "全部业务线");
@@ -329,6 +349,11 @@ export function ReportDashboard({
       setUnmeasuredOnly(false);
       setSelectedProductKey(null);
       setProductPage(1);
+
+      // 处于 BG 全局大盘时，若 URL 仍残留 line 参数，静默清理保持 URL 干净
+      if (effectiveView === "bg" && searchParams.has("line")) {
+        syncUrl({ period: requestedSnapshot?.periodKey ?? fallbackPeriod, view: "bg" }, false);
+      }
     };
 
     applyUrlState();
@@ -447,15 +472,17 @@ export function ReportDashboard({
 
   function changeViewMode(nextView: "bg" | "workbench") {
     setViewMode(nextView);
-    syncUrl({ period: periodKey, view: nextView, line: selectedLine }, true);
     if (nextView === "bg") {
+      syncUrl({ period: periodKey, view: "bg" }, true);
       window.scrollTo({ top: 0, behavior: "smooth" });
+    } else {
+      syncUrl({ period: periodKey, view: "workbench", line: selectedLine }, true);
     }
   }
 
   function returnToBg() {
     setViewMode("bg");
-    syncUrl({ period: periodKey, view: "bg", line: selectedLine }, true);
+    syncUrl({ period: periodKey, view: "bg" }, true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -937,7 +964,17 @@ export function ReportDashboard({
                             <div className="govRecBody">
                               <div><b>指标事实:</b> {prod.rdhs === null ? "本期无有效评分，考核计0；原因待核实。" : `RDHS ${prod.rdhs.toFixed(1)} 分，最低过程项：${prod.lowestComponent || "未获取"}。`}</div>
                               <div><b>核查动作:</b> {prod.rdhs === null ? "核实产品状态、图表范围与数据关联，不直接认定未开展研发。" : "结合原单和分项指标核实实际阶段；仅对真实完成且满足验收条件的需求补齐记录，不为提分结项。"}</div>
-                              <div><b>责任角色:</b> 本期快照未提供，待业务线确认。</div>
+                              <div>
+                                <b>责任角色:</b>{" "}
+                                {prod.prodRep || prod.pmRep
+                                  ? [
+                                      prod.prodRep ? `产品代表：${prod.prodRep}` : null,
+                                      prod.pmRep ? `项目管理代表：${prod.pmRep}` : null,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(" ｜ ")
+                                  : "本期快照未提供，待业务线确认"}
+                              </div>
                             </div>
                             <button
                               type="button"
