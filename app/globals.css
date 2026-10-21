@@ -1610,6 +1610,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
 }
 .deltaUp { color: var(--track); background: color-mix(in oklch, var(--track) 10%, transparent); }
 .deltaDown { color: var(--critical); background: color-mix(in oklch, var(--critical) 10%, transparent); }
+/* MTD is a partial month: never signal a settled gain. */
+.deltaNeutral { color: var(--muted); background: var(--soft); border: 1px dashed var(--border); }
+.deltaMtdTag { margin-left: 4px; font-size: 9.5px; opacity: 0.75; }
 .textLead { color: var(--track); font-weight: 500; font-size: 12px; }
 .textLag { color: var(--critical); font-weight: 500; font-size: 12px; }
 .tableActionLink {
@@ -2635,6 +2638,14 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   align-items: stretch;
 }
 
+/* 2x2 grid doubles in height here; stacking beats stretching the hero into dead space. */
+@media (max-width: 1200px) {
+  .lineCtoOverview {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+}
+
 @media (max-width: 960px) {
   .lineCtoOverview {
     grid-template-columns: 1fr;
@@ -2648,8 +2659,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
@@ -2705,9 +2716,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   grid-template-columns: repeat(4, 1fr);
   gap: 10px;
   align-items: stretch;
+  grid-auto-rows: 1fr;
 }
 
-@media (max-width: 1200px) {
+@media (max-width: 900px) {
   .lineCtoGrid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -2755,6 +2767,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   color: var(--muted);
   line-height: 1.4;
   margin-top: auto;
+  /* Avoid a single orphaned character on the last line. */
+  text-wrap: pretty;
 }
 
 .lineCtoProgressTrack {
@@ -2964,6 +2978,24 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   gap: 6px;
 }
 
+.govRecCompactHint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.govRecCompactHint b {
+  margin: 0 3px;
+  font-weight: 700;
+}
+
 .govRecGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -3082,4 +3114,27 @@ button:focus-visible, input:focus-visible, select:focus-visible, [tabindex]:focu
   .topbarInner .barControls { grid-column: 2; grid-row: 1; }
   .topbarInner .viewSwitcher { grid-column: 1 / -1; grid-row: 2; }
   .viewTabBtn { flex: 1; justify-content: center; white-space: nowrap; }
+}
+
+/* Mobile density: keep the CTO overview short so the product list stays near the first screen. */
+@media (max-width: 660px) {
+  .navDivider { display: none; }
+  .lineCtoCard { padding: 10px 12px; gap: 5px; }
+  .lineCtoCardNum { font-size: 19px; }
+  .lineCtoCardDesc { font-size: 11px; }
+  .labelHint { display: none; }
+  .govRecGrid {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    padding-bottom: 4px;
+  }
+  .govRecCard {
+    flex: 0 0 82%;
+    scroll-snap-align: start;
+  }
+  .govRecCompactHint { align-items: flex-start; font-size: 11px; }
+  /* Subline cards stay single-column: 2-up at 390px breaks "10.0 分" and "未度量 1". */
+  .sublineCard { padding: 10px 12px; }
 }

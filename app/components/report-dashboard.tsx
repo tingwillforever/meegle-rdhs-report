@@ -703,7 +703,7 @@ export function ReportDashboard({
                 <div className="lineCtoOverview">
                   <div className="lineCtoHeroCard">
                     <div className="lineCtoHeroTop">
-                      <span className="lineCtoHeroTitle">{selectedLine} · 均分考核</span>
+                      <span className="lineCtoHeroTitle">整线均分考核</span>
                       {currentLineRanking ? (
                         <span className="bentoRankBadge rankBronze" title={currentLineRanking.isTie ? "并列排名" : undefined}>
                           BG 排名 #{currentLineRanking.rank}{currentLineRanking.isTie ? "*" : ""}
@@ -717,9 +717,16 @@ export function ReportDashboard({
                       </span>
                       <span className="lineCtoHeroScoreUnit">分</span>
                       {currentLineRanking?.delta !== null && currentLineRanking?.delta !== undefined ? (
-                        <span className={`deltaBadge ${currentLineRanking.delta >= 0 ? "deltaUp" : "deltaDown"}`}>
-                          {currentLineRanking.delta >= 0 ? `+${currentLineRanking.delta.toFixed(1)}` : currentLineRanking.delta.toFixed(1)}
-                        </span>
+                        isCurrentMonth ? (
+                          <span className="deltaBadge deltaNeutral" title="当月进行中，仅作过程参考，不代表全月结论">
+                            {currentLineRanking.delta >= 0 ? `+${currentLineRanking.delta.toFixed(1)}` : currentLineRanking.delta.toFixed(1)}
+                            <span className="deltaMtdTag">MTD参考</span>
+                          </span>
+                        ) : (
+                          <span className={`deltaBadge ${currentLineRanking.delta >= 0 ? "deltaUp" : "deltaDown"}`}>
+                            {currentLineRanking.delta >= 0 ? `+${currentLineRanking.delta.toFixed(1)}` : currentLineRanking.delta.toFixed(1)}
+                          </span>
+                        )
                       ) : (
                         <span className="textMuted" style={{ fontSize: 11 }}>上月暂无对比</span>
                       )}
@@ -748,7 +755,7 @@ export function ReportDashboard({
                       const barTone = passRateVal >= 70 ? "var(--track)" : passRateVal >= 50 ? "var(--optimize)" : passRateVal > 0 ? "var(--risk)" : "var(--critical)";
                       return (
                         <div className="lineCtoCard">
-                          <span className="lineCtoCardLabel">达标及格率 (≥70)</span>
+                          <span className="lineCtoCardLabel">达标及格率<span className="labelHint"> (≥70)</span></span>
                           <div className="lineCtoCardNum">
                             <span style={{ color: barTone }}>{passRateVal.toFixed(1)}%</span>
                           </div>
@@ -784,7 +791,7 @@ export function ReportDashboard({
 
                     {/* 3. 重点治理敞口 (P0/<45) */}
                     <div className="lineCtoCard">
-                      <span className="lineCtoCardLabel">重点治理敞口 (P0/&lt;45)</span>
+                      <span className="lineCtoCardLabel">重点治理敞口<span className="labelHint"> (P0/&lt;45)</span></span>
                       <div className="lineCtoCardNum textRed">
                         {activeLineSummary.bandCounts.keyGovernance} <small>款</small>
                       </div>
@@ -885,7 +892,18 @@ export function ReportDashboard({
                   </div>
                 ) : null}
 
-                {governanceCandidates.length > 0 ? (
+                {governanceCandidates.length > 0 && activeLineSummary.productTotal <= 5 ? (
+                  <div className="govRecCompactHint">
+                    <AlertTriangle size={13} />
+                    <span>
+                      全线仅 {activeLineSummary.productTotal} 款（待治理 {activeLineSummary.pendingGovernanceCount} 款），不再重复推荐；最需先看
+                      <b>{governanceCandidates[0].product}</b>
+                      （{governanceCandidates[0].rdhs === null ? "未度量，考核计0" : `${governanceCandidates[0].rdhs.toFixed(1)} 分`}），明细见下方列表。
+                    </span>
+                  </div>
+                ) : null}
+
+                {governanceCandidates.length > 0 && activeLineSummary.productTotal > 5 ? (
                   <div className="govRecommendationsSection">
                     <div className="govRecHeader">
                       <div className="govRecTitle">
@@ -910,7 +928,7 @@ export function ReportDashboard({
                             <div className="govRecCardTop">
                               <div>
                                 <div className="govRecProductTitle">{prod.product}</div>
-                                <div className="govRecSubline">{prod.subLine || "未分二级业务线"}</div>
+                                <div className="govRecSubline">{prod.subLine && prod.subLine.trim() && prod.subLine.trim() !== selectedLine ? prod.subLine : "独立产品"}</div>
                               </div>
                               <span className={`govRecScoreBadge badge ${bandClass(prod.governanceBand)}`}>
                                 {priorityLabel} · {scoreText}
