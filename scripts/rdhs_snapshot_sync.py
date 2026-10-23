@@ -192,6 +192,19 @@ def _dependency_metrics(row: Mapping[str, object]) -> list[dict[str, object]]:
             "unit": "%",
             "tone": _tone_by_lower_bound(release_closure, 0.6, 0.8),
         },
+        # 分子分母必须一起落盘：月份归属由图表快捷筛选决定（公式内无日期条件），只存比率事后无法复算。
+        {
+            "label": "应发布需求数",
+            "value": _number_or_none(row.get("应发布需求数")),
+            "unit": "个",
+            "tone": "neutral",
+        },
+        {
+            "label": "有效发布需求数",
+            "value": _number_or_none(row.get("有效发布需求数")),
+            "unit": "个",
+            "tone": "neutral",
+        },
         {
             "label": "严重缺陷占比",
             "value": severe_defect_rate,
@@ -258,70 +271,13 @@ def _lowest_component(metric_row: Mapping[str, object]) -> str:
     return " / ".join(field.split("(", 1)[0] for field, value in valid if value == lowest)
 
 
-def _load_product_roles() -> dict[str, dict[str, Optional[str]]]:
-    """读取产品角色映射（产品代表、项目管理代表），优先读取产品主数据缓存，其次读取本地 CSV。"""
-    roles: dict[str, dict[str, Optional[str]]] = {}
-    csv_path = SITE_ROOT / "product_master_data_for_cs.csv"
-    if csv_path.exists():
-        try:
-            import csv
-
-            with csv_path.open(encoding="utf-8") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    pname = str(row.get("产品型号/平台名称") or "").strip()
-                    if pname:
-                        roles[pname] = {
-                            "prodRep": str(row.get("产品代表") or "").strip() or None,
-                            "pmRep": str(row.get("项目管理代表") or "").strip() or None,
-                        }
-        except Exception:
-            pass
-
-    cache_master = Path(os.path.expanduser("~/.cache/meegle-rdhs/product_master.json"))
-    cache_users = Path(os.path.expanduser("~/.cache/meegle-rdhs/user_names.json"))
-    if cache_master.exists() and cache_users.exists():
-        try:
-            with cache_master.open(encoding="utf-8") as f:
-                master = json.load(f)
-            with cache_users.open(encoding="utf-8") as f:
-                users = json.load(f)
-            role_map = {
-                "role_01773a": "产品代表",
-                "role_57dcb8": "产品经理",
-                "role_424751": "研发代表",
-                "role_0ba52c": "系统架构师",
-                "role_8d8f90": "项目管理代表",
-                "role_4292f5": "PMO",
-            }
-            for it in master:
-                name = str(it.get("name") or "").strip()
-                if not name:
-                    continue
-                f_map = {f.get("field_key"): f for f in it.get("fields", [])}
-                ro_list = f_map.get("role_owners", {}).get("field_value") or []
-                r_dict: dict[str, list[str]] = {}
-                for r in ro_list:
-                    rid = str(r.get("role") or "")
-                    rname = role_map.get(rid, rid)
-                    owners = [users.get(str(o), str(o)) for o in r.get("owners") or []]
-                    if owners:
-                        r_dict[rname] = owners
-                prod_rep = "、".join(r_dict.get("产品代表") or r_dict.get("产品经理") or []) or None
-                pm_rep = "、".join(r_dict.get("项目管理代表") or r_dict.get("PMO") or []) or None
-                roles[name] = {"prodRep": prod_rep, "pmRep": pm_rep}
-        except Exception:
-            pass
-    return roles
-
-
 def build_snapshot(
     report_data: dict[str, object],
     audit_manifest: dict[str, object],
     *,
     cadence: str,
 ) -> dict[str, object]:
-    """Convert a verified periodic report into the Site's schema-v1 contract."""
+    """Convert a verified report only; never enrich history from current personal caches."""
     if cadence != "monthly":
         raise ValueError("cadence must be monthly")
     as_of = str(audit_manifest.get("as_of") or "")
@@ -372,7 +328,6 @@ def build_snapshot(
 
     products: list[dict[str, object]] = []
     seen_keys: set[tuple[str, str]] = set()
-    product_roles = _load_product_roles()
     for metric_row in measured_rows:
         business_line = str(metric_row["业务线"]).strip()
         product_name = str(metric_row["产品"]).strip()
@@ -381,7 +336,6 @@ def build_snapshot(
         key = (business_line, product_name)
         improvement = improvement_by_key.get(key)
         rdhs = _number_or_none(metric_row.get(RDHS_FIELD))
-        role_info = product_roles.get(product_name, {})
         products.append(
             {
                 "businessLine": business_line,
@@ -409,8 +363,8 @@ def build_snapshot(
                     if improvement
                     else "保持当前过程记录完整度，按月复核积压、节奏、质量与发布闭环。"
                 ),
-                "prodRep": role_info.get("prodRep"),
-                "pmRep": role_info.get("pmRep"),
+                "prodRep": _optional_text(metric_row, ("产品代表",)),
+                "pmRep": _optional_text(metric_row, ("项目管理代表",)),
             }
         )
         seen_keys.add(key)
@@ -426,7 +380,6 @@ def build_snapshot(
             raise ValueError(
                 f"measured product is missing from full_product_rows: {business_line} / {product_name}"
             )
-        role_info = product_roles.get(product_name, {})
         products.append(
             {
                 "businessLine": business_line,
@@ -441,8 +394,8 @@ def build_snapshot(
                 "lowestComponent": str(improvement["最低分分项"]),
                 "problem": str(improvement["主要问题"]),
                 "action": str(improvement["建议本期动作"]),
-                "prodRep": role_info.get("prodRep"),
-                "pmRep": role_info.get("pmRep"),
+                "prodRep": _optional_text(improvement, ("产品代表",)),
+                "pmRep": _optional_text(improvement, ("项目管理代表",)),
             }
         )
         seen_keys.add(key)

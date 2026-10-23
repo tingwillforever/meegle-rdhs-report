@@ -59,7 +59,7 @@ class SafetyTest(unittest.TestCase):
             r.parse_chart_rows(TITLES, [row(business='一级B')], MASTER)
 
     def test_unknown_multiblock_rejected(self):
-        with patch.object(r, 'get_cached_or_fetch', return_value={'quota_titles': TITLES, 'chart_data_list': [[row()], [row()]]}):
+        with patch.object(r, 'run_meegle_cmd', return_value={'quota_titles': TITLES, 'chart_data_list': [[row()], [row()]]}):
             with self.assertRaises(ValueError):
                 r.get_chart_data(r.CURRENT_CHART_ID)
 
@@ -81,12 +81,80 @@ class SafetyTest(unittest.TestCase):
         self.assertNotIn('保持当前研发节拍', report)
         self.assertIn('严重缺陷', report.split('### 🎯 当前优先治理动作')[1])
 
-    def test_relative_chart_cache_key_has_effective_month(self):
-        with tempfile.TemporaryDirectory() as td, patch.object(r, 'CACHE_DIR', Path(td)), patch.object(r, 'run_meegle_cmd', return_value={'quota_titles': TITLES, 'chart_data_list': [[row()]]}) as fetch:
-            for anchor in [datetime(2026, 9, 30), datetime(2026, 10, 1), datetime(2026, 10, 1)]:
-                with patch.object(r, 'chart_period', return_value=r.previous_period(anchor)):
-                    r.get_chart_data(r.LAST_CHART_ID, ttl=1800, now=anchor)
+    def test_old_two_of_three_cannot_override_live_five_of_nine(self):
+        titles = TITLES + ['应发布需求数', '有效发布需求数']
+        old = row([73, 25, 8, 10, 15, 15, 10, 1, 5, 0, 0.1, 3, 2])
+        live = row([73, 25, 8, 10, 15, 15, 10, 1, 5, 0, 0.1, 9, 5])
+        with tempfile.TemporaryDirectory() as td:
+            old_path = Path(td) / '.cache/meegle-rdhs/cbg_product_develop_chart_7659618575337915254_2026-10.json'
+            old_path.parent.mkdir(parents=True)
+            old_path.write_text(json.dumps({'quota_titles': titles, 'chart_data_list': [[old]]}))
+            before = old_path.read_bytes()
+            with patch.dict('os.environ', {'HOME': td}), patch.object(r, 'run_meegle_cmd', return_value={'quota_titles': titles, 'chart_data_list': [[live]]}), patch('builtins.open', side_effect=AssertionError('实时取数不得读写文件')):
+                qt, rows = r.get_chart_data(r.CURRENT_CHART_ID)
+                product = r.parse_chart_rows(qt, rows, MASTER)['产品A']
+                report = r.format_product_report('产品A', product, None, MASTER['产品A'])
+                self.assertIn('5/9 = 55.6%', report)
+                self.assertNotIn('2/3', report)
+            self.assertEqual(old_path.read_bytes(), before)
+
+    def test_live_failure_never_falls_back_to_disk(self):
+        with patch.object(r, 'run_meegle_cmd', side_effect=RuntimeError('AUTH_REQUIRED')), patch('builtins.open', side_effect=AssertionError('不得回退磁盘')):
+            with self.assertRaisesRegex(RuntimeError, 'AUTH_REQUIRED'):
+                r.get_chart_data(r.CURRENT_CHART_ID)
+
+    def test_master_business_and_names_are_refetched_without_disk(self):
+        with patch('builtins.open', side_effect=AssertionError('不得读写缓存')), patch.object(r, 'fetch_master_items', return_value=[]) as fetch, patch.object(r, 'run_meegle_cmd', return_value=[]) as cli:
+            r.get_product_master()
+            r.get_product_master()
             self.assertEqual(fetch.call_count, 2)
+            self.assertEqual(cli.call_count, 2)
+        with patch('builtins.open', side_effect=AssertionError('不得读写姓名缓存')), patch.object(r, 'run_meegle_cmd', side_effect=[[{'user_key': 'u', 'name_cn': '旧名字'}], [{'user_key': 'u', 'name_cn': '新名字'}]]):
+            self.assertEqual(r.resolve_user_names(['u']), {'u': '旧名字'})
+            self.assertEqual(r.resolve_user_names(['u']), {'u': '新名字'})
+
+    def test_cache_options_cannot_enable_stale_queries(self):
+        with patch.object(sys, 'argv', ['rdhs_query.py', '--all', '--cache-ttl', '30']), patch.object(r, 'run_meegle_cmd') as cli, contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit):
+                r.main()
+            cli.assert_not_called()
+        with patch.object(sys, 'argv', ['rdhs_query.py', '--all', '--refresh', '--format', 'json']), patch.object(r, 'get_product_master', return_value={}), patch.object(r, 'get_chart_data', return_value=(TITLES, [])) as chart, contextlib.redirect_stdout(io.StringIO()) as output:
+            r.main()
+            self.assertEqual(json.loads(output.getvalue())['source_mode'], 'live')
+            chart.assert_called_once()
+
+    def test_release_zero_missing_and_mismatched_counts(self):
+        product = {'rdhs': 73, 'business_line_chart': '一级A', 'metrics': {COMPONENTS[1]: 8, '应发布需求数': 0, '有效发布需求数': 0}}
+        report = r.format_product_report('产品A', product, None, MASTER['产品A'])
+        self.assertIn('无应发布样本；规则给8分', report)
+        self.assertNotIn('有效发布 0/0', report)
+        product['metrics'].pop('应发布需求数')
+        self.assertIn('发布计数未获取', r.format_product_report('产品A', product, None, MASTER['产品A']))
+        product['metrics'].update({'应发布需求数': 9, '有效发布需求数': 5, COMPONENTS[1]: 15})
+        with self.assertRaisesRegex(ValueError, '得分与同次响应'):
+            r.format_product_report('产品A', product, None, MASTER['产品A'])
+
+    def test_release_step_boundaries_and_invalid_counts(self):
+        for valid, required, score in [(0, 0, 8), (0, 10, 0), (1, 10, 5), (5, 10, 8), (7, 10, 12), (9, 10, 15), (10, 10, 15)]:
+            with self.subTest(valid=valid, required=required):
+                metrics = {COMPONENTS[1]: score, '应发布需求数': required, '有效发布需求数': valid}
+                self.assertIn(f'{score}分', r.release_closure_fact(metrics))
+        for valid, required in [(1, 0), (10, 9), (-1, 9), (1.5, 9), (1, float('nan'))]:
+            with self.subTest(valid=valid, required=required), self.assertRaises(ValueError):
+                r.release_closure_fact({COMPONENTS[1]: 8, '应发布需求数': required, '有效发布需求数': valid})
+
+    def test_json_product_rejects_score_count_mismatch(self):
+        titles = TITLES + ['应发布需求数', '有效发布需求数']
+        bad = row([80, 25, 15, 10, 15, 15, 10, 1, 5, 0, 0.1, 9, 5])
+        with self.assertRaisesRegex(ValueError, '得分与同次响应'):
+            r.parse_chart_rows(titles, [bad], MASTER)
+
+    def test_chart_queries_are_live_for_every_source(self):
+        with patch.object(r, 'run_meegle_cmd', return_value={'quota_titles': TITLES, 'chart_data_list': [[row()]]}) as fetch:
+            for chart_id in (r.CURRENT_CHART_ID, r.LAST_CHART_ID, r.BG_TREND_CHART_ID):
+                r.get_chart_data(chart_id)
+                r.get_chart_data(chart_id)
+            self.assertEqual(fetch.call_count, 6)
 
     def test_auth_not_retried_and_request_has_timeout(self):
         response = SimpleNamespace(returncode=1, stdout='AUTH_REQUIRED', stderr='')
@@ -143,7 +211,7 @@ class SafetyTest(unittest.TestCase):
 
     def test_unknown_custom_attribute_fails_closed(self):
         item = {'id': 1, 'name': '定制产品', 'work_item_status': {'state_key': 'In Progress'}, 'fields': [{'field_key': 'business', 'field_value': 'biz'}, {'field_key': 'field_22acd7', 'field_value': {'value': 'hmeckpgbh'}}]}
-        with patch.object(r, 'get_cached_or_fetch', return_value=[item]), patch.object(r, 'get_business_lines', return_value={'biz': '一级A/二级A'}), patch.object(r, 'resolve_user_names', return_value={}):
+        with patch.object(r, 'fetch_master_items', return_value=[item]), patch.object(r, 'get_business_lines', return_value={'biz': '一级A/二级A'}), patch.object(r, 'resolve_user_names', return_value={}):
             result = r.get_product_master()['定制产品']
         self.assertTrue(result['is_custom'])
         self.assertFalse(r.is_eligible_product(result))
@@ -153,11 +221,10 @@ class SafetyTest(unittest.TestCase):
         self.assertIn('未获取', report)
         self.assertNotIn('0.0%', report)
 
-    def test_cross_month_fetch_does_not_write_cache(self):
-        with tempfile.TemporaryDirectory() as td, patch.object(r, 'CACHE_DIR', Path(td)), patch.object(r, 'chart_period', side_effect=['2026-09', '2026-09', '2026-10']), patch.object(r, 'run_meegle_cmd', return_value={'quota_titles': TITLES, 'chart_data_list': [[row()]]}):
-            with self.assertRaises(RuntimeError):
-                r.get_chart_data(r.LAST_CHART_ID)
-            self.assertEqual(list(Path(td).glob('*.json')), [])
+    def test_cross_month_fetch_is_rejected(self):
+        with patch.object(r, 'chart_period', side_effect=['2026-09', '2026-09', '2026-10']), patch.object(r, 'run_meegle_cmd', return_value={'quota_titles': TITLES, 'chart_data_list': [[row()]]}):
+            with self.assertRaisesRegex(RuntimeError, '跨月'):
+                r.get_chart_data(r.CURRENT_CHART_ID)
 
     def test_timeout_and_invalid_json_have_bounded_retries(self):
         import subprocess
@@ -207,7 +274,7 @@ class SafetyTest(unittest.TestCase):
     def test_unknown_enum_does_not_use_standard_label(self):
         for attr, expected in [({'value': 'unknown', 'label': '标准产品'}, '未知'), ({'label': '标准产品'}, '标准产品')]:
             item = {'id': 1, 'name': '产品A', 'fields': [{'field_key': 'field_22acd7', 'field_value': attr}]}
-            with patch.object(r, 'get_cached_or_fetch', return_value=[item]), patch.object(r, 'get_business_lines', return_value={}), patch.object(r, 'resolve_user_names', return_value={}):
+            with patch.object(r, 'fetch_master_items', return_value=[item]), patch.object(r, 'get_business_lines', return_value={}), patch.object(r, 'resolve_user_names', return_value={}):
                 self.assertEqual(r.get_product_master()['产品A']['product_attr'], expected)
 
     def test_missing_completion_count_is_distinct_from_zero(self):
@@ -266,7 +333,7 @@ class SafetyTest(unittest.TestCase):
 
     def test_duplicate_master_name_rejected(self):
         base = {'name': '同名产品', 'work_item_status': {'state_key': 'In Progress'}, 'fields': []}
-        with patch.object(r, 'get_cached_or_fetch', return_value=[{'id': 1, **base}, {'id': 2, **base}]), patch.object(r, 'get_business_lines', return_value={}), patch.object(r, 'resolve_user_names', return_value={}):
+        with patch.object(r, 'fetch_master_items', return_value=[{'id': 1, **base}, {'id': 2, **base}]), patch.object(r, 'get_business_lines', return_value={}), patch.object(r, 'resolve_user_names', return_value={}):
             with self.assertRaises(ValueError):
                 r.get_product_master()
 

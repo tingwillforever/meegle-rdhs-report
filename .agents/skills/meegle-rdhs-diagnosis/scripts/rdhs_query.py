@@ -2,7 +2,7 @@
 """RDHS 产研健康度极速查询与诊断工具 (rdhs_query.py)
 
 专为 AI Agent 和产研效能分析设计：
-1. 自动调用 Meegle CLI 拉取实时度量底表，支持会话级短缓存（默认 0 秒实时直连）。
+1. 自动调用 Meegle CLI 拉取实时度量底表，不读写磁盘缓存。
 2. 内置 10429 频率限制自动重试与退避机制。
 3. 动态结合主数据清洗规则（自动剔除交付定制与测试业务线，只考核 In Progress 在研标准产品）。
 4. 真实角色解析：严格从 role_owners 读取【产品代表】与【项目管理代表】，绝不误读卡片 owner 建卡人。
@@ -14,18 +14,12 @@ from __future__ import annotations
 import argparse
 import json
 import math
-import os
 import subprocess
 import sys
 import time
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-CACHE_DIR = Path(os.path.expanduser("~/.cache/meegle-rdhs"))
-CACHE_TTL = 0  # 当月实时数据默认 0 秒直连；已归档数据另有下限，见 ttl_for_chart
-ARCHIVE_TTL = 1800  # 已归档数据（上月图表、月度趋势）不会随日变化，最短缓存 30 分钟
-MASTER_TTL = 1800  # 产品主数据状态与责任角色低频变化，最短缓存 30 分钟
 MAX_MASTER_PAGES = 50  # 分页保险丝：防止服务端忽略 page-num 时死循环
 TREND_MONTHS = 6
 BUSINESS_TZ = timezone(timedelta(hours=8))
@@ -66,8 +60,6 @@ ATTR_RELEASE_DEFICIT = "发布闭环不足"
 ATTR_PACE_SLOW = "研发节奏偏慢"
 ATTR_PROCESS_OPTIMIZE = "过程能力优化"
 
-USER_CACHE_FILE = CACHE_DIR / "user_names.json"
-
 def run_meegle_cmd(args: List[str], max_retries: int = 3) -> Any:
     cmd = ["meegle"] + args + ["--format", "json"]
     for attempt in range(max_retries):
@@ -97,33 +89,6 @@ def run_meegle_cmd(args: List[str], max_retries: int = 3) -> Any:
         except json.JSONDecodeError as exc:
             raise RuntimeError("Meegle CLI returned invalid JSON") from exc
     raise RuntimeError("Meegle CLI failed after retries.")
-
-def get_cached_or_fetch(key: str, fetch_fn, ttl: int = CACHE_TTL, refresh: bool = False) -> Any:
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    cache_file = CACHE_DIR / f"{key}.json"
-    now = time.time()
-    if not refresh and ttl > 0 and cache_file.exists():
-        try:
-            mtime = cache_file.stat().st_mtime
-            if now - mtime < ttl:
-                with open(cache_file, "r", encoding="utf-8") as f:
-                    return json.load(f)
-        except Exception:
-            pass
-
-    data = fetch_fn()
-    try:
-        with open(cache_file, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False)
-    except Exception:
-        pass
-    return data
-
-def ttl_for_chart(chart_id: str, requested: int) -> int:
-    """当月图表由 requested 决定（默认 0 实时直连）；已归档/历史趋势图表不随日频繁变化，应用短缓存策略（保底 300 秒，支持 --refresh 穿透）。"""
-    if chart_id == CURRENT_CHART_ID:
-        return requested
-    return max(requested, 300)
 
 def previous_period(now: Optional[datetime] = None) -> str:
     """上一个已收口自然月（YYYY-MM）。月份一律现算，不写死。"""
@@ -176,20 +141,13 @@ def fetch_master_items(page_size: int = 200) -> List[Dict[str, Any]]:
         f"产品主数据超过 {page_size * MAX_MASTER_PAGES} 条仍未取完，疑似分页未生效，请检查 CLI page-num 支持"
     )
 
-def get_chart_data(chart_id: str, ttl: int = CACHE_TTL, refresh: bool = False, now: Optional[datetime] = None) -> Tuple[List[str], List[Dict[str, Any]]]:
+def get_chart_data(chart_id: str, now: Optional[datetime] = None) -> Tuple[List[str], List[Dict[str, Any]]]:
     period = chart_period(chart_id, now)
-    cache_key = f"{PROJECT_KEY}_chart_{chart_id}" + (f"_{period}" if period else "")
-
-    def fetch():
-        before = chart_period(chart_id)
-        if period and before != period:
-            raise RuntimeError("相对图查询已跨月，请重新发起以避免月份错标")
-        data = run_meegle_cmd(["chart", "get", "--project-key", PROJECT_KEY, "--chart-id", chart_id])
-        if period and chart_period(chart_id) != before:
-            raise RuntimeError("相对图取数跨月，结果未缓存，请重新查询")
-        return data
-
-    raw = get_cached_or_fetch(cache_key, fetch, ttl=ttl_for_chart(chart_id, ttl), refresh=refresh)
+    if period and chart_period(chart_id) != period:
+        raise RuntimeError("相对图查询已跨月，请重新发起以避免月份错标")
+    raw = run_meegle_cmd(["chart", "get", "--project-key", PROJECT_KEY, "--chart-id", chart_id])
+    if period and chart_period(chart_id) != period:
+        raise RuntimeError("相对图取数跨月，请重新查询")
     if not isinstance(raw, dict) or not isinstance(raw.get("quota_titles"), list) or not isinstance(raw.get("chart_data_list"), list):
         raise ValueError("图表响应缺少 quota_titles / chart_data_list，不能解释为零值")
     chart_list = raw["chart_data_list"]
@@ -199,13 +157,8 @@ def get_chart_data(chart_id: str, ttl: int = CACHE_TTL, refresh: bool = False, n
         raise ValueError("图表存在重复指标名称")
     return raw["quota_titles"], chart_list[0] if chart_list else []
 
-def get_business_lines(ttl: int = CACHE_TTL, refresh: bool = False) -> Dict[str, str]:
-    raw = get_cached_or_fetch(
-        "business_lines",
-        lambda: run_meegle_cmd(["space", "business-lines", "--project-key", PROJECT_KEY]),
-        ttl=3600 if ttl == 0 else ttl,  # 业务线树结构极为稳定，默认安全缓存1小时
-        refresh=refresh
-    )
+def get_business_lines() -> Dict[str, str]:
+    raw = run_meegle_cmd(["space", "business-lines", "--project-key", PROJECT_KEY])
     b_map: Dict[str, str] = {}
     def traverse(nodes: List[Dict[str, Any]], prefix: str = ""):
         for n in nodes:
@@ -218,47 +171,26 @@ def get_business_lines(ttl: int = CACHE_TTL, refresh: bool = False) -> Dict[str,
     return b_map
 
 def resolve_user_names(user_keys: List[str]) -> Dict[str, str]:
-    if not user_keys:
-        return {}
     known: Dict[str, str] = {}
-    if USER_CACHE_FILE.exists():
+    to_query = sorted({key for key in user_keys if key})
+    for i in range(0, len(to_query), 10):
+        chunk = to_query[i:i+10]
         try:
-            with open(USER_CACHE_FILE, "r", encoding="utf-8") as f:
-                known = json.load(f)
-        except Exception:
-            pass
-
-    to_query = [k for k in set(user_keys) if k and k not in known]
-    if to_query:
-        # Batch query in chunks of 10
-        for i in range(0, len(to_query), 10):
-            chunk = to_query[i:i+10]
-            try:
-                res = run_meegle_cmd(["user", "query", "--user-keys", ",".join(chunk)])
-                user_list = res if isinstance(res, list) else (res.get("data", []) if isinstance(res, dict) else [])
-                for u in user_list:
-                    uk = str(u.get("user_key", ""))
-                    name_cn = u.get("name_cn", "") or u.get("name", {}).get("zh_cn", "")
-                    simple_name = name_cn.split()[0] if name_cn else uk
-                    known[uk] = simple_name
-            except Exception as exc:
-                sys.stderr.write(f"Warning: 责任人姓名未解析，保留用户标识：{exc}\n")
-        try:
-            with open(USER_CACHE_FILE, "w", encoding="utf-8") as f:
-                json.dump(known, f, ensure_ascii=False)
-        except Exception:
-            pass
+            res = run_meegle_cmd(["user", "query", "--user-keys", ",".join(chunk)])
+            user_list = res if isinstance(res, list) else (res.get("data", []) if isinstance(res, dict) else [])
+            for u in user_list:
+                uk = str(u.get("user_key", ""))
+                name_cn = u.get("name_cn", "") or u.get("name", {}).get("zh_cn", "")
+                if uk and name_cn:
+                    known[uk] = name_cn.split()[0]
+        except Exception as exc:
+            sys.stderr.write(f"Warning: 责任人姓名未解析，保留用户标识：{exc}\n")
     return known
 
-def get_product_master(ttl: int = CACHE_TTL, refresh: bool = False, resolve_names: bool = True) -> Dict[str, Dict[str, Any]]:
-    items = get_cached_or_fetch(
-        "product_master",
-        fetch_master_items,
-        ttl=ttl,
-        refresh=refresh
-    )
-    b_lines = get_business_lines(ttl=ttl, refresh=refresh)
-    
+def get_product_master(resolve_names: bool = True) -> Dict[str, Dict[str, Any]]:
+    items = fetch_master_items()
+    b_lines = get_business_lines()
+
     # Pre-collect all user keys inside role_owners
     all_role_users: List[str] = []
     if resolve_names:
@@ -401,6 +333,27 @@ def evaluate_attribution(metrics: Dict[str, Any]) -> Tuple[str, str, str]:
 
     return main_tag, detail, step
 
+def release_closure_fact(metrics: Dict[str, Any]) -> str:
+    s_deliv = float(metrics.get("交付闭环得分(15')", 0))
+    required = float(metrics["应发布需求数"]) if metrics.get("应发布需求数") is not None else None
+    valid = float(metrics["有效发布需求数"]) if metrics.get("有效发布需求数") is not None else None
+    if required is None or valid is None:
+        return "发布计数未获取，不能复算闭环率"
+    elif required < 0 or valid < 0 or not required.is_integer() or not valid.is_integer() or valid > required:
+        raise ValueError("发布需求计数非法：需为非负整数且有效发布不超过应发布")
+    elif required == 0:
+        release_fact = "无应发布样本；规则给8分，不计算0/0"
+        if s_deliv != 8:
+            raise ValueError("无应发布样本时交付闭环得分应为8分")
+        return release_fact
+    else:
+        ratio = valid / required
+        expected_score = 15 if ratio >= 0.9 else 12 if ratio >= 0.7 else 8 if ratio >= 0.5 else 5 if ratio > 0 else 0
+        if s_deliv != expected_score:
+            raise ValueError("交付闭环得分与同次响应的发布计数不一致，需核实图表公式")
+        return f"有效发布 {valid:g}/{required:g} = {ratio:.1%}；按阶梯复核 {expected_score}分"
+
+
 def get_tier(rdhs: float) -> Tuple[str, str]:
     if rdhs >= 70:
         return "常规跟踪", "达标"
@@ -450,6 +403,7 @@ def parse_chart_rows(quota_titles: List[str], rows: List[Dict[str, Any]], master
         # Chart decimals are rounded; tolerate 0.05 point without rewriting source scores.
         if abs(float(metric_dict["RDHS(100')"]) - total) > 0.05:
             raise ValueError(f"{p_name}: RDHS 与五维得分之和不一致")
+        release_closure_fact(metric_dict)
         row_obj = {
             "business_line_chart": b_name,
             "product_name": p_name,
@@ -871,6 +825,8 @@ def format_product_report(p_name: str, cur_item: Optional[Dict[str, Any]], last_
     s_grain = float(metrics.get("颗粒度对齐度(20')", 0))
     s_qual = float(metrics.get("质量敏锐度(20')", 0))
 
+    release_fact = release_closure_fact(metrics)
+
     lines = [
         f"## 🏥【{p_name}】RDHS 产研体检单",
         f"- **综合健康度**：**{rdhs_cur:.0f} 分**（{tier_name}，治理优先级：`{tier_p}`） ｜ **上月基线**：{last_rdhs_str}（环比：{delta_str}）",
@@ -880,7 +836,7 @@ def format_product_report(p_name: str, cur_item: Optional[Dict[str, Any]], last_
         "",
         "### 五维健康度体检 (进度条自适应)",
         f"- 链路闭环得分(25')   {render_progress_bar(s_chain, 25)}  实绩: 人均吞吐 {metrics.get('人均需求吞吐量')}, 人均缺陷关闭 {metrics.get('人均缺陷关闭量')}",
-        f"- 交付闭环得分(15')   {render_progress_bar(s_deliv, 15)}  实绩: 有效发布 {metrics.get('有效发布需求数')}/{metrics.get('应发布需求数')}",
+        f"- 交付闭环得分(15')   {render_progress_bar(s_deliv, 15)}  实绩: {release_fact}",
         f"- 时效节奏合理性(20') {render_progress_bar(s_time, 20)}  实绩: 在途 {metrics.get('需求在途时长')}天, 积压率 {float(metrics.get('积压需求占比',0))*100:.1f}%",
         f"- 颗粒度对齐度(20')   {render_progress_bar(s_grain, 20)}  实绩: 交付周期 {metrics.get('需求交付周期')}天, 需求量 {metrics.get('需求总量')}",
         f"- 质量敏锐度(20')     {render_progress_bar(s_qual, 20)}  实绩: 严重缺陷比 {float(metrics.get('严重缺陷占比',0))*100:.1f}%, 线上Bug {metrics.get('线上缺陷数量')}",
@@ -922,14 +878,14 @@ def historical_report(args, parser, now: datetime) -> None:
     top_line = secondary = None
     chart_id = BG_TREND_CHART_ID
     if args.business_line:
-        paths = sorted(set(get_business_lines(ttl=args.cache_ttl, refresh=args.refresh).values()))
+        paths = sorted(set(get_business_lines().values()))
         matches = [path for path in paths if args.business_line in (path, path.split("/")[-1])]
         if len(matches) != 1:
             parser.error(f"业务线名称不唯一或未找到：{args.business_line}；候选：{matches}，请使用完整路径")
         path = matches[0]
         top_line, _, secondary = path.partition("/")
         chart_id = SECONDARY_LINE_TREND_CHART_ID if secondary else LINE_TREND_CHART_ID
-    titles, rows = get_chart_data(chart_id, ttl=args.cache_ttl, refresh=args.refresh, now=now)
+    titles, rows = get_chart_data(chart_id, now=now)
     selected = parse_trend_rows(titles, rows, top_line, secondary or None, month=args.month, now=now)
     warnings = []
     report_rows = selected
@@ -947,6 +903,7 @@ def historical_report(args, parser, now: datetime) -> None:
         "warnings": warnings,
         "source_chart_id": chart_id,
         "queried_at": now.isoformat(),
+        "source_mode": "live",
         "trends": [{"title": args.business_line or "消费者 BG", "rows": report_rows, "judgement": format_trend_judgement(report_rows)}],
         "limitations": ["过程趋势覆盖历史业务数据，不等同自研产品 RDHS 考核分母；不提供历史产品评分或已实施整改结论"],
     }
@@ -954,6 +911,7 @@ def historical_report(args, parser, now: datetime) -> None:
         print(json.dumps(result, ensure_ascii=False, indent=2))
     else:
         print(f"## {result['scope']} {args.month} 整月过程情况\n")
+        print(f"> 来源：Meegle CLI 实时查询；图表：{chart_id}；查询开始：{now.isoformat()}\n")
         print(format_trend_report("", report_rows) if selected else f"未获取 {args.month} 数据；可查深度受趋势源保留范围限制。")
         for message in warnings + result["limitations"]:
             print(f"\n> {message}")
@@ -980,26 +938,30 @@ def main():
     parser.add_argument("--compare", "-c", action="store_true", help="对比上一个自然月（本月 RDHS 或指定月过程指标）")
     parser.add_argument("--month", help="YYYY-MM：指定已收口月份的 BG/业务线过程指标，不提供历史产品评分")
     parser.add_argument("--trend", action="store_true", help="追加一级业务线或消费者 BG 月度趋势")
-    parser.add_argument("--cache-ttl", type=int, default=CACHE_TTL, help="缓存过期时间(秒)，默认 0 (实时直连)")
-    parser.add_argument("--refresh", "-r", action="store_true", help="强制穿透缓存直连拉取最新数据")
+    parser.add_argument("--cache-ttl", type=int, default=0, help="兼容旧调用：仅接受0，所有查询强制实时")
+    parser.add_argument("--refresh", "-r", action="store_true", help="兼容旧调用；所有查询已强制实时")
     parser.add_argument("--format", "-f", choices=["markdown", "json"], default="markdown", help="输出格式")
     args = parser.parse_args()
+    if args.cache_ttl != 0:
+        parser.error("已禁用磁盘缓存，--cache-ttl 仅接受0")
     now = datetime.now(BUSINESS_TZ)
     if args.month:
         historical_report(args, parser, now)
         return
     warnings: List[str] = []
-    master = get_product_master(ttl=args.cache_ttl, refresh=args.refresh, resolve_names=False)
+    source_chart_ids = [CURRENT_CHART_ID]
+    master = get_product_master(resolve_names=False)
     unknown = [name for name, info in master.items() if info.get("product_attr") not in ("标准产品", "交付定制") and (args.all or args.product and args.product.lower() in name.lower() or args.business_line and args.business_line.lower() in info.get("business_path", "").lower())]
     if unknown:
         warnings.append(f"{len(unknown)} 款产品属性未确认，未默认纳入标准自研考核")
-    cur_qt, cur_rows = get_chart_data(CURRENT_CHART_ID, ttl=args.cache_ttl, refresh=args.refresh, now=now)
+    cur_qt, cur_rows = get_chart_data(CURRENT_CHART_ID, now=now)
     cur_prods = parse_chart_rows(cur_qt, cur_rows, master)
 
     last_prods: Dict[str, Dict[str, Any]] = {}
     if args.compare:
+        source_chart_ids.append(LAST_CHART_ID)
         try:
-            last_qt, last_rows = get_chart_data(LAST_CHART_ID, ttl=args.cache_ttl, refresh=args.refresh, now=now)
+            last_qt, last_rows = get_chart_data(LAST_CHART_ID, now=now)
             last_prods = parse_chart_rows(last_qt, last_rows, master)
         except Exception as e:
             warnings.append(f"上月基线未获取：{e}")
@@ -1021,7 +983,7 @@ def main():
 
     if not matched:
         message = f"未找到与 '{args.product or args.business_line or '消费者BG'}' 相关的度量数据。"
-        print(json.dumps({"scope": args.product or args.business_line or "消费者BG", "status": "no_data", "products": [], "warnings": warnings, "message": message}, ensure_ascii=False) if args.format == "json" else message)
+        print(json.dumps({"scope": args.product or args.business_line or "消费者BG", "status": "no_data", "source_mode": "live", "queried_at": now.isoformat(), "source_chart_ids": source_chart_ids, "products": [], "warnings": warnings, "message": message}, ensure_ascii=False) if args.format == "json" else f"{message}（实时查询开始：{now.isoformat()}；图表：{', '.join(source_chart_ids)}）")
         return
 
     # Resolve only roles belonging to products that will be shown.
@@ -1044,7 +1006,8 @@ def main():
 
     trend_sections: List[Tuple[str, List[Dict[str, Any]]]] = []
     if args.trend and args.all:
-        trend_qt, trend_rows = get_chart_data(BG_TREND_CHART_ID, ttl=args.cache_ttl, refresh=args.refresh)
+        source_chart_ids.append(BG_TREND_CHART_ID)
+        trend_qt, trend_rows = get_chart_data(BG_TREND_CHART_ID)
         trend_sections.append(("消费者 BG ", parse_trend_rows(trend_qt, trend_rows, now=now)))
     elif args.trend and args.business_line:
         paths = sorted({item[3]["business_path"] for item in matched if item[3]})
@@ -1052,7 +1015,8 @@ def main():
         secondary_names = {path.split("/", 1)[1] for path in paths if "/" in path}
         resolved_secondary = next(iter(secondary_names)) if len(secondary_names) == 1 else None
         if resolved_secondary and args.business_line.lower() in resolved_secondary.lower():
-            trend_qt, trend_rows = get_chart_data(SECONDARY_LINE_TREND_CHART_ID, ttl=args.cache_ttl, refresh=args.refresh)
+            source_chart_ids.append(SECONDARY_LINE_TREND_CHART_ID)
+            trend_qt, trend_rows = get_chart_data(SECONDARY_LINE_TREND_CHART_ID)
             trend_sections = [
                 (
                     f"【{top_line}/{resolved_secondary}】",
@@ -1061,7 +1025,8 @@ def main():
                 for top_line in top_lines
             ]
         else:
-            trend_qt, trend_rows = get_chart_data(LINE_TREND_CHART_ID, ttl=args.cache_ttl, refresh=args.refresh)
+            source_chart_ids.append(LINE_TREND_CHART_ID)
+            trend_qt, trend_rows = get_chart_data(LINE_TREND_CHART_ID)
             trend_sections = [
                 (f"【{top_line}】", parse_trend_rows(trend_qt, trend_rows, top_line, now=now))
                 for top_line in top_lines
@@ -1075,6 +1040,9 @@ def main():
             "status": "partial" if warnings else "ok",
             "warnings": warnings,
             "queried_at": now.isoformat(),
+            "source_mode": "live",
+            "source_chart_ids": source_chart_ids,
+            "limitations": ["查询时间不是服务端数据截止时间；图表日期筛选字段未核实，计数不能证明需求名单或历史关联状态"],
             "periods": {
                 "current_mtd": current_period(now),
                 "latest_closed": previous_period(now),
@@ -1095,6 +1063,7 @@ def main():
         return
 
     print(period_banner(now) + "\n")
+    print(f"> 来源：Meegle CLI 实时查询；查询开始：{now.isoformat()}；图表：{', '.join(source_chart_ids)}。查询时间不是服务端截止时间；日期筛选字段未核实，不反推需求名单。\n")
     for message in warnings:
         print(f"> 范围/数据提示：{message}\n")
     if args.product and len(matched) == 1:

@@ -7,7 +7,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
 from rdhs_query import (
-    ARCHIVE_TTL,
     CURRENT_CHART_ID,
     LAST_CHART_ID,
     MAX_MASTER_PAGES,
@@ -24,7 +23,6 @@ from rdhs_query import (
     period_banner,
     previous_period,
     summarize_scope,
-    ttl_for_chart,
 )
 
 
@@ -145,14 +143,6 @@ class RdhsQueryTest(unittest.TestCase):
 
         self.assertIn("周期有效样本", judgement)
         self.assertNotIn("0.00 → 0.00 天（持平）", judgement)
-
-    def test_current_month_chart_stays_realtime_while_archives_are_cached(self):
-        # 当月实时图表默认 ttl=0 直连；归档与历史过程趋势图保底 300 秒短缓冲
-        self.assertEqual(ttl_for_chart(CURRENT_CHART_ID, 0), 0)
-        self.assertEqual(ttl_for_chart(CURRENT_CHART_ID, 3600), 3600)
-        self.assertEqual(ttl_for_chart(LAST_CHART_ID, 0), 300)
-        self.assertEqual(ttl_for_chart(SECONDARY_LINE_TREND_CHART_ID, 0), 300)
-        self.assertEqual(ttl_for_chart(LAST_CHART_ID, 7200), 7200)
 
     def test_chart_periods_are_derived_not_hardcoded(self):
         anchor = datetime(2026, 10, 9, 11, 0)

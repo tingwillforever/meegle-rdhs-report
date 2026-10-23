@@ -132,7 +132,7 @@ function linePath(product: Pick<ProductMetric, "businessLine"> & Partial<Pick<Pr
 function formatDependencyValue(metric: ProductDependencyMetric) {
   if (metric.value === null) return "—";
   if (metric.unit === "%") return (metric.value * 100).toFixed(1);
-  if (metric.unit === "人" && Number.isInteger(metric.value)) return String(metric.value);
+  if ((metric.unit === "人" || metric.unit === "个") && Number.isInteger(metric.value)) return String(metric.value);
   return metric.value.toFixed(1);
 }
 

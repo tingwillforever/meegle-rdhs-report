@@ -558,6 +558,25 @@ class SnapshotSyncTests(unittest.TestCase):
         self.assertEqual(snapshot["audit"]["excludedTestBusinessLineCount"], 2)
         self.assertEqual(snapshot["audit"]["excludedProductAttributeCount"], 9)
 
+    def test_snapshot_roles_use_only_the_same_report_not_personal_cache(self) -> None:
+        report = _load_json(REPORT_DIR / "report_data.json")
+        manifest = _load_json(REPORT_DIR / "audit_manifest.json")
+        with tempfile.TemporaryDirectory() as td, patch.dict(os.environ, {"HOME": td}):
+            cache = Path(td) / ".cache" / "meegle-rdhs"
+            cache.mkdir(parents=True)
+            (cache / "product_master.json").write_text("not valid JSON")
+            snapshot = build_snapshot(report, manifest, cadence="monthly")
+        self.assertTrue(all(p["prodRep"] is None and p["pmRep"] is None for p in snapshot["products"]))
+
+        # Explicit role columns in the same report may be preserved; never invent historical names.
+        report["full_product_headers"].extend(["产品代表", "项目管理代表"])
+        for row in report["full_product_rows"]:
+            row.extend(["当期产品代表", "当期项目代表"])
+        snapshot = build_snapshot(report, manifest, cadence="monthly")
+        measured = [p for p in snapshot["products"] if p["rdhs"] is not None]
+        self.assertTrue(measured)
+        self.assertTrue(all(p["prodRep"] == "当期产品代表" and p["pmRep"] == "当期项目代表" for p in measured))
+
     def test_build_snapshot_rejects_an_incomplete_current_chart(self) -> None:
         report = _load_json(REPORT_DIR / "report_data.json")
         manifest = _load_json(REPORT_DIR / "audit_manifest.json")
@@ -597,6 +616,9 @@ class SnapshotSyncTests(unittest.TestCase):
         self.assertAlmostEqual(metrics["需求发布闭环率"]["value"], 1 / 7)
         self.assertEqual(metrics["需求发布闭环率"]["unit"], "%")
         self.assertEqual(metrics["需求发布闭环率"]["tone"], "critical")
+        # 分子分母必须随快照落盘，否则“为什么是这个分数”只能靠反推。
+        self.assertEqual(metrics["应发布需求数"]["value"], 7.0)
+        self.assertEqual(metrics["有效发布需求数"]["value"], 1.0)
         self.assertAlmostEqual(metrics["需求积压占比"]["value"], 0.5082)
         self.assertEqual(metrics["需求积压占比"]["tone"], "critical")
 
